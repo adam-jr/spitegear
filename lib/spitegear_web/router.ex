@@ -25,6 +25,11 @@ defmodule SpitegearWeb.Router do
   #   pipe_through :api
   # end
 
+  scope "/api", SpitegearWeb do
+    pipe_through :api
+    post "/slack/events", SlackController, :handle_events
+  end
+
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:spitegear, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put

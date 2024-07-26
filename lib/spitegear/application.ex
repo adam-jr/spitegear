@@ -9,7 +9,6 @@ defmodule Spitegear.Application do
   def start(_type, _args) do
     children = [
       SpitegearWeb.Telemetry,
-      Spitegear.Repo,
       {DNSCluster, query: Application.get_env(:spitegear, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Spitegear.PubSub},
       # Start the Finch HTTP client for sending emails

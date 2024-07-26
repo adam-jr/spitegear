@@ -18,8 +18,6 @@ defmodule Spitegear.DataCase do
 
   using do
     quote do
-      alias Spitegear.Repo
-
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
@@ -27,18 +25,18 @@ defmodule Spitegear.DataCase do
     end
   end
 
-  setup tags do
-    Spitegear.DataCase.setup_sandbox(tags)
-    :ok
-  end
+  # setup tags do
+  #   Spitegear.DataCase.setup_sandbox(tags)
+  #   :ok
+  # end
 
   @doc """
   Sets up the sandbox based on the test tags.
   """
-  def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Spitegear.Repo, shared: not tags[:async])
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
-  end
+  # def setup_sandbox(tags) do
+  #   pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Spitegear.Repo, shared: not tags[:async])
+  #   on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+  # end
 
   @doc """
   A helper that transforms changeset errors into a map of messages.

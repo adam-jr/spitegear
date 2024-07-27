@@ -43,11 +43,6 @@ defmodule GoogleAuth do
   end
 
   defp create_jwt(client_email, private_key) do
-    header = %{
-      "alg" => "RS256",
-      "typ" => "JWT"
-    }
-
     iat = :os.system_time(:second)
     exp = iat + 3600
 
@@ -60,10 +55,9 @@ defmodule GoogleAuth do
     }
 
     jwk = JOSE.JWK.from_pem(private_key)
-    jwt = %JOSE.JWT{fields: payload}
-
-    {_, signed_jwt} = JOSE.JWT.sign(jwk, header, jwt)
-    JOSE.JWS.compact(signed_jwt)
+    jwt = JOSE.JWT.sign(jwk, %{"alg" => "RS256"}, payload)
+    {_, signed_jwt} = JOSE.JWS.compact(jwt)
+    signed_jwt
   end
 
   defp exchange_jwt_for_token(jwt) do
@@ -77,6 +71,8 @@ defmodule GoogleAuth do
     headers = [
       {"Content-Type", "application/json"}
     ]
+
+    _ = Finch.start_link(name: :google_auth)
 
     case Finch.build(:post, @token_url, headers, body) |> Finch.request(:google_auth) do
       {:ok, %Finch.Response{status: 200, body: body}} ->

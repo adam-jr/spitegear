@@ -68,6 +68,6 @@ defmodule Spitegear.GoogleSpreadsheets.API do
   defp headers,
     do: [
       {"Content-Type", "application/json"},
-      {"Authorization", "Bearer #{GSS.Registry.token()}"}
+      # {"Authorization", "Bearer #{GSS.Registry.token()}"}
     ]
 end

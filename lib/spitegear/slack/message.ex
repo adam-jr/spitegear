@@ -1,7 +1,7 @@
 defmodule Spitegear.Slack.Message do
   def text(:kind_reminder, turn),
     do:
-      "<@#{turn.player.slack_name}> #{reminder_text(turn.reminders)} http://www.wargear.net/games/view/#{turn.game_id}"
+      "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} http://www.wargear.net/games/view/#{turn.game_id}"
 
   @spec text(
           :game_started | :next_turn,

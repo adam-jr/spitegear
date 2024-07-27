@@ -17,13 +17,13 @@ defmodule Spitegear.HTML.Player do
   end
 
   @players [
-    %{name: "pants off vant hof", slack_name: "cvanthof85"},
-    %{name: "adam jormp jomp", slack_name: "atom.r"},
-    %{name: "Kyjygyfyf", slack_name: "json"},
-    %{name: "ZachClash", slack_name: "zachclash"},
-    %{name: "Tallness", slack_name: "zach"},
-    %{name: "Hesh", slack_name: "heshman45"},
-    %{name: "dandodd", slack_name: "dan"}
+    %{name: "pants off vant hof", slack_name: "@cvanthof85"},
+    %{name: "adam jormp jomp", slack_name: "@atom.r"},
+    %{name: "Kyjygyfyf", slack_name: "@json"},
+    %{name: "ZachClash", slack_name: "@zachclash"},
+    %{name: "Tallness", slack_name: "@zach"},
+    %{name: "Hesh", slack_name: "@heshman45"},
+    %{name: "dandodd", slack_name: "@dan"}
   ]
 
   @doc """

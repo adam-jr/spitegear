@@ -1,6 +1,6 @@
 defmodule SlackAPI do
   def post_message(text, channel \\ :spitegear) do
-    config = Application.get_env(:wargear, SlackAPI)
+    config = Application.get_env(:spitegear, SlackAPI)
 
     url = %{config[:url] | path: config[:endpoints][:post_message]}
     headers = headers()
@@ -14,7 +14,7 @@ defmodule SlackAPI do
   end
 
   def post_dm(text, recipient) do
-    config = Application.get_env(:wargear, SlackAPI)
+    config = Application.get_env(:spitegear, SlackAPI)
 
     url = %{config[:url] | path: config[:endpoints][:post_message]}
     headers = headers()
@@ -40,22 +40,22 @@ defmodule SlackAPI do
   end
 
   defp channel_id(channel) do
-    config = Application.get_env(:wargear, SlackAPI)
+    config = Application.get_env(:spitegear, SlackAPI)
     config[:channel_ids][channel]
   end
 
   defp dm_id(recipient) do
-    config = Application.get_env(:wargear, SlackAPI)
+    config = Application.get_env(:spitegear, SlackAPI)
     config[:dm_ids][recipient]
   end
 
   defp url(endpoint) do
-    config = Application.get_env(:wargear, SlackAPI)
+    config = Application.get_env(:spitegear, SlackAPI)
     %{config[:url] | path: config[:endpoints][endpoint]}
   end
 
   defp headers do
-    token = Application.get_env(:wargear, SlackAPI)[:auth_token]
+    token = Application.get_env(:spitegear, SlackAPI)[:auth_token]
     [{"Content-Type", "application/json"}, {"Authorization", "Bearer #{token}"}]
   end
 end

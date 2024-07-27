@@ -16,25 +16,5 @@ config :swoosh, local: false
 # Do not print debug messages in production
 config :logger, level: :info
 
-config :spitegear, Spitegear.Slack.API,
-  url: URI.parse("https://slack.com"),
-  channel: "spitegear",
-  endpoints: [
-    post_message: "/api/chat.postMessage",
-    list_channels: "/api/conversations.list",
-    read_channel: "/api/conversations.history",
-    list_users: "/api/users.list",
-    open_conversation: "/api/conversations.open"
-  ],
-  channel_ids: [
-    spitegear: "C014W8DN81X"
-  ],
-  dm_ids: [
-    adam: "D014TFY2K6W"
-  ],
-  user_ids: [
-    adam: "U1LBVMGUU"
-  ]
-
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

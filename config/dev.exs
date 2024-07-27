@@ -80,23 +80,3 @@ config :phoenix_live_view, :debug_heex_annotations, true
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
-
-config :spitegear, Spitegear.Slack.API,
-  url: URI.parse("https://slack.com"),
-  channel: "spitegear",
-  endpoints: [
-    post_message: "/api/chat.postMessage",
-    list_channels: "/api/conversations.list",
-    read_channel: "/api/conversations.history",
-    list_users: "/api/users.list",
-    open_conversation: "/api/conversations.open"
-  ],
-  channel_ids: [
-    spitegear: "C014W8DN81X"
-  ],
-  dm_ids: [
-    adam: "D014TFY2K6W"
-  ],
-  user_ids: [
-    adam: "U1LBVMGUU"
-  ]

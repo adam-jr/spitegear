@@ -60,6 +60,26 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+config :spitegear, Spitegear.Slack.API,
+  url: URI.parse("https://slack.com"),
+  channel: "spitegear",
+  endpoints: [
+    post_message: "/api/chat.postMessage",
+    list_channels: "/api/conversations.list",
+    read_channel: "/api/conversations.history",
+    list_users: "/api/users.list",
+    open_conversation: "/api/conversations.open"
+  ],
+  channel_ids: [
+    spitegear: "C014W8DN81X"
+  ],
+  dm_ids: [
+    adam: "D014TFY2K6W"
+  ],
+  user_ids: [
+    adam: "U1LBVMGUU"
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

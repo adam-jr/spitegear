@@ -20,4 +20,5 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           GSS_PRIVATE_KEY: ${{ secrets.GSS_PRIVATE_KEY }}
       - run: flyctl deploy --remote-only
+        env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

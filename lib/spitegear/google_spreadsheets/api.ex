@@ -1,4 +1,4 @@
-defmodule Spitegear.GoogleSheets.API do
+defmodule Spitegear.GoogleSpreadsheets.API do
   def get_values(spreadsheet_id, sheet_name) do
     _ = Finch.start_link(name: :google_spreadsheets)
 

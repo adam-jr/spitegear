@@ -2,7 +2,7 @@ defmodule Spitegear.Worker.SlackMessenger do
   use GenServer
   require Logger
 
-  alias SlackAPI, as: API
+  alias Spitegear.Slack.API
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts)

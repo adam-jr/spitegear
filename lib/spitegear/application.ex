@@ -10,6 +10,7 @@ defmodule Spitegear.Application do
     children = [
       SpitegearWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:spitegear, :dns_cluster_query) || :ignore},
+      {DynamicSupervisor, name: GameSupervisor, strategy: :one_for_one},
       {Phoenix.PubSub, name: Spitegear.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: Spitegear.Finch},

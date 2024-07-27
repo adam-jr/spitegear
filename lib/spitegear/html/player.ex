@@ -7,7 +7,7 @@ defmodule Spitegear.HTML.Player do
   require Logger
 
   @primary_key false
-  schema "players" do
+  embedded_schema do
     field(:name, :string)
     field(:slack_name, :string)
 

@@ -1,4 +1,4 @@
-defmodule Spitegear.GamePoller do
+defmodule Spitegear.Workers.GamePoller do
   use GenServer
 
   alias Spitegear.HTML.ViewScreen

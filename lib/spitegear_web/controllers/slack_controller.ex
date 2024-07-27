@@ -10,10 +10,10 @@ defmodule SpitegearWeb.SlackController do
   def handle_events(conn, %{"type" => "event_callback", "event" => event}) do
     Logger.info("Received event: #{inspect(event)}")
 
-    DynamicSupervisor.start_child(
-      GameSupervisor,
-      Spitegear.GamePoller.child_spec(game_id: "81437099")
-    )
+    # DynamicSupervisor.start_child(
+    #   GameSupervisor,
+    #   Spitegear.Workers.GamePoller.child_spec(game_id: "81437099")
+    # )
 
     send_resp(conn, 200, "ok")
   end

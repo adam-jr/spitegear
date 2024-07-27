@@ -31,7 +31,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   def init(game_id: game_id) do
     Logger.info("Initializing #{__MODULE__} with game_id #{game_id}")
-    Logger.info("#{__MODULE__} will poll spitegear.net every #{@interval / 1000} second(s)")
+    Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
 
     schedule_work()
 

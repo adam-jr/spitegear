@@ -71,7 +71,8 @@ config :spitegear, Spitegear.Slack.API,
     open_conversation: "/api/conversations.open"
   ],
   channel_ids: [
-    spitegear: "C014W8DN81X"
+    spitegear: "C014W8DN81X",
+    spitegear_test: "C07EC4D76JW"
   ],
   dm_ids: [
     adam: "D014TFY2K6W"

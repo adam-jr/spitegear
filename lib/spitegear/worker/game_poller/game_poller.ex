@@ -80,7 +80,7 @@ defmodule Spitegear.Worker.GamePoller do
     if new_turn?(state) do
       player = state.view_screen.current_player
       Logger.info("Notifying #{player.name} of turn...")
-      Spitegear.PubSub.msg(:spitegear_test, type: :next_turn, payload: {player, state.game_id})
+      Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
       %{
         state

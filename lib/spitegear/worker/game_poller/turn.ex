@@ -6,6 +6,7 @@ defmodule Spitegear.Worker.GamePoller.Turn do
 
   @primary_key false
   embedded_schema do
+    field(:game_id, :string)
     field(:player, :any, virtual: true)
     field(:reminded_at, :utc_datetime_usec)
     field(:reminders, :integer, default: 0)

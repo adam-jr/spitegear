@@ -1,7 +1,7 @@
 defmodule Spitegear.Worker.KeepAlive do
   use GenServer
 
-  @interval :timer.minutes(1)
+  @interval :timer.seconds(5)
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -26,6 +26,7 @@ defmodule Spitegear.Worker.KeepAlive do
     _ = Finch.start_link(name: :keep_alive)
 
     url = URI.encode("https://spitegear.fly.dev/ping")
+    # url = URI.encode("http://localhost:4000/ping")
 
     Finch.build(:get, url)
     |> Finch.request(:keep_alive)

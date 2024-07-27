@@ -103,22 +103,22 @@ defmodule Spitegear.Worker.GamePoller do
       [] ->
         state
 
-      _newly_dead ->
-        # Enum.each(newly_dead, fn player ->
-        #   text = Spitegear.Message.text(:player_died, player, game_id)
-        #   Spitegear.PubSub.msg(:spitegear, text)
-        # end)
+      newly_dead ->
+        Enum.each(newly_dead, fn player ->
+          text = Spitegear.Slack.Message.text(:player_died, player, state.game_id)
+          Spitegear.PubSub.msg(:spitegear_test, text)
+        end)
         %{state | dead_players: state.view_screen.eliminated}
     end
   end
 
   def maybe_announce_winners(state) do
-    # if Enum.any?(winners) do
-    # text = Spitegear.Message.text(:game_winners, winners, game_id)
-    # Spitegear.PubSub.msg(:spitegear, text)
-    # Spitegear.PubSub.msg(:spitegear, text)
-    # Spitegear.PubSub.msg(:spitegear, text)
-    # end
+    if Enum.any?(state.view_screen.winners) do
+      text = Spitegear.Slack.Message.text(:game_winners, state.view_screen.winners, state.game_id)
+      Spitegear.PubSub.msg(:spitegear, text)
+      Spitegear.PubSub.msg(:spitegear, text)
+      Spitegear.PubSub.msg(:spitegear, text)
+    end
     state
   end
 

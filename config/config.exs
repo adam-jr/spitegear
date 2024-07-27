@@ -61,6 +61,7 @@ config :logger, :console,
 config :phoenix, :json_library, Jason
 
 config :spitegear, Spitegear.Slack.API,
+  auth_token: System.get_env("SLACK_API_TOKEN"),
   url: URI.parse("https://slack.com"),
   channel: "spitegear",
   endpoints: [

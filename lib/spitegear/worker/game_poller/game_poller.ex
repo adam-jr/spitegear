@@ -80,7 +80,7 @@ defmodule Spitegear.Worker.GamePoller do
     if new_turn?(state) do
       player = state.view_screen.current_player
       Logger.info("Notifying #{player.name} of turn...")
-      Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
+      Spitegear.PubSub.msg(:spitegear_test, type: :next_turn, payload: {player, state.game_id})
 
       %{
         state
@@ -115,9 +115,9 @@ defmodule Spitegear.Worker.GamePoller do
   def maybe_announce_winners(state) do
     if Enum.any?(state.view_screen.winners) do
       text = Spitegear.Slack.Message.text(:game_winners, state.view_screen.winners, state.game_id)
-      Spitegear.PubSub.msg(:spitegear, text)
-      Spitegear.PubSub.msg(:spitegear, text)
-      Spitegear.PubSub.msg(:spitegear, text)
+      Spitegear.PubSub.msg(:spitegear_test, text)
+      Spitegear.PubSub.msg(:spitegear_test, text)
+      Spitegear.PubSub.msg(:spitegear_test, text)
     end
     state
   end

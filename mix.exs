@@ -36,8 +36,8 @@ defmodule Spitegear.MixProject do
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.10"},
       # {:postgrex, ">= 0.0.0"},
-      {:elixir_google_spreadsheets,
-       git: "https://github.com/adam-jr/elixir_google_spreadsheets", only: [:dev, :prod]},
+      # {:elixir_google_spreadsheets,
+      #  git: "https://github.com/adam-jr/elixir_google_spreadsheets", only: [:dev, :prod]},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.20.2"},
@@ -59,6 +59,7 @@ defmodule Spitegear.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
+      {:jose, "~> 1.11"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.2"}
     ]

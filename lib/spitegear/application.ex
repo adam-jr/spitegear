@@ -18,7 +18,8 @@ defmodule Spitegear.Application do
       # {Spitegear.Worker, arg},
       # Start to serve requests, typically the last entry
       SpitegearWeb.Endpoint,
-      Spitegear.Worker.KeepAlive
+      Spitegear.Worker.KeepAlive,
+      GoogleAuth
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

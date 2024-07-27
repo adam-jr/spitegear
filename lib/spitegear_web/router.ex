@@ -18,6 +18,7 @@ defmodule SpitegearWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/ping", PingController, :ping
   end
 
   # Other scopes may use custom stacks.
@@ -28,7 +29,6 @@ defmodule SpitegearWeb.Router do
   scope "/api", SpitegearWeb do
     pipe_through :api
     post "/slack/events", SlackController, :handle_events
-    get "/ping", PingController, :ping
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

@@ -11,7 +11,9 @@ defmodule SpitegearWeb.SlackController do
     Logger.info("Received event: #{inspect(event)}")
 
     case extract_game_id(event) do
-      {:ok, game_id} -> start_child(game_id)
+      {:ok, game_id} ->
+        Spitegear.PubSub.msg(:spitegear, "Starting game ##{game_id}")
+        start_child(game_id)
       _ -> nil
     end
 

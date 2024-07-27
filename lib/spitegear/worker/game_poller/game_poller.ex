@@ -85,6 +85,7 @@ defmodule Spitegear.Worker.GamePoller do
       %{
         state
         | current_turn: %Turn{
+            game_id: state.game_id,
             player: player,
             reminded_at: DateTime.utc_now()
           }

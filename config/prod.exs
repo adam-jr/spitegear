@@ -16,5 +16,29 @@ config :swoosh, local: false
 # Do not print debug messages in production
 config :logger, level: :info
 
+config :elixir_google_spreadsheets,
+  json: """
+    {
+      "type": "service_account",
+      "project_id": "nice-hydra-404616",
+      "private_key_id": "9df3e434391f184c931ebe7ef459b1f31b32b12e",
+      "private_key": "#{System.get_env("GSS_PRIVATE_KEY")}",
+      "client_email": "wargear@nice-hydra-404616.iam.gserviceaccount.com",
+      "client_id": "110287222621206062110",
+      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+      "token_uri": "https://oauth2.googleapis.com/token",
+      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/wargear%40nice-hydra-404616.iam.gserviceaccount.com",
+      "universe_domain": "googleapis.com"
+    }
+  """
+
+config :elixir_google_spreadsheets, :client,
+  request_workers: 50,
+  max_demand: 100,
+  max_interval: :timer.minutes(1),
+  interval: 100,
+  result_timeout: :timer.minutes(10)
+
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.

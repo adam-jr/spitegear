@@ -17,7 +17,8 @@ defmodule Spitegear.Application do
       # Start a worker by calling: Spitegear.Worker.start_link(arg)
       # {Spitegear.Worker, arg},
       # Start to serve requests, typically the last entry
-      SpitegearWeb.Endpoint
+      SpitegearWeb.Endpoint,
+      Spitegear.Worker.KeepAlive
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -12,7 +12,7 @@ defmodule SpitegearWeb.SlackController do
 
     # DynamicSupervisor.start_child(
     #   GameSupervisor,
-    #   Spitegear.GamePoller.child_spec(game_id: "81437099")
+    #   Spitegear.Worker.GamePoller.child_spec(game_id: "81437099")
     # )
 
     send_resp(conn, 200, "ok")

@@ -1,7 +1,7 @@
 defmodule Spitegear.Slack.Message do
   def text(:kind_reminder, turn),
     do:
-      "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} http://www.wargear.net/games/view/#{turn.game_id}"
+      "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
 
   @spec text(
           :game_started | :next_turn,
@@ -11,14 +11,14 @@ defmodule Spitegear.Slack.Message do
         ) :: <<_::64, _::_*8>>
   def text(:game_started, game),
     do:
-      "I wuv you, waiting to start #{game.name} http://www.wargear.net/games/view/#{game.game_id} 🧸💕"
+      "I wuv you, waiting to start #{game.name} https://www.wargear.net/games/view/#{game.game_id} 🧸💕"
 
   def text(:next_turn, {player, game_id}),
     do:
-      "<#{player.slack_name}>, you are ON THE CLOCK http://www.wargear.net/games/view/#{game_id}"
+      "<#{player.slack_name}>, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
 
   def text(:player_died, player, game_id),
-    do: "<#{player.slack_name}> died in http://www.wargear.net/games/view/#{game_id}"
+    do: "<#{player.slack_name}> died in https://www.wargear.net/games/view/#{game_id}"
 
   def text(:game_winners, players, game_id),
     do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
@@ -30,9 +30,9 @@ defmodule Spitegear.Slack.Message do
       wins
       |> Enum.map(fn win ->
         if win.game.utc_end_time do
-          "<http://www.wargear.net/games/view/#{win.game.game_id}|*#{win.game.name}* - #{DateTime.to_date(win.game.utc_end_time)}>"
+          "<https://www.wargear.net/games/view/#{win.game.game_id}|*#{win.game.name}* - #{DateTime.to_date(win.game.utc_end_time)}>"
         else
-          "<http://www.wargear.net/games/view/#{win.game.game_id}|*#{win.game.name}*>"
+          "<https://www.wargear.net/games/view/#{win.game.game_id}|*#{win.game.name}*>"
         end
       end)
       |> Enum.join("\n")

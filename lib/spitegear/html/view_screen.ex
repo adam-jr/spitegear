@@ -8,7 +8,7 @@ defmodule Spitegear.HTML.ViewScreen do
             winners: []
 
   def get_game(game_id) do
-    with base_url <- URI.parse("https://www.spitegear.net"),
+    with base_url <- URI.parse("https://www.wargear.net"),
          url <- %{base_url | path: "/games/view/#{game_id}"},
          {:ok, %{body: body}} <- HTTPoison.get(url),
          {:ok, document} <- Floki.parse_document(body),

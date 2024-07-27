@@ -1,7 +1,7 @@
 defmodule Spitegear.Worker.KeepAlive do
   use GenServer
 
-  @interval :timer.seconds(5)
+  @interval :timer.minutes(1)
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)

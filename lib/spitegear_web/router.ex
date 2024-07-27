@@ -28,6 +28,7 @@ defmodule SpitegearWeb.Router do
   scope "/api", SpitegearWeb do
     pipe_through :api
     post "/slack/events", SlackController, :handle_events
+    get "/ping", PingController, :ping
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

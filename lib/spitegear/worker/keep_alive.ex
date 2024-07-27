@@ -1,4 +1,4 @@
-defmodule Spitegear.KeepAlive do
+defmodule Spitegear.Worker.KeepAlive do
   use GenServer
 
   @interval :timer.minutes(1)

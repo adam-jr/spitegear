@@ -1,4 +1,4 @@
-defmodule Spitegear.Workers.GamePoller.Turn do
+defmodule Spitegear.Worker.GamePoller.Turn do
   @moduledoc """
   Embedded schema for turns
   """

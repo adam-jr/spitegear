@@ -55,7 +55,11 @@ defmodule Spitegear.Slack.API do
   end
 
   defp headers do
-    token = Application.get_env(:spitegear, Spitegear.Slack.API)[:auth_token]
-    [{"Content-Type", "application/json"}, {"Authorization", "Bearer #{token}"}]
+    [{"Content-Type", "application/json"}, {"Authorization", "Bearer #{auth_token()}"}]
+  end
+
+  defp auth_token do
+    {:ok, auth_token} = System.fetch_env("SLACK_AUTH_TOKEN")
+    auth_token
   end
 end

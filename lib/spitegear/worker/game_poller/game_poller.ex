@@ -108,6 +108,7 @@ defmodule Spitegear.Worker.GamePoller do
           text = Spitegear.Slack.Message.text(:player_died, player, state.game_id)
           Spitegear.PubSub.msg(:spitegear_test, text)
         end)
+
         %{state | dead_players: state.view_screen.eliminated}
     end
   end
@@ -119,6 +120,7 @@ defmodule Spitegear.Worker.GamePoller do
       Spitegear.PubSub.msg(:spitegear_test, text)
       Spitegear.PubSub.msg(:spitegear_test, text)
     end
+
     state
   end
 

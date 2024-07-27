@@ -1,0 +1,107 @@
+defmodule Spitegear.HTML.Player do
+  use Ecto.Schema
+
+  @moduledoc """
+  parse players from floki/html
+  """
+  require Logger
+
+  @primary_key false
+  schema "players" do
+    field(:name, :string)
+    field(:slack_name, :string)
+
+    field(:current_turn?, :boolean, virtual: true)
+    field(:eliminated?, :boolean, virtual: true)
+    field(:winner?, :boolean, virtual: true)
+  end
+
+  @players [
+    %{name: "pants off vant hof", slack_name: "cvanthof85"},
+    %{name: "adam jormp jomp", slack_name: "atom.r"},
+    %{name: "Kyjygyfyf", slack_name: "json"},
+    %{name: "ZachClash", slack_name: "zachclash"},
+    %{name: "Tallness", slack_name: "zach"},
+    %{name: "Hesh", slack_name: "heshman45"},
+    %{name: "dandodd", slack_name: "dan"}
+  ]
+
+  @doc """
+  Parses players from html/Floki
+
+  ## Examples
+
+      iex> from_table_row(html)
+      %Player{}
+
+  """
+  def from_table_row(tr) do
+    name = player_name(tr)
+    player = Enum.find(@players, &(&1.name == name))
+    player = struct(__MODULE__, player)
+
+    %{
+      player
+      | current_turn?: current_turn?(tr),
+        eliminated?: eliminated?(tr),
+        winner?: winner?(tr)
+    }
+  end
+
+  defp current_turn?(tr) do
+    {"tr", [], tds} = tr
+    clock_td = Enum.at(tds, -2)
+
+    case clock_td do
+      {"td", [], [{"span", [{"id", _clock_num}], [_hd | _tl]}]} ->
+        true
+
+      {"td", [], [{"span", [{"id", _clock_num}], []}]} ->
+        false
+
+      {"td", [],
+       [
+         {"span", [{"title", "AutoBoot Pending"}, {"class", "boot_pending"}], [" "]},
+         {"span", [{"id", _clock_num}], []}
+       ]} ->
+        false
+
+      {"td", [],
+       [
+         {"span", [{"title", "AutoBoot Pending"}, {"class", "boot_pending"}], [" "]},
+         {"span", [{"id", _clock_num}], _clock}
+       ]} ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  defp eliminated?(tr) do
+    {"tr", [], tds} = tr
+    eliminated_td = Enum.at(tds, -3)
+
+    case eliminated_td do
+      {"td", [], ["Eliminated"]} -> true
+      _ -> false
+    end
+  end
+
+  defp winner?(tr) do
+    {"tr", [], tds} = tr
+    winner_td = Enum.at(tds, -3)
+
+    case winner_td do
+      {"td", [], ["Winner"]} -> true
+      _ -> false
+    end
+  end
+
+  defp player_name(tr) do
+    {"tr", [], tds} = tr
+    player_td = Enum.at(tds, 2)
+    {"td", _, [{"a", _, [player_name]}]} = player_td
+    player_name
+  end
+end

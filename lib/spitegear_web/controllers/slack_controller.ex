@@ -14,7 +14,9 @@ defmodule SpitegearWeb.SlackController do
       {:ok, game_id} ->
         Spitegear.PubSub.msg(:spitegear, "Starting game ##{game_id}")
         start_child(game_id)
-      _ -> nil
+
+      _ ->
+        nil
     end
 
     send_resp(conn, 200, "ok")

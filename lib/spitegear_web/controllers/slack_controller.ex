@@ -13,7 +13,7 @@ defmodule SpitegearWeb.SlackController do
     case extract_game_id(event) do
       {:ok, game_id} ->
         Spitegear.PubSub.msg(:spitegear, "Starting game ##{game_id}")
-        GameResumer.start_game(game_id)
+        start_child(game_id)
 
       _ ->
         nil
@@ -24,6 +24,13 @@ defmodule SpitegearWeb.SlackController do
 
   def handle_events(conn, _params) do
     send_resp(conn, 400, "Bad Request")
+  end
+
+  defp start_child(game_id) do
+    DynamicSupervisor.start_child(
+      GameSupervisor,
+      Spitegear.Worker.GamePoller.child_spec(game_id: game_id)
+    )
   end
 
   @game_url_pattern ~r|wargear\.net/games/join/(\d+)|

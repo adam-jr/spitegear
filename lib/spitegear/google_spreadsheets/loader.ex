@@ -95,13 +95,13 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
         []
 
       module ->
-        module.from_data(values) |> IO.inspect()
+        module.from_data(values)
     end
   end
 
   defp load_games(rows) do
     Enum.each(rows, fn row ->
-      if is_nil(row.finished) do
+      if is_nil(row.finished) and Application.get_env(:spitegear, :env) == :prod do
         DynamicSupervisor.start_child(
           GameSupervisor,
           Spitegear.Worker.GamePoller.child_spec(game_id: row.game_id)

@@ -19,6 +19,7 @@ defmodule Spitegear.Application do
       # Start to serve requests, typically the last entry
       SpitegearWeb.Endpoint,
       Spitegear.Worker.SlackMessenger,
+      Spitegear.GoogleSpreadsheets.Loader,
       GoogleAuth
     ]
 

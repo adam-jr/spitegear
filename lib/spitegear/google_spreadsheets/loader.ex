@@ -4,6 +4,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
   require Logger
 
   alias Spitegear.GoogleSpreadsheets.API
+  alias Spitegear.GoogleSpreadsheets.Sheets
 
   @spreadsheet_id "1qhTcmKRpnmknMV3opGv1jdpQ1d6hFCU862lIRy1jL-Q"
 
@@ -18,6 +19,10 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
 
   def refresh do
     send(__MODULE__, :load_google_sheet)
+  end
+
+  def start_games do
+    send(__MODULE__, :start_games)
   end
 
   # Callbacks
@@ -65,7 +70,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
            state
            | sheets: remaining_sheets,
              current_sheet: current_sheet,
-             data: Map.put(data, current_sheet, data)
+             data: Map.put(data, current_sheet, parse_sheet(current_sheet, data))
          }}
 
       :error ->
@@ -77,7 +82,32 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
   @impl true
   def handle_info(:process_next_sheet, %{sheets: []} = state) do
     Logger.info("Finished loading sheets!")
+    load_games(state.data["games"])
     {:noreply, state}
+  end
+
+  @sheets [
+    games: Sheets.Games
+  ]
+  defp parse_sheet(sheet_name, %{"values" => values}) do
+    case Keyword.get(@sheets, String.to_atom(sheet_name)) do
+      nil ->
+        []
+
+      module ->
+        module.from_data(values) |> IO.inspect()
+    end
+  end
+
+  defp load_games(rows) do
+    Enum.each(rows, fn row ->
+      if is_nil(row.finished) do
+        DynamicSupervisor.start_child(
+          GameSupervisor,
+          Spitegear.Worker.GamePoller.child_spec(game_id: row.game_id)
+        )
+      end
+    end)
   end
 
   defp schedule_retry(retry_count) do

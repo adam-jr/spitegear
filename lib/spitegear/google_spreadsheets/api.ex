@@ -1,5 +1,20 @@
 defmodule Spitegear.GoogleSpreadsheets.API do
-  def get_values(spreadsheet_id, sheet_name) do
+  def get_spreadsheet(spreadsheet_id) do
+    _ = Finch.start_link(name: :google_spreadsheets)
+
+    url = URI.encode("https://sheets.googleapis.com/v4/spreadsheets/#{spreadsheet_id}")
+
+    case Finch.build(:get, url, headers())
+         |> Finch.request(:google_spreadsheets) do
+      {:ok, %Finch.Response{status: 200, body: body}} ->
+        {:ok, Jason.decode!(body)}
+
+      {:error, %Finch.Error{} = error} ->
+        {:error, error}
+    end
+  end
+
+  def get_individual_sheet(spreadsheet_id, sheet_name) do
     _ = Finch.start_link(name: :google_spreadsheets)
 
     url =

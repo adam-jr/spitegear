@@ -17,7 +17,7 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Games do
       res =
         API.update_cells(GoogleSpreadsheets.Reader.spreadsheet_id(), "games", range(index), [data])
 
-      GoogleSpreadsheets.Reader.refresh_games()
+      GoogleSpreadsheets.Reader.refresh_sheet(:games)
       res
     end
   end

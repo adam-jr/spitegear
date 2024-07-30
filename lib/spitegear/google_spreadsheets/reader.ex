@@ -19,12 +19,8 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
     GenServer.call(__MODULE__, {:get_sheet, sheet_name})
   end
 
-  def refresh do
-    send(__MODULE__, :load_google_sheet)
-  end
-
-  def refresh_games do
-    GenServer.call(__MODULE__, :refresh_games)
+  def refresh_sheet(:games) do
+    GenServer.call(__MODULE__, {:refresh, :games})
   end
 
   def start_games do
@@ -40,7 +36,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
 
   @impl true
   def handle_call({:get_sheet, sheet_name}, _from, state) do
-    case get_in(state, [:data, sheet_name]) do
+    case get_in(state, [:data, to_string(sheet_name)]) do
       nil ->
         {:reply, :error, state}
 
@@ -49,13 +45,15 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
     end
   end
 
-  def handle_call(:refresh_games, _from, state) do
-    case load_individual_sheet("games") do
+  def handle_call({:refresh, sheet_name}, _from, state) do
+    sheet_name = to_string(sheet_name)
+
+    case load_individual_sheet(sheet_name) do
       {:ok, data} ->
         {:reply, {:ok, data},
          %{
            state
-           | data: Map.put(state.data, "games", parse_sheet("games", data))
+           | data: Map.put(state.data, sheet_name, parse_sheet(sheet_name, data))
          }}
 
       :error ->
@@ -107,7 +105,8 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   end
 
   @sheets [
-    games: Sheets.Games
+    games: Sheets.Games,
+    turns: Sheets.Turns
   ]
   defp parse_sheet(sheet_name, %{"values" => values}) do
     case Keyword.get(@sheets, String.to_atom(sheet_name)) do

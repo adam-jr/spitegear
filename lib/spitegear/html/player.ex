@@ -26,6 +26,8 @@ defmodule Spitegear.HTML.Player do
     %{name: "dandodd", slack_name: "@dan"}
   ]
 
+  def from_name(player_name), do: Enum.find(@players, &(&1.name == player_name))
+
   @doc """
   Parses players from html/Floki
 

@@ -55,6 +55,7 @@ defmodule Spitegear.MixProject do
       {:finch, "~> 0.13"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
+      {:tzdata, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
       {:jose, "~> 1.11"},

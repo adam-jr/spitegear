@@ -4,10 +4,16 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Games do
 
   def update_or_create_row(view_screen) do
     with {:ok, rows} <- Loader.fetch_sheet_data("games"),
-         row_struct when not is_nil(row_struct) <-
-           Enum.find(rows, &(&1.game_id == view_screen.game_id)) do
+         row_struct <- Enum.find(rows, &(&1.game_id == view_screen.game_id)) do
+      index =
+        if row_struct do
+          row_struct.index
+        else
+          length(rows)
+        end
+
       data = to_data(view_screen)
-      API.update_cells(Loader.spreadsheet_id(), "games", range(row_struct.index), [data])
+      API.update_cells(Loader.spreadsheet_id(), "games", range(index), [data])
     end
   end
 
@@ -27,7 +33,7 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Games do
 
   defp winner(vs, index) do
     w = Enum.at(vs.winners, index)
-    w && w[:name]
+    w && w.name
   end
 
   def from_data([_headers | rest]) do

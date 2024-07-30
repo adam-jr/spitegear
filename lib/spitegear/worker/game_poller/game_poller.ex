@@ -50,6 +50,7 @@ defmodule Spitegear.Worker.GamePoller do
           |> maybe_announce_winners()
 
         if Enum.any?(view_screen.winners) do
+          update_spreadsheet()
           finish_game(game_id)
           {:stop, :normal, nil}
         else

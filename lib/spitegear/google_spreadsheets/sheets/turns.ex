@@ -23,9 +23,12 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Turns do
         player: Spitegear.HTML.Player.from_name(get_val(row, 1)),
         started: datetime(get_val(row, 2)),
         reminded: datetime(get_val(row, 3)),
-        reminders: get_val(row, 4)
+        reminders: integer(get_val(row, 4))
       }
     end
+
+    defp integer(nil), do: 0
+    defp integer(str), do: String.to_integer(str)
 
     defp datetime(nil), do: nil
 

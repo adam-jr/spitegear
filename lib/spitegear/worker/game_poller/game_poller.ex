@@ -129,7 +129,8 @@ defmodule Spitegear.Worker.GamePoller do
   defp remind_player(state) do
     player = state.current_turn.player
     Logger.info("Reminding #{player.name} of turn...")
-    Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
+    text = Spitegear.Slack.Message.text(:kind_reminder, state.current_turn)
+    Spitegear.PubSub.msg(:spitegear, text)
 
     turn = %{
       state.current_turn

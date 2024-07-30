@@ -33,11 +33,9 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
 
     update_spreadsheet()
-    # turn = Spitegear.GoogleSpreadsheets.Reader.get_row(:turns, game_id) |> IO.inspect()
     update_current_turn()
     schedule_work()
 
-    # {:ok, %{@state | game_id: game_id, current_turn: turn}}
     {:ok, %{@state | game_id: game_id}}
   end
 
@@ -79,7 +77,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   def handle_info(:update_current_turn, state) do
     row = Spitegear.GoogleSpreadsheets.Reader.get_row(:turns, state.game_id)
-    {:noreply, %{state | current_turn: row}} |> IO.inspect()
+    {:noreply, %{state | current_turn: row}}
   end
 
   def handle_info({:ssl_closed, _}, state) do
@@ -104,7 +102,7 @@ defmodule Spitegear.Worker.GamePoller do
     if new_turn?(state) do
       player = state.view_screen.current_player
       Logger.info("Notifying #{player.name} of turn...")
-      # Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
+      Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
       turn = %Spitegear.GoogleSpreadsheets.Sheets.Turns.Row{
         game_id: state.game_id,

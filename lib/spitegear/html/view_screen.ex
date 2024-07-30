@@ -1,5 +1,6 @@
 defmodule Spitegear.HTML.ViewScreen do
   defstruct game_id: nil,
+            url: nil,
             game_name: nil,
             board_name: nil,
             created: nil,
@@ -25,6 +26,7 @@ defmodule Spitegear.HTML.ViewScreen do
       {:ok,
        %__MODULE__{
          game_id: game_id,
+         url: url,
          game_name: game_name,
          board_name: board_name,
          created: created,

@@ -8,6 +8,8 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
 
   @spreadsheet_id "1qhTcmKRpnmknMV3opGv1jdpQ1d6hFCU862lIRy1jL-Q"
 
+  def spreadsheet_id, do: @spreadsheet_id
+
   # Public API
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)

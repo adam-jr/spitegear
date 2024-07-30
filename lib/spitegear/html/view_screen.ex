@@ -1,6 +1,9 @@
 defmodule Spitegear.HTML.ViewScreen do
   defstruct game_id: nil,
             game_name: nil,
+            board_name: nil,
+            created: nil,
+            finished: nil,
             next_card: nil,
             players: [],
             current_player: nil,
@@ -14,12 +17,18 @@ defmodule Spitegear.HTML.ViewScreen do
          {:ok, document} <- Floki.parse_document(body),
          {:ok, card} <- get_next_card(document),
          {:ok, game_name} <- game_name(document),
+         {:ok, board_name} <- board_name(document),
+         {:ok, created} <- created_time(document),
+         {:ok, finished} <- finished_time(document),
          {:ok, player_table_rows} <- get_players(document),
          players <- Enum.map(player_table_rows, &Spitegear.HTML.Player.from_table_row/1) do
       {:ok,
        %__MODULE__{
          game_id: game_id,
          game_name: game_name,
+         board_name: board_name,
+         created: created,
+         finished: finished,
          next_card: card,
          players: players,
          current_player: Enum.find(players, & &1.current_turn?),
@@ -29,6 +38,42 @@ defmodule Spitegear.HTML.ViewScreen do
     else
       _ ->
         :error
+    end
+  end
+
+  def created_time(document) do
+    document
+    |> Floki.find("table.ranking.data tr")
+    |> Enum.find(fn row ->
+      Floki.text(Floki.find(row, "td:first-child")) == "Created"
+    end)
+    |> case do
+      nil -> {:ok, nil}
+      row -> {:ok, Floki.text(Floki.find(row, "td span.small"))}
+    end
+  end
+
+  def finished_time(document) do
+    document
+    |> Floki.find("table.ranking.data tr")
+    |> Enum.find(fn row ->
+      Floki.text(Floki.find(row, "td:first-child")) == "Finished"
+    end)
+    |> case do
+      nil -> {:ok, nil}
+      row -> {:ok, Floki.text(Floki.find(row, "td span.small"))}
+    end
+  end
+
+  def board_name(document) do
+    document
+    |> Floki.find("table.ranking.data tr")
+    |> Enum.find(fn row ->
+      Floki.text(Floki.find(row, "td:first-child")) == "Board Name"
+    end)
+    |> case do
+      nil -> {:ok, nil}
+      row -> {:ok, Floki.text(Floki.find(row, "td a.dotted:first-child"))}
     end
   end
 

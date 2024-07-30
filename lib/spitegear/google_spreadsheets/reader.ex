@@ -15,8 +15,8 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def fetch_sheet_data(sheet_name) do
-    GenServer.call(__MODULE__, {:fetch_sheet_data, sheet_name})
+  def get_sheet(sheet_name) do
+    GenServer.call(__MODULE__, {:get_sheet, sheet_name})
   end
 
   def refresh do
@@ -39,7 +39,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   end
 
   @impl true
-  def handle_call({:fetch_sheet_data, sheet_name}, _from, state) do
+  def handle_call({:get_sheet, sheet_name}, _from, state) do
     case get_in(state, [:data, sheet_name]) do
       nil ->
         {:reply, :error, state}

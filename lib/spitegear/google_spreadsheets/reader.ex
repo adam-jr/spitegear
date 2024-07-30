@@ -31,10 +31,15 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   @impl true
   def init(_opts) do
     schedule_retry(0)
-    {:ok, %{retry_count: 0, sheets: [], current_sheet: nil, data: %{}}}
+    {:ok, %{retry_count: 0, sheets: [], current_sheet: nil, data: %{}, loading: true}}
   end
 
   @impl true
+  def handle_call({:get_sheet, sheet_name}, from, %{loading: true} = state) do
+    Process.send_after(self(), {:get_sheet, sheet_name, from}, 1000)
+    {:noreply, state}
+  end
+
   def handle_call({:get_sheet, sheet_name}, _from, state) do
     case get_in(state, [:data, to_string(sheet_name)]) do
       nil ->
@@ -62,6 +67,17 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   end
 
   @impl true
+  def handle_info({:get_sheet, sheet_name, from}, state) do
+    if state.loading do
+      Process.send_after(self(), {:get_sheet, sheet_name, from}, 1000)
+    else
+      data = get_in(state, [:data, to_string(sheet_name)])
+      GenServer.reply(from, {:ok, data})
+    end
+
+    {:noreply, state}
+  end
+
   def handle_info(:load_google_sheet, %{retry_count: retry_count} = state) do
     Logger.info("Started loading sheets")
 
@@ -101,7 +117,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   def handle_info(:process_next_sheet, %{sheets: []} = state) do
     Logger.info("Finished loading sheets!")
     resume_games(state.data["games"])
-    {:noreply, state}
+    {:noreply, %{state | loading: false}}
   end
 
   @sheets [

@@ -101,13 +101,13 @@ defmodule Spitegear.Worker.GamePoller do
   defp update_turn(state) do
     cond do
       new_turn?(state) ->
-        {:noreply, new_turn(state)}
+        new_turn(state)
 
       reminder_due?(state) ->
-        {:noreply, remind_player(state)}
+        remind_player(state)
 
       true ->
-        {:noreply, state}
+        state
     end
   end
 

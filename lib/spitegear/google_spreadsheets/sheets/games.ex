@@ -1,9 +1,9 @@
 defmodule Spitegear.GoogleSpreadsheets.Sheets.Games do
   alias Spitegear.GoogleSpreadsheets.API
-  alias Spitegear.GoogleSpreadsheets.Loader
+  alias Spitegear.GoogleSpreadsheets
 
   def update_or_create_row(view_screen) do
-    with {:ok, rows} <- Loader.fetch_sheet_data("games"),
+    with {:ok, rows} <- GoogleSpreadsheets.Reader.fetch_sheet_data("games"),
          row_struct <- Enum.find(rows, &(&1.game_id == view_screen.game_id)) do
       index =
         if row_struct do
@@ -13,8 +13,8 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Games do
         end
 
       data = to_data(view_screen)
-      res = API.update_cells(Loader.spreadsheet_id(), "games", range(index), [data])
-      Loader.refresh_games()
+      res = API.update_cells(GoogleSpreadsheets.Reader.spreadsheet_id(), "games", range(index), [data])
+      GoogleSpreadsheets.Reader.refresh_games()
       res
     end
   end

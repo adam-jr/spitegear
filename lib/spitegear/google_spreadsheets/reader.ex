@@ -1,4 +1,4 @@
-defmodule Spitegear.GoogleSpreadsheets.Loader do
+defmodule Spitegear.GoogleSpreadsheets.Reader do
   use GenServer
 
   require Logger

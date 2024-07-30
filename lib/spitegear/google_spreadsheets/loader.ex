@@ -23,6 +23,10 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
     send(__MODULE__, :load_google_sheet)
   end
 
+  def refresh_games do
+    GenServer.call(__MODULE__, :refresh_games)
+  end
+
   def start_games do
     send(__MODULE__, :start_games)
   end
@@ -42,6 +46,20 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
 
       data ->
         {:reply, {:ok, data}, state}
+    end
+  end
+
+  def handle_call(:refresh_games, _from, state) do
+    case load_sheet_data("games") do
+      {:ok, data} ->
+        {:reply, {:ok, data},
+         %{
+           state
+           | data: Map.put(state.data, "games", parse_sheet("games", data))
+         }}
+
+      :error ->
+        {:reply, :error, state}
     end
   end
 

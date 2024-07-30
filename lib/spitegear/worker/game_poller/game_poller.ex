@@ -96,58 +96,76 @@ defmodule Spitegear.Worker.GamePoller do
     end
   end
 
-  def update_turn(%{status: s} = state) when s != :in_progress, do: state
+  defp update_turn(%{status: s} = state) when s != :in_progress, do: state
 
-  def update_turn(state) do
-    if new_turn?(state) do
-      player = state.view_screen.current_player
-      Logger.info("Notifying #{player.name} of turn...")
-      Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
+  defp update_turn(state) do
+    cond do
+      new_turn?(state) ->
+        {:noreply, new_turn(state)}
 
-      turn = %Spitegear.GoogleSpreadsheets.Sheets.Turns.Row{
-        game_id: state.game_id,
-        player: state.view_screen.current_player,
-        started: DateTime.utc_now(),
-        reminded: DateTime.utc_now(),
-        reminders: 0
-      }
+      reminder_due?(state) ->
+        {:noreply, remind_player(state)}
 
-      Spitegear.GoogleSpreadsheets.Sheets.Turns.update_or_create_row(turn)
-
-      %{state | current_turn: turn}
-    else
-      # remind_player(state.current_turn)
-      state
+      true ->
+        {:noreply, state}
     end
   end
 
-  def update_eliminated(state) do
-    last_eliminated = Enum.map(state.dead_players, & &1.name)
-    newly_eliminated = state.view_screen.eliminated
+  # 3 hours
+  @horizon_seconds 3 * 60 * 60
+  defp reminder_due?(%{current_turn: %{reminded: reminded_time}}) do
+    current_time_utc = DateTime.utc_now()
 
-    case Enum.reject(newly_eliminated, &(&1.name in last_eliminated)) do
-      [] ->
-        state
+    {:ok, current_time_chicago} = DateTime.shift_zone(current_time_utc, "America/Chicago")
+    current_hour_chicago = current_time_chicago.hour
+    waking_hours_chicago? = current_hour_chicago >= 7 and current_hour_chicago < 24
 
-      newly_dead ->
-        Enum.each(newly_dead, fn player ->
-          text = Spitegear.Slack.Message.text(:player_died, player, state.game_id)
-          Spitegear.PubSub.msg(:spitegear_test, text)
-        end)
-
-        %{state | dead_players: state.view_screen.eliminated}
-    end
+    beyond_horizon? = DateTime.diff(current_time_utc, reminded_time) > @horizon_seconds
+    waking_hours_chicago? and beyond_horizon?
   end
 
-  def maybe_announce_winners(state) do
-    if Enum.any?(state.view_screen.winners) do
-      text = Spitegear.Slack.Message.text(:game_winners, state.view_screen.winners, state.game_id)
-      Spitegear.PubSub.msg(:spitegear_test, text)
-      Spitegear.PubSub.msg(:spitegear_test, text)
-      Spitegear.PubSub.msg(:spitegear_test, text)
-    end
+  defp reminder_due?(_state), do: false
 
-    state
+  defp remind_player(state) do
+    player = state.current_turn.player
+    Logger.info("Reminding #{player.name} of turn...")
+    Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
+
+    turn = %{
+      state.current_turn
+      | reminded: DateTime.utc_now(),
+        reminders: state.current_turn.reminders + 1
+    }
+
+    Spitegear.GoogleSpreadsheets.Sheets.Turns.update_or_create_row(turn)
+
+    %{state | current_turn: turn}
+  end
+
+  defp new_turn?(%{current_turn: %{player: %{name: name}}, view_screen: view_screen}) do
+    name != view_screen.current_player.name
+  end
+
+  defp new_turn?(%{view_screen: view_screen}) do
+    view_screen.current_player != nil
+  end
+
+  defp new_turn(state) do
+    player = state.view_screen.current_player
+    Logger.info("Notifying #{player.name} of turn...")
+    Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
+
+    turn = %Spitegear.GoogleSpreadsheets.Sheets.Turns.Row{
+      game_id: state.game_id,
+      player: state.view_screen.current_player,
+      started: DateTime.utc_now(),
+      reminded: DateTime.utc_now(),
+      reminders: 0
+    }
+
+    Spitegear.GoogleSpreadsheets.Sheets.Turns.update_or_create_row(turn)
+
+    %{state | current_turn: turn}
   end
 
   defp update_spreadsheet do
@@ -160,11 +178,32 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp schedule_work, do: Process.send_after(self(), :work, @interval)
 
-  defp new_turn?(%{current_turn: %{player: %{name: name}}, view_screen: view_screen}) do
-    name != view_screen.current_player.name
+  defp update_eliminated(state) do
+    last_eliminated = Enum.map(state.dead_players, & &1.name)
+    newly_eliminated = state.view_screen.eliminated
+
+    case Enum.reject(newly_eliminated, &(&1.name in last_eliminated)) do
+      [] ->
+        state
+
+      newly_dead ->
+        Enum.each(newly_dead, fn player ->
+          text = Spitegear.Slack.Message.text(:player_died, player, state.game_id)
+          Spitegear.PubSub.msg(:spitegear, text)
+        end)
+
+        %{state | dead_players: state.view_screen.eliminated}
+    end
   end
 
-  defp new_turn?(%{view_screen: view_screen}) do
-    view_screen.current_player != nil
+  defp maybe_announce_winners(state) do
+    if Enum.any?(state.view_screen.winners) do
+      text = Spitegear.Slack.Message.text(:game_winners, state.view_screen.winners, state.game_id)
+      Spitegear.PubSub.msg(:spitegear, text)
+      Spitegear.PubSub.msg(:spitegear, text)
+      Spitegear.PubSub.msg(:spitegear, text)
+    end
+
+    state
   end
 end

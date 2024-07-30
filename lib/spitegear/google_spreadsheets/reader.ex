@@ -1,4 +1,4 @@
-defmodule Spitegear.GoogleSpreadsheets.Loader do
+defmodule Spitegear.GoogleSpreadsheets.Reader do
   use GenServer
 
   require Logger
@@ -8,17 +8,23 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
 
   @spreadsheet_id "1qhTcmKRpnmknMV3opGv1jdpQ1d6hFCU862lIRy1jL-Q"
 
+  def spreadsheet_id, do: @spreadsheet_id
+
   # Public API
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def fetch_sheet_data(sheet_name) do
-    GenServer.call(__MODULE__, {:fetch_sheet_data, sheet_name})
+  def get_sheet(sheet_name) do
+    GenServer.call(__MODULE__, {:get_sheet, sheet_name})
   end
 
   def refresh do
     send(__MODULE__, :load_google_sheet)
+  end
+
+  def refresh_games do
+    GenServer.call(__MODULE__, :refresh_games)
   end
 
   def start_games do
@@ -33,7 +39,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
   end
 
   @impl true
-  def handle_call({:fetch_sheet_data, sheet_name}, _from, state) do
+  def handle_call({:get_sheet, sheet_name}, _from, state) do
     case get_in(state, [:data, sheet_name]) do
       nil ->
         {:reply, :error, state}
@@ -43,11 +49,25 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
     end
   end
 
+  def handle_call(:refresh_games, _from, state) do
+    case load_individual_sheet("games") do
+      {:ok, data} ->
+        {:reply, {:ok, data},
+         %{
+           state
+           | data: Map.put(state.data, "games", parse_sheet("games", data))
+         }}
+
+      :error ->
+        {:reply, :error, state}
+    end
+  end
+
   @impl true
   def handle_info(:load_google_sheet, %{retry_count: retry_count} = state) do
     Logger.info("Started loading sheets")
 
-    case load_all_sheets() do
+    case load_spreadsheet() do
       {:ok, sheets} ->
         schedule_sheet_processing()
         {:noreply, %{state | retry_count: 0, sheets: sheets}}
@@ -61,7 +81,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
 
   @impl true
   def handle_info(:process_next_sheet, %{sheets: [current_sheet | remaining_sheets]} = state) do
-    case load_sheet_data(current_sheet) do
+    case load_individual_sheet(current_sheet) do
       {:ok, data} ->
         schedule_sheet_processing()
 
@@ -70,7 +90,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
            state
            | sheets: remaining_sheets,
              current_sheet: current_sheet,
-             data: Map.put(data, current_sheet, parse_sheet(current_sheet, data))
+             data: Map.put(state.data, current_sheet, parse_sheet(current_sheet, data))
          }}
 
       :error ->
@@ -82,7 +102,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
   @impl true
   def handle_info(:process_next_sheet, %{sheets: []} = state) do
     Logger.info("Finished loading sheets!")
-    load_games(state.data["games"])
+    resume_games(state.data["games"])
     {:noreply, state}
   end
 
@@ -99,12 +119,12 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
     end
   end
 
-  defp load_games(rows) do
-    Enum.each(rows, fn row ->
-      if is_nil(row.finished) and Application.get_env(:spitegear, :env) == :prod do
+  defp resume_games(games) do
+    Enum.each(games, fn game ->
+      if is_nil(game.finished) and Application.get_env(:spitegear, :env) == :prod do
         DynamicSupervisor.start_child(
           GameSupervisor,
-          Spitegear.Worker.GamePoller.child_spec(game_id: row.game_id)
+          Spitegear.Worker.GamePoller.child_spec(game_id: game.game_id)
         )
       end
     end)
@@ -120,7 +140,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
     Process.send_after(self(), :process_next_sheet, 200)
   end
 
-  defp load_all_sheets do
+  defp load_spreadsheet do
     case API.get_spreadsheet(@spreadsheet_id) do
       {:ok, response} ->
         sheets = Enum.map(response["sheets"], fn sheet -> sheet["properties"]["title"] end)
@@ -131,7 +151,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
     end
   end
 
-  defp load_sheet_data(sheet_name) do
+  defp load_individual_sheet(sheet_name) do
     case API.get_individual_sheet(@spreadsheet_id, sheet_name) do
       {:ok, %Finch.Response{status: 200, body: body}} ->
         data = Jason.decode!(body)

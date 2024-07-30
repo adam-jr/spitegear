@@ -33,6 +33,7 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("Initializing #{__MODULE__} with game_id #{game_id}")
     Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
 
+    update_spreadsheet()
     schedule_work()
 
     {:ok, %{@state | game_id: game_id}}
@@ -49,6 +50,7 @@ defmodule Spitegear.Worker.GamePoller do
           |> maybe_announce_winners()
 
         if Enum.any?(view_screen.winners) do
+          update_spreadsheet()
           finish_game(game_id)
           {:stop, :normal, nil}
         else
@@ -58,6 +60,16 @@ defmodule Spitegear.Worker.GamePoller do
 
       _ ->
         schedule_work()
+        {:noreply, state}
+    end
+  end
+
+  def handle_info(:update_spreadsheet, state) do
+    case ViewScreen.get_game(state.game_id) do
+      {:ok, view_screen} ->
+        Spitegear.GoogleSpreadsheets.Sheets.Games.update_or_create_row(view_screen)
+
+      _ ->
         {:noreply, state}
     end
   end
@@ -122,6 +134,10 @@ defmodule Spitegear.Worker.GamePoller do
     end
 
     state
+  end
+
+  defp update_spreadsheet do
+    send(self(), :update_spreadsheet)
   end
 
   defp finish_game(_game_id) do

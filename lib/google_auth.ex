@@ -83,7 +83,6 @@ defmodule GoogleAuth do
         {:ok, token, expires_at}
 
       {:error, reason} ->
-        IO.inspect(reason, label: "Token exchange error")
         {:error, reason}
     end
   end

@@ -4,6 +4,7 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Turns do
 
   defmodule Row do
     use Ecto.Schema
+    require Logger
 
     @primary_key false
     embedded_schema do
@@ -20,10 +21,23 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Turns do
         index: index,
         game_id: get_val(row, 0),
         player: Spitegear.HTML.Player.from_name(get_val(row, 1)),
-        started: get_val(row, 2),
-        reminded: get_val(row, 3),
+        started: datetime(get_val(row, 2)),
+        reminded: datetime(get_val(row, 3)),
         reminders: get_val(row, 4)
       }
+    end
+
+    defp datetime(nil), do: nil
+
+    defp datetime(str) do
+      case DateTime.from_iso8601(str) do
+        {:ok, datetime, _offset} ->
+          datetime
+
+        {:error, reason} ->
+          Logger.error("failed to cast to DateTime: #{reason}")
+          nil
+      end
     end
 
     defp get_val(row, index), do: val(Enum.at(row, index))
@@ -31,6 +45,16 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Turns do
     defp val(""), do: nil
     defp val(str) when is_binary(str), do: str
     defp val(_), do: nil
+  end
+
+  defp to_data(turn) do
+    [
+      turn.game_id,
+      turn.player.name,
+      turn.started,
+      turn.reminded,
+      turn.reminders
+    ]
   end
 
   def update_or_create_row(%__MODULE__.Row{} = turn) do
@@ -51,16 +75,6 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Turns do
       GoogleSpreadsheets.Reader.refresh_sheet(:turns)
       res
     end
-  end
-
-  defp to_data(turn) do
-    [
-      turn.game_id,
-      turn.player.name,
-      turn.started,
-      turn.reminded,
-      turn.reminders
-    ]
   end
 
   def from_data([_headers | rest]) do

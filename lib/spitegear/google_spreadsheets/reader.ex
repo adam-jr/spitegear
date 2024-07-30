@@ -15,12 +15,22 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  def get_row(sheet_name, game_id) do
+    case get_sheet(sheet_name) do
+      {:ok, rows} ->
+        Enum.find(rows, fn row -> row.game_id == game_id end)
+
+      _ ->
+        nil
+    end
+  end
+
   def get_sheet(sheet_name) do
     GenServer.call(__MODULE__, {:get_sheet, sheet_name})
   end
 
-  def refresh_sheet(:games) do
-    GenServer.call(__MODULE__, {:refresh, :games})
+  def refresh_sheet(sheet_name) do
+    GenServer.call(__MODULE__, {:refresh, sheet_name})
   end
 
   def start_games do
@@ -136,7 +146,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
 
   defp resume_games(games) do
     Enum.each(games, fn game ->
-      if is_nil(game.finished) and Application.get_env(:spitegear, :env) == :prod do
+      if is_nil(game.finished) do
         DynamicSupervisor.start_child(
           GameSupervisor,
           Spitegear.Worker.GamePoller.child_spec(game_id: game.game_id)

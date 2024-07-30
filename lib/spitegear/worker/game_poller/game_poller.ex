@@ -95,14 +95,17 @@ defmodule Spitegear.Worker.GamePoller do
       Logger.info("Notifying #{player.name} of turn...")
       Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
-      %{
-        state
-        | current_turn: %Turn{
-            game_id: state.game_id,
-            player: player,
-            reminded_at: DateTime.utc_now()
-          }
+      turn = %Spitegear.GoogleSpreadsheets.Sheets.Turns.Row{
+        game_id: state.game_id,
+        player: state.view_screen.current_player,
+        started: DateTime.utc_now(),
+        reminded: DateTime.utc_now(),
+        reminders: 0
       }
+
+      Turns.update_or_create_row(turn)
+
+      %{state | current_turn: turn}
     else
       state
     end

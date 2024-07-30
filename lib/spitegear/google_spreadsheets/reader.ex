@@ -50,7 +50,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   end
 
   def handle_call(:refresh_games, _from, state) do
-    case load_sheet_data("games") do
+    case load_individual_sheet("games") do
       {:ok, data} ->
         {:reply, {:ok, data},
          %{
@@ -67,7 +67,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   def handle_info(:load_google_sheet, %{retry_count: retry_count} = state) do
     Logger.info("Started loading sheets")
 
-    case load_all_sheets() do
+    case load_spreadsheet() do
       {:ok, sheets} ->
         schedule_sheet_processing()
         {:noreply, %{state | retry_count: 0, sheets: sheets}}
@@ -81,7 +81,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
 
   @impl true
   def handle_info(:process_next_sheet, %{sheets: [current_sheet | remaining_sheets]} = state) do
-    case load_sheet_data(current_sheet) do
+    case load_individual_sheet(current_sheet) do
       {:ok, data} ->
         schedule_sheet_processing()
 
@@ -102,7 +102,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
   @impl true
   def handle_info(:process_next_sheet, %{sheets: []} = state) do
     Logger.info("Finished loading sheets!")
-    load_games(state.data["games"])
+    resume_games(state.data["games"])
     {:noreply, state}
   end
 
@@ -119,12 +119,12 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
     end
   end
 
-  defp load_games(rows) do
-    Enum.each(rows, fn row ->
-      if is_nil(row.finished) and Application.get_env(:spitegear, :env) == :prod do
+  defp resume_games(games) do
+    Enum.each(games, fn game ->
+      if is_nil(game.finished) and Application.get_env(:spitegear, :env) == :prod do
         DynamicSupervisor.start_child(
           GameSupervisor,
-          Spitegear.Worker.GamePoller.child_spec(game_id: row.game_id)
+          Spitegear.Worker.GamePoller.child_spec(game_id: game.game_id)
         )
       end
     end)
@@ -140,7 +140,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
     Process.send_after(self(), :process_next_sheet, 200)
   end
 
-  defp load_all_sheets do
+  defp load_spreadsheet do
     case API.get_spreadsheet(@spreadsheet_id) do
       {:ok, response} ->
         sheets = Enum.map(response["sheets"], fn sheet -> sheet["properties"]["title"] end)
@@ -151,7 +151,7 @@ defmodule Spitegear.GoogleSpreadsheets.Reader do
     end
   end
 
-  defp load_sheet_data(sheet_name) do
+  defp load_individual_sheet(sheet_name) do
     case API.get_individual_sheet(@spreadsheet_id, sheet_name) do
       {:ok, %Finch.Response{status: 200, body: body}} ->
         data = Jason.decode!(body)

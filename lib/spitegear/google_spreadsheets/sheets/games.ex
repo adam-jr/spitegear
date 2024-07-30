@@ -13,7 +13,10 @@ defmodule Spitegear.GoogleSpreadsheets.Sheets.Games do
         end
 
       data = to_data(view_screen)
-      res = API.update_cells(GoogleSpreadsheets.Reader.spreadsheet_id(), "games", range(index), [data])
+
+      res =
+        API.update_cells(GoogleSpreadsheets.Reader.spreadsheet_id(), "games", range(index), [data])
+
       GoogleSpreadsheets.Reader.refresh_games()
       res
     end

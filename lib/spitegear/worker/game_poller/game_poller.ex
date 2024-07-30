@@ -68,6 +68,7 @@ defmodule Spitegear.Worker.GamePoller do
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         Spitegear.GoogleSpreadsheets.Sheets.Games.update_or_create_row(view_screen)
+        {:noreply, state}
 
       _ ->
         {:noreply, state}

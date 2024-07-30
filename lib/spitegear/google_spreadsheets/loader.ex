@@ -70,7 +70,7 @@ defmodule Spitegear.GoogleSpreadsheets.Loader do
            state
            | sheets: remaining_sheets,
              current_sheet: current_sheet,
-             data: Map.put(data, current_sheet, parse_sheet(current_sheet, data))
+             data: Map.put(state.data, current_sheet, parse_sheet(current_sheet, data))
          }}
 
       :error ->

@@ -143,6 +143,8 @@ defmodule Spitegear.Worker.GamePoller do
     %{state | current_turn: turn}
   end
 
+  defp new_turn?(%{view_screen: %{current_player: nil}}), do: false
+
   defp new_turn?(%{current_turn: %{player: %{name: name}}, view_screen: view_screen}) do
     name != view_screen.current_player.name
   end

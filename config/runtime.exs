@@ -65,6 +65,11 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
+  config :spitegear, Spitegear.Scheduler,
+    jobs: [
+      {"0 0 * * *", {Spitegear.Worker.CryptoBreadthPoller, :perform, []}}
+    ]
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key

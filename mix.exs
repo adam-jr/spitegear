@@ -60,7 +60,8 @@ defmodule Spitegear.MixProject do
       {:jason, "~> 1.2"},
       {:jose, "~> 1.11"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.2"}
+      {:bandit, "~> 1.2"},
+      {:quantum, "~> 3.0"}
     ]
   end
 

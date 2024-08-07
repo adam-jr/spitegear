@@ -20,6 +20,7 @@ defmodule Spitegear.Application do
       SpitegearWeb.Endpoint,
       Spitegear.Worker.SlackMessenger,
       Spitegear.GoogleSpreadsheets.Reader,
+      Spitegear.Scheduler,
       GoogleAuth
     ]
 

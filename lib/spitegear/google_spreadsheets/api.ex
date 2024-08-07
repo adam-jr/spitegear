@@ -34,7 +34,7 @@ defmodule Spitegear.GoogleSpreadsheets.API do
         "https://sheets.googleapis.com/v4/spreadsheets/#{spreadsheet_id}/values/#{sheet_name}:append?valueInputOption=USER_ENTERED"
       )
 
-    body = Jason.encode!(%{"values" => [data]})
+    body = Jason.encode!(%{"values" => data})
 
     Finch.build(:post, url, headers(), body)
     |> Finch.request(:google_spreadsheets)

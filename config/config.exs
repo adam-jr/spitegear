@@ -84,6 +84,12 @@ config :spitegear, Spitegear.Slack.API,
     adam: "U1LBVMGUU"
   ]
 
+config :spitegear, Spitegear.TradingView.API,
+  url: URI.parse("https://scanner.tradingview.com"),
+  endpoints: [
+    crypto_coins: "/coin/scan"
+  ]
+
 config :spitegear, :env, config_env()
 
 # Import environment specific config. This must remain at the bottom

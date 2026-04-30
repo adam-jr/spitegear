@@ -10,6 +10,7 @@ import Config
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 config :spitegear,
+  ecto_repos: [Spitegear.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint

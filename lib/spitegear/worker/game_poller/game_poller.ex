@@ -32,7 +32,7 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("Initializing #{__MODULE__} with game_id #{game_id}")
     Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
 
-    update_spreadsheet()
+    update_game()
     update_current_turn()
     schedule_work()
 
@@ -50,7 +50,7 @@ defmodule Spitegear.Worker.GamePoller do
           |> maybe_announce_winners()
 
         if Enum.any?(view_screen.winners) do
-          update_spreadsheet()
+          update_game()
           finish_game(game_id)
           {:stop, :normal, nil}
         else
@@ -64,10 +64,10 @@ defmodule Spitegear.Worker.GamePoller do
     end
   end
 
-  def handle_info(:update_spreadsheet, state) do
+  def handle_info(:update_game, state) do
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
-        Spitegear.GoogleSpreadsheets.Sheets.Games.update_or_create_row(view_screen)
+        Spitegear.Games.upsert_game(view_screen)
         {:noreply, state}
 
       _ ->
@@ -76,17 +76,15 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   def handle_info(:update_current_turn, state) do
-    row = Spitegear.GoogleSpreadsheets.Reader.get_row(:turns, state.game_id)
-    {:noreply, %{state | current_turn: row}}
+    turn = Spitegear.Games.get_current_turn(state.game_id)
+    {:noreply, %{state | current_turn: turn}}
   end
 
   def handle_info({:ssl_closed, _}, state) do
     {:noreply, state}
   end
 
-  def update_current_turn do
-    send(self(), :update_current_turn)
-  end
+  def update_current_turn, do: send(self(), :update_current_turn)
 
   def update_status(state) do
     if state.view_screen.current_player do
@@ -138,7 +136,7 @@ defmodule Spitegear.Worker.GamePoller do
         reminders: state.current_turn.reminders + 1
     }
 
-    Spitegear.GoogleSpreadsheets.Sheets.Turns.update_or_create_row(turn)
+    Spitegear.Games.upsert_turn(turn)
 
     %{state | current_turn: turn}
   end
@@ -158,7 +156,7 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("Notifying #{player.name} of turn...")
     Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
-    turn = %Spitegear.GoogleSpreadsheets.Sheets.Turns.Row{
+    turn = %Spitegear.Turn{
       game_id: state.game_id,
       player: state.view_screen.current_player,
       started: DateTime.utc_now(),
@@ -166,18 +164,14 @@ defmodule Spitegear.Worker.GamePoller do
       reminders: 0
     }
 
-    Spitegear.GoogleSpreadsheets.Sheets.Turns.update_or_create_row(turn)
+    Spitegear.Games.upsert_turn(turn)
 
     %{state | current_turn: turn}
   end
 
-  defp update_spreadsheet do
-    send(self(), :update_spreadsheet)
-  end
+  defp update_game, do: send(self(), :update_game)
 
-  defp finish_game(_game_id) do
-    # update google sheet w/ winners and date etc
-  end
+  defp finish_game(_game_id), do: :ok
 
   defp schedule_work, do: Process.send_after(self(), :work, @interval)
 

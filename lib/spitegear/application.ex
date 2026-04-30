@@ -9,19 +9,15 @@ defmodule Spitegear.Application do
   def start(_type, _args) do
     children = [
       SpitegearWeb.Telemetry,
+      Spitegear.Repo,
       {DNSCluster, query: Application.get_env(:spitegear, :dns_cluster_query) || :ignore},
       {DynamicSupervisor, name: GameSupervisor, strategy: :one_for_one},
       {Phoenix.PubSub, name: Spitegear.PubSub},
-      # Start the Finch HTTP client for sending emails
       {Finch, name: Spitegear.Finch},
-      # Start a worker by calling: Spitegear.Worker.start_link(arg)
-      # {Spitegear.Worker, arg},
-      # Start to serve requests, typically the last entry
       SpitegearWeb.Endpoint,
       Spitegear.Worker.SlackMessenger,
-      Spitegear.GoogleSpreadsheets.Reader,
       Spitegear.Scheduler,
-      GoogleAuth
+      {Task, &Spitegear.Games.resume_games/0}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

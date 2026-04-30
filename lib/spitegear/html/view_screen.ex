@@ -14,7 +14,7 @@ defmodule Spitegear.HTML.ViewScreen do
   def get_game(game_id) do
     with base_url <- URI.parse("https://www.wargear.net"),
          url <- %{base_url | path: "/games/view/#{game_id}"},
-         {:ok, %{body: body}} <- HTTPoison.get(url),
+         {:ok, %{body: body}} <- HTTPoison.get(url, [{"Cookie", wargear_cookie()}]),
          {:ok, document} <- Floki.parse_document(body),
          {:ok, card} <- get_next_card(document),
          {:ok, game_name} <- game_name(document),
@@ -138,4 +138,8 @@ defmodule Spitegear.HTML.ViewScreen do
   end
 
   def get_player_rows(_), do: :error
+
+  defp wargear_cookie do
+    Application.get_env(:spitegear, Spitegear.Wargear.API)[:cookie] || ""
+  end
 end

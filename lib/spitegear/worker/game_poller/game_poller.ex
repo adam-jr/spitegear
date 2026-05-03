@@ -98,6 +98,8 @@ defmodule Spitegear.Worker.GamePoller do
     {:noreply, state}
   end
 
+  def name(game_id), do: :"#{__MODULE__}_#{game_id}"
+
   def update_current_turn, do: send(self(), :update_current_turn)
 
   def update_status(state) do

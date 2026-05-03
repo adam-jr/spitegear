@@ -77,5 +77,5 @@ defmodule Spitegear.Games do
     end)
   end
 
-  defp poller_name(game_id), do: :"Spitegear.Worker.GamePoller_#{game_id}"
+  defp poller_name(game_id), do: Spitegear.Worker.GamePoller.name(game_id)
 end

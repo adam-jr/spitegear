@@ -1,5 +1,4 @@
 NETWORK = fnh_data_network
-DB_CONTAINER = postgres
 APP_CONTAINER = spitegear
 
 build:
@@ -9,7 +8,6 @@ up-app:
 	docker run -d --name $(APP_CONTAINER) \
 		--network $(NETWORK) \
 		--env-file $(HOME)/spitegear/.env \
-		-e PGHOST=$(DB_CONTAINER) \
 		-p 4001:4001 \
 		$(APP_CONTAINER)
 
@@ -21,4 +19,7 @@ down: down-app
 
 deploy: build down-app up-app
 
-.PHONY: build up-app down-app down deploy
+remote:
+	docker exec -it $(APP_CONTAINER) /app/bin/spitegear remote
+
+.PHONY: build up-app down-app down deploy remote

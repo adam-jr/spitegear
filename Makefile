@@ -7,6 +7,7 @@ build:
 up-app:
 	docker run -d --name $(APP_CONTAINER) \
 		--network $(NETWORK) \
+		--restart unless-stopped \
 		--env-file $(HOME)/spitegear/.env \
 		-p 4001:4001 \
 		$(APP_CONTAINER)

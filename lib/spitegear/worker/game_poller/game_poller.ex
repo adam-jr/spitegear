@@ -127,7 +127,7 @@ defmodule Spitegear.Worker.GamePoller do
   # 3 hours
   @horizon_seconds 3 * 60 * 60
   defp reminder_due?(%{current_turn: %{reminded: reminded_time}}) do
-    current_time_utc = DateTime.utc_now()
+    current_time_utc = DateTime.utc_now() |> DateTime.truncate(:second)
 
     {:ok, current_time_chicago} = DateTime.shift_zone(current_time_utc, "America/Chicago")
     current_hour_chicago = current_time_chicago.hour
@@ -147,7 +147,7 @@ defmodule Spitegear.Worker.GamePoller do
 
     turn = %{
       state.current_turn
-      | reminded: DateTime.utc_now(),
+      | reminded: DateTime.utc_now() |> DateTime.truncate(:second),
         reminders: state.current_turn.reminders + 1
     }
 
@@ -174,8 +174,8 @@ defmodule Spitegear.Worker.GamePoller do
     turn = %Spitegear.Turn{
       game_id: state.game_id,
       player: state.view_screen.current_player,
-      started: DateTime.utc_now(),
-      reminded: DateTime.utc_now(),
+      started: DateTime.utc_now() |> DateTime.truncate(:second),
+      reminded: DateTime.utc_now() |> DateTime.truncate(:second),
       reminders: 0
     }
 

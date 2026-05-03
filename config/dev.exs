@@ -3,7 +3,7 @@ import Config
 config :spitegear, Spitegear.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "localhost",
+  hostname: System.get_env("PGHOST", "localhost"),
   database: "spitegear_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,

@@ -1,4 +1,4 @@
-name: Deploy to Fly.io
+name: Deploy to Beelink
 
 on:
   push:
@@ -8,17 +8,19 @@ on:
 jobs:
   deploy:
     name: Deploy app
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Set Fly.io Secrets
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          GSS_PRIVATE_KEY: ${{ secrets.GSS_PRIVATE_KEY }}
+      - name: Write env file
         run: |
-          echo "${GSS_PRIVATE_KEY}" | flyctl secrets set GSS_PRIVATE_KEY=-
-      - run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          echo "SLACK_AUTH_TOKEN=${{ secrets.SLACK_AUTH_TOKEN }}" > $HOME/spitegear/.env
+
+      - name: Pull latest code
+        run: |
+          cd $HOME/spitegear
+          git pull origin main
+
+      - name: Build and restart
+        run: |
+          cd $HOME/spitegear
+          make deploy

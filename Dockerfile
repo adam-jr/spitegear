@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.18.4-erlang-28.0.3-debian-bullseye-20231009-slim
+FROM hexpm/elixir:1.18.4-erlang-28.0.2-debian-bullseye-20260421-slim
 
 RUN apt-get update -y && apt-get install -y build-essential git \
     && apt-get clean && rm -f /var/lib/apt/lists/*_*

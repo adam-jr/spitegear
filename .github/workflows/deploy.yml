@@ -13,7 +13,14 @@ jobs:
     steps:
       - name: Write env file
         run: |
-          echo "SLACK_AUTH_TOKEN=${{ secrets.SLACK_AUTH_TOKEN }}" > $HOME/spitegear/.env
+          cat > $HOME/spitegear/.env << EOF
+          SLACK_AUTH_TOKEN=${{ secrets.SLACK_AUTH_TOKEN }}
+          SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}
+          DATABASE_URL=ecto://postgres:postgres@postgres/spitegear_dev
+          PHX_HOST=spitegear.duckdns.org
+          PORT=4001
+          PHX_SERVER=true
+          EOF
 
       - name: Pull latest code
         run: |

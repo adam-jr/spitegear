@@ -43,6 +43,31 @@ defmodule Spitegear.Games do
     )
   end
 
+  def add_game(game_id) do
+    Repo.insert(%Game{game_id: game_id},
+      on_conflict: :nothing,
+      conflict_target: :game_id
+    )
+  end
+
+  def start_poller(game_id) do
+    DynamicSupervisor.start_child(
+      GameSupervisor,
+      Spitegear.Worker.GamePoller.child_spec(game_id: game_id)
+    )
+  end
+
+  def stop_poller(game_id) do
+    case Process.whereis(poller_name(game_id)) do
+      nil -> :ok
+      pid -> DynamicSupervisor.terminate_child(GameSupervisor, pid)
+    end
+  end
+
+  def poller_alive?(game_id) do
+    Process.whereis(poller_name(game_id)) != nil
+  end
+
   def resume_games do
     Enum.each(list_active_games(), fn game ->
       DynamicSupervisor.start_child(
@@ -51,4 +76,6 @@ defmodule Spitegear.Games do
       )
     end)
   end
+
+  defp poller_name(game_id), do: :"Spitegear.Worker.GamePoller_#{game_id}"
 end

@@ -10,7 +10,8 @@ defmodule SpitegearWeb.AdminLive do
      assign(socket,
        cookie: Settings.get(@cookie_key) || "",
        api_key: Settings.get(@api_key_key) || "",
-       saved: nil
+       saved: nil,
+       revealed: MapSet.new()
      )}
   end
 
@@ -24,14 +25,31 @@ defmodule SpitegearWeb.AdminLive do
     {:noreply, assign(socket, api_key: value, saved: :api_key)}
   end
 
+  def handle_event("toggle_reveal", %{"key" => key}, socket) do
+    revealed =
+      if MapSet.member?(socket.assigns.revealed, key) do
+        MapSet.delete(socket.assigns.revealed, key)
+      else
+        MapSet.put(socket.assigns.revealed, key)
+      end
+
+    {:noreply, assign(socket, revealed: revealed)}
+  end
+
+  defp revealed?(revealed, key), do: MapSet.member?(revealed, key)
+
   def render(assigns) do
     ~H"""
     <div class="max-w-xl mx-auto mt-16 p-6 flex flex-col gap-10">
-      <h1 class="text-2xl font-bold">Admin</h1>
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Admin</h1>
+        <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
+      </div>
 
       <section>
-        <h2 class="text-lg font-semibold mb-4">Wargear API Key</h2>
-        <form phx-submit="save_api_key" class="flex flex-col gap-4">
+        <h2 class="text-lg font-semibold mb-3">Wargear API Key</h2>
+        <.secret_row key={@api_key_key} value={@api_key} revealed={revealed?(@revealed, @api_key_key)} />
+        <form phx-submit="save_api_key" class="flex flex-col gap-4 mt-4">
           <input
             type="text"
             name="api_key"
@@ -51,8 +69,9 @@ defmodule SpitegearWeb.AdminLive do
       </section>
 
       <section>
-        <h2 class="text-lg font-semibold mb-4">Wargear Session Cookie</h2>
-        <form phx-submit="save_cookie" class="flex flex-col gap-4">
+        <h2 class="text-lg font-semibold mb-3">Wargear Session Cookie</h2>
+        <.secret_row key={@cookie_key} value={@cookie} revealed={revealed?(@revealed, @cookie_key)} />
+        <form phx-submit="save_cookie" class="flex flex-col gap-4 mt-4">
           <textarea
             name="cookie"
             rows="4"
@@ -72,4 +91,35 @@ defmodule SpitegearWeb.AdminLive do
     </div>
     """
   end
+
+  defp secret_row(assigns) do
+    ~H"""
+    <div class="flex items-center gap-3 font-mono text-sm bg-gray-50 border border-gray-200 rounded p-2">
+      <span class="flex-1 truncate text-gray-700">
+        <%= if @revealed, do: @value, else: mask(@value) %>
+      </span>
+      <button
+        type="button"
+        phx-click="toggle_reveal"
+        phx-value-key={@key}
+        class="text-xs text-blue-600 hover:underline shrink-0"
+      >
+        <%= if @revealed, do: "Hide", else: "Reveal" %>
+      </button>
+      <%= if @revealed and @value != "" do %>
+        <button
+          type="button"
+          data-value={@value}
+          onclick="navigator.clipboard.writeText(this.dataset.value).then(() => { this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 1500) })"
+          class="text-xs text-gray-500 hover:underline shrink-0"
+        >
+          Copy
+        </button>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp mask(""), do: "—"
+  defp mask(value), do: String.slice(value, 0, 6) <> String.duplicate("•", 20)
 end

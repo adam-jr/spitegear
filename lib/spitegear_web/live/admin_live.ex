@@ -48,7 +48,7 @@ defmodule SpitegearWeb.AdminLive do
 
       <section>
         <h2 class="text-lg font-semibold mb-3">Wargear API Key</h2>
-        <.secret_row key={@api_key_key} value={@api_key} revealed={revealed?(@revealed, @api_key_key)} />
+        <.secret_row key="wargear_api_key" value={@api_key} revealed={revealed?(@revealed, "wargear_api_key")} />
         <form phx-submit="save_api_key" class="flex flex-col gap-4 mt-4">
           <input
             type="text"
@@ -70,7 +70,7 @@ defmodule SpitegearWeb.AdminLive do
 
       <section>
         <h2 class="text-lg font-semibold mb-3">Wargear Session Cookie</h2>
-        <.secret_row key={@cookie_key} value={@cookie} revealed={revealed?(@revealed, @cookie_key)} />
+        <.secret_row key="wargear_cookie" value={@cookie} revealed={revealed?(@revealed, "wargear_cookie")} />
         <form phx-submit="save_cookie" class="flex flex-col gap-4 mt-4">
           <textarea
             name="cookie"

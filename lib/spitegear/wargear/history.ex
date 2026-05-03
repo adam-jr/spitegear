@@ -8,8 +8,8 @@ defmodule Spitegear.Wargear.History do
 
     with {:ok, %{body: body, status_code: 200}} <-
            HTTPoison.get(url(game_id), [], params: [api_key: api_key, format: "json"]),
-         {:ok, %{"turns" => turns}} <- Jason.decode(body) do
-      {:ok, turns}
+         {:ok, %{"history" => %{"turn" => turns}}} <- Jason.decode(body) do
+      {:ok, Enum.map(turns, & &1["@attributes"])}
     else
       {:ok, %{status_code: status}} -> {:error, {:http, status}}
       {:error, reason} -> {:error, reason}
@@ -18,7 +18,8 @@ defmodule Spitegear.Wargear.History do
 
   def latest_turn(game_id) do
     with {:ok, turns} <- get(game_id) do
-      {:ok, turns |> Enum.max_by(& &1["turnid"], fn -> nil end)}
+      latest = Enum.max_by(turns, &String.to_integer(&1["turnid"]), fn -> nil end)
+      {:ok, latest}
     end
   end
 

@@ -103,7 +103,11 @@ defmodule Spitegear.HTML.Player do
   defp player_name(tr) do
     {"tr", [], tds} = tr
     player_td = Enum.at(tds, 2)
-    {"td", _, [{"a", _, [player_name]}]} = player_td
-    player_name
+
+    [player_td]
+    |> Floki.find("a")
+    |> List.first()
+    |> Floki.text()
+    |> String.trim()
   end
 end

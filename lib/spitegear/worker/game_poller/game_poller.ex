@@ -2,6 +2,7 @@ defmodule Spitegear.Worker.GamePoller do
   use GenServer
 
   alias Spitegear.HTML.ViewScreen
+  alias Spitegear.Wargear.History
 
   require Logger
 
@@ -12,6 +13,7 @@ defmodule Spitegear.Worker.GamePoller do
     view_screen: nil,
     dead_players: [],
     current_turn: nil,
+    last_turn_id: nil,
     status: :players_joining
   }
 
@@ -39,23 +41,35 @@ defmodule Spitegear.Worker.GamePoller do
     {:ok, %{@state | game_id: game_id}}
   end
 
-  def handle_info(:work, %{game_id: game_id} = state) do
-    case ViewScreen.get_game(game_id) do
-      {:ok, view_screen} ->
-        state =
-          %{state | view_screen: view_screen}
-          |> update_status()
-          |> update_turn()
-          |> update_eliminated()
-          |> maybe_announce_winners()
+  def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
+    case History.latest_turn(game_id) do
+      {:ok, %{"turnid" => ^last_turn_id}} ->
+        state = maybe_remind(state)
+        schedule_work()
+        {:noreply, state}
 
-        if Enum.any?(view_screen.winners) do
-          update_game()
-          finish_game(game_id)
-          {:stop, :normal, nil}
-        else
-          schedule_work()
-          {:noreply, state}
+      {:ok, %{"turnid" => turn_id}} ->
+        case ViewScreen.get_game(game_id) do
+          {:ok, view_screen} ->
+            state =
+              %{state | view_screen: view_screen, last_turn_id: turn_id}
+              |> update_status()
+              |> update_turn()
+              |> update_eliminated()
+              |> maybe_announce_winners()
+
+            if Enum.any?(view_screen.winners) do
+              update_game()
+              finish_game(game_id)
+              {:stop, :normal, nil}
+            else
+              schedule_work()
+              {:noreply, state}
+            end
+
+          _ ->
+            schedule_work()
+            {:noreply, %{state | last_turn_id: turn_id}}
         end
 
       _ ->
@@ -94,18 +108,19 @@ defmodule Spitegear.Worker.GamePoller do
     end
   end
 
+  defp maybe_remind(%{status: s} = state) when s != :in_progress, do: state
+
+  defp maybe_remind(state) do
+    if reminder_due?(state), do: remind_player(state), else: state
+  end
+
   defp update_turn(%{status: s} = state) when s != :in_progress, do: state
 
   defp update_turn(state) do
     cond do
-      new_turn?(state) ->
-        new_turn(state)
-
-      reminder_due?(state) ->
-        remind_player(state)
-
-      true ->
-        state
+      new_turn?(state) -> new_turn(state)
+      reminder_due?(state) -> remind_player(state)
+      true -> state
     end
   end
 

@@ -140,6 +140,7 @@ defmodule Spitegear.HTML.ViewScreen do
   def get_player_rows(_), do: :error
 
   defp wargear_cookie do
-    Application.get_env(:spitegear, Spitegear.Wargear.API)[:cookie] || ""
+    Spitegear.Settings.get("wargear_cookie") ||
+      Application.get_env(:spitegear, Spitegear.Wargear.API)[:cookie] || ""
   end
 end

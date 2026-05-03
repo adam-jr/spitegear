@@ -27,7 +27,10 @@ defmodule SpitegearWeb.AdminLive do
   def render(assigns) do
     ~H"""
     <div class="max-w-xl mx-auto mt-16 p-6 flex flex-col gap-10">
-      <h1 class="text-2xl font-bold">Admin</h1>
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Admin</h1>
+        <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
+      </div>
 
       <section>
         <h2 class="text-lg font-semibold mb-4">Wargear API Key</h2>

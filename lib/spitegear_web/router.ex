@@ -20,6 +20,7 @@ defmodule SpitegearWeb.Router do
     get "/", PageController, :home
     get "/ping", PingController, :ping
     live "/admin", AdminLive
+    live "/admin/games", AdminGamesLive
   end
 
   # Other scopes may use custom stacks.

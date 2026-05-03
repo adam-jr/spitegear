@@ -1,13 +1,13 @@
 defmodule Spitegear.Wargear.History do
   alias Spitegear.Settings
 
-  @base_url "https://www.wargear.net"
+  @base_url "https://www.wargear.net/rest"
 
   def get(game_id) do
     api_key = Settings.get("wargear_api_key")
 
     with {:ok, %{body: body, status_code: 200}} <-
-           HTTPoison.get(url(game_id), [], params: [api_key: api_key, format: "JSON"]),
+           HTTPoison.get(url(game_id), [], params: [api_key: api_key, format: "json"]),
          {:ok, %{"turns" => turns}} <- Jason.decode(body) do
       {:ok, turns}
     else

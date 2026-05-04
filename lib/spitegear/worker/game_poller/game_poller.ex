@@ -7,6 +7,7 @@ defmodule Spitegear.Worker.GamePoller do
   require Logger
 
   @interval :timer.seconds(20)
+  @view_screen_interval :timer.minutes(5)
 
   @state %{
     game_id: nil,
@@ -14,7 +15,8 @@ defmodule Spitegear.Worker.GamePoller do
     dead_players: [],
     current_turn: nil,
     last_turn_id: nil,
-    status: :players_joining
+    status: :players_joining,
+    view_screen_timer: nil
   }
 
   def child_spec(game_id: game_id) do
@@ -49,32 +51,28 @@ defmodule Spitegear.Worker.GamePoller do
         {:noreply, state}
 
       {:ok, %{"turnid" => turn_id}} ->
-        case ViewScreen.get_game(game_id) do
-          {:ok, view_screen} ->
-            state =
-              %{state | view_screen: view_screen, last_turn_id: turn_id}
-              |> update_status()
-              |> update_turn()
-              |> update_eliminated()
-              |> maybe_announce_winners()
+        if state.view_screen_timer, do: Process.cancel_timer(state.view_screen_timer)
+        state = %{state | last_turn_id: turn_id, view_screen_timer: nil}
 
-            if Enum.any?(view_screen.winners) do
-              update_game()
-              finish_game(game_id)
-              {:stop, :normal, nil}
-            else
-              schedule_work()
-              {:noreply, state}
-            end
+        case fetch_view_screen(state) do
+          {:stop, state} ->
+            {:stop, :normal, state}
 
-          _ ->
+          {:continue, state} ->
             schedule_work()
-            {:noreply, %{state | last_turn_id: turn_id}}
+            {:noreply, state}
         end
 
       _ ->
         schedule_work()
         {:noreply, state}
+    end
+  end
+
+  def handle_info(:poll_view_screen, state) do
+    case fetch_view_screen(state) do
+      {:stop, state} -> {:stop, :normal, state}
+      {:continue, state} -> {:noreply, state}
     end
   end
 
@@ -107,6 +105,32 @@ defmodule Spitegear.Worker.GamePoller do
       %{state | status: :in_progress}
     else
       state
+    end
+  end
+
+  defp fetch_view_screen(state) do
+    case ViewScreen.get_game(state.game_id) do
+      {:ok, view_screen} ->
+        state =
+          %{state | view_screen: view_screen}
+          |> update_status()
+          |> update_turn()
+          |> update_eliminated()
+          |> maybe_announce_winners()
+
+        if Enum.any?(view_screen.winners) do
+          update_game()
+          finish_game(state.game_id)
+          {:stop, state}
+        else
+          timer = Process.send_after(self(), :poll_view_screen, @view_screen_interval)
+          {:continue, %{state | view_screen_timer: timer}}
+        end
+
+      error ->
+        Logger.error("#{__MODULE__} ViewScreen.get_game failed for game #{state.game_id}: #{inspect(error)}")
+        timer = Process.send_after(self(), :poll_view_screen, @view_screen_interval)
+        {:continue, %{state | view_screen_timer: timer}}
     end
   end
 

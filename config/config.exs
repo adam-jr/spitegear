@@ -76,7 +76,8 @@ config :spitegear, Spitegear.Slack.API,
   ],
   channel_ids: [
     spitegear: "C014W8DN81X",
-    spitegear_test: "C07EC4D76JW"
+    spitegear_test: "C07EC4D76JW",
+    spitegear_alerts: "REPLACE_WITH_CHANNEL_ID"
   ],
   dm_ids: [
     adam: "D014TFY2K6W"

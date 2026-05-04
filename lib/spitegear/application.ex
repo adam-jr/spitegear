@@ -23,7 +23,11 @@ defmodule Spitegear.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Spitegear.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    with {:ok, _} = result <- Supervisor.start_link(children, opts) do
+      :logger.add_handler(:slack_errors, Spitegear.Logger.SlackErrorHandler, %{level: :error})
+      result
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration

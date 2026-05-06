@@ -8,6 +8,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   @interval :timer.seconds(20)
   @view_screen_interval :timer.minutes(5)
+  @view_screen_max_polls 6
 
   @state %{
     game_id: nil,
@@ -16,7 +17,8 @@ defmodule Spitegear.Worker.GamePoller do
     current_turn: nil,
     last_turn_id: nil,
     status: :players_joining,
-    view_screen_timer: nil
+    view_screen_timer: nil,
+    view_screen_polls_remaining: 0
   }
 
   def child_spec(game_id: game_id) do
@@ -52,7 +54,7 @@ defmodule Spitegear.Worker.GamePoller do
 
       {:ok, %{"turnid" => turn_id}} ->
         if state.view_screen_timer, do: Process.cancel_timer(state.view_screen_timer)
-        state = %{state | last_turn_id: turn_id, view_screen_timer: nil}
+        state = %{state | last_turn_id: turn_id, view_screen_timer: nil, view_screen_polls_remaining: @view_screen_max_polls}
 
         case fetch_view_screen(state) do
           {:stop, state} ->
@@ -109,10 +111,12 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp fetch_view_screen(state) do
+    polls_remaining = state.view_screen_polls_remaining - 1
+
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         state =
-          %{state | view_screen: view_screen}
+          %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
           |> update_status()
           |> update_turn()
           |> update_eliminated()
@@ -123,16 +127,22 @@ defmodule Spitegear.Worker.GamePoller do
           finish_game(state.game_id)
           {:stop, state}
         else
-          timer = Process.send_after(self(), :poll_view_screen, @view_screen_interval)
-          {:continue, %{state | view_screen_timer: timer}}
+          {timer, remaining} = maybe_schedule_view_screen_poll(polls_remaining)
+          {:continue, %{state | view_screen_timer: timer, view_screen_polls_remaining: remaining}}
         end
 
       error ->
         Logger.error("#{__MODULE__} ViewScreen.get_game failed for game #{state.game_id}: #{inspect(error)}")
-        timer = Process.send_after(self(), :poll_view_screen, @view_screen_interval)
-        {:continue, %{state | view_screen_timer: timer}}
+        {timer, remaining} = maybe_schedule_view_screen_poll(polls_remaining)
+        {:continue, %{state | view_screen_timer: timer, view_screen_polls_remaining: remaining}}
     end
   end
+
+  defp maybe_schedule_view_screen_poll(remaining) when remaining > 0 do
+    {Process.send_after(self(), :poll_view_screen, @view_screen_interval), remaining}
+  end
+
+  defp maybe_schedule_view_screen_poll(_), do: {nil, 0}
 
   defp maybe_remind(%{status: s} = state) when s != :in_progress, do: state
 

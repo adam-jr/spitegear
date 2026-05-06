@@ -7,8 +7,8 @@ defmodule Spitegear.Worker.GamePoller do
   require Logger
 
   @interval :timer.seconds(20)
-  @view_screen_interval :timer.minutes(5)
-  @view_screen_max_polls 6
+  @view_screen_interval :timer.minutes(1)
+  @view_screen_max_polls 10
 
   @state %{
     game_id: nil,

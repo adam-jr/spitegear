@@ -19,7 +19,8 @@ defmodule Spitegear.Worker.GamePoller do
     status: :players_joining,
     view_screen_timer: nil,
     view_screen_polls_remaining: 0,
-    moving_announced: false
+    moving_announced: false,
+    last_stats_round: 0
   }
 
   def child_spec(game_id: game_id) do
@@ -230,20 +231,16 @@ defmodule Spitegear.Worker.GamePoller do
     ended = DateTime.utc_now() |> DateTime.truncate(:second)
     Spitegear.Games.record_completed_turn(state.current_turn, ended)
 
-    active_players = length(state.view_screen.players) - length(state.view_screen.eliminated)
-    round_size = active_players * 5
+    completed = Spitegear.Games.completed_rounds(state.game_id)
 
-    if round_size > 0 do
-      turn_count = Spitegear.Games.completed_turn_count(state.game_id)
-
-      if rem(turn_count, round_size) == 0 do
-        stats = Spitegear.Games.turn_stats(state.game_id)
-        text = Spitegear.Slack.Message.text(:turn_stats, stats, state.game_id)
-        Spitegear.PubSub.msg(:spitegear, text)
-      end
+    if completed > 0 && rem(completed, 5) == 0 && completed != state.last_stats_round do
+      stats = Spitegear.Games.turn_stats(state.game_id)
+      text = Spitegear.Slack.Message.text(:turn_stats, stats, state.game_id)
+      Spitegear.PubSub.msg(:spitegear, text)
+      %{state | last_stats_round: completed}
+    else
+      state
     end
-
-    state
   end
 
   defp maybe_announce_moving(%{current_turn: nil} = state), do: state
@@ -281,7 +278,10 @@ defmodule Spitegear.Worker.GamePoller do
         state
 
       newly_dead ->
+        now = DateTime.utc_now() |> DateTime.truncate(:second)
+
         Enum.each(newly_dead, fn player ->
+          Spitegear.Games.record_death(state.game_id, player.name, now)
           text = Spitegear.Slack.Message.text(:player_died, player, state.game_id)
           Spitegear.PubSub.msg(:spitegear, text)
         end)

@@ -36,9 +36,10 @@ defmodule Spitegear.Games do
         player_name: turn.player.name,
         started: turn.started,
         reminded: turn.reminded,
-        reminders: turn.reminders
+        reminders: turn.reminders,
+        moving_announced: turn.moving_announced
       },
-      on_conflict: {:replace, [:player_name, :started, :reminded, :reminders, :updated_at]},
+      on_conflict: {:replace, [:player_name, :started, :reminded, :reminders, :moving_announced, :updated_at]},
       conflict_target: :game_id
     )
   end

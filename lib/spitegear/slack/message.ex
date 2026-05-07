@@ -1,27 +1,37 @@
 defmodule Spitegear.Slack.Message do
   def text(:kind_reminder, turn),
     do:
-      "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
+      "#{handle(turn.player)} #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
 
-  @spec text(
-          :game_started | :next_turn,
-          atom()
-          | {atom() | %{:slack_name => any(), optional(any()) => any()}, any()}
-          | %{:game_id => any(), :name => any(), optional(any()) => any()}
-        ) :: <<_::64, _::_*8>>
   def text(:game_started, game),
     do:
       "I wuv you, waiting to start #{game.name} https://www.wargear.net/games/view/#{game.game_id} 🧸💕"
 
   def text(:next_turn, {player, game_id}),
     do:
-      "<#{player.slack_name}>, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
+      "#{handle(player)}, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
+
+  def text(:player_moving, player),
+    do: "#{handle(player)} is taking their turn! 👀"
 
   def text(:player_died, player, game_id),
-    do: "<#{player.slack_name}> died in https://www.wargear.net/games/view/#{game_id}"
+    do: "#{handle(player)} died in https://www.wargear.net/games/view/#{game_id}"
 
   def text(:game_winners, players, game_id),
     do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
+
+  def text(:turn_stats, stats, game_id) do
+    total = Enum.sum(Enum.map(stats, & &1.count))
+
+    lines =
+      stats
+      |> Enum.map(fn s ->
+        "#{s.player_name}: avg #{format_duration(s.avg_seconds)}, fastest #{format_duration(s.fastest_seconds)}, slowest #{format_duration(s.slowest_seconds)}"
+      end)
+      |> Enum.join("\n")
+
+    "*Turn stats after #{total} turns — game ##{game_id}*\n#{lines}"
+  end
 
   def text(:cards_traded, name, last_card), do: "#{name} just traded for #{last_card} units"
 
@@ -43,11 +53,22 @@ defmodule Spitegear.Slack.Message do
     """
   end
 
+  defp format_duration(seconds) when seconds < 60, do: "#{seconds}s"
+
+  defp format_duration(seconds) when seconds < 3600 do
+    "#{div(seconds, 60)}m"
+  end
+
+  defp format_duration(seconds) do
+    h = div(seconds, 3600)
+    m = div(rem(seconds, 3600), 60)
+    if m > 0, do: "#{h}h#{m}m", else: "#{h}h"
+  end
+
+  defp handle(player), do: String.trim_leading(player.slack_name, "@")
+
   defp slack_names(players) do
-    Enum.map(players, fn player ->
-      "<#{player.slack_name}>"
-    end)
-    |> Enum.join(" and ")
+    players |> Enum.map(&handle/1) |> Enum.join(" and ")
   end
 
   defp winning_gif(_game_id) do

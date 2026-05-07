@@ -92,7 +92,8 @@ defmodule Spitegear.Worker.GamePoller do
 
   def handle_info(:update_current_turn, state) do
     turn = Spitegear.Games.get_current_turn(state.game_id)
-    {:noreply, %{state | current_turn: turn}}
+    moving_announced = if turn, do: turn.moving_announced, else: false
+    {:noreply, %{state | current_turn: turn, moving_announced: moving_announced}}
   end
 
   def handle_info({:ssl_closed, _}, state) do
@@ -260,7 +261,9 @@ defmodule Spitegear.Worker.GamePoller do
       Logger.info("#{current_turn.player.name} is taking their turn...")
       text = Spitegear.Slack.Message.text(:player_moving, current_turn.player)
       Spitegear.PubSub.msg(:spitegear, text)
-      %{state | moving_announced: true}
+      turn = %{current_turn | moving_announced: true}
+      Spitegear.Games.upsert_turn(turn)
+      %{state | moving_announced: true, current_turn: turn}
     else
       state
     end

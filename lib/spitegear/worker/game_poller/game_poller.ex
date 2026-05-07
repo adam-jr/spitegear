@@ -234,7 +234,10 @@ defmodule Spitegear.Worker.GamePoller do
     history = [entry | state.turn_history]
     turn_count = state.turn_count + 1
 
-    if rem(turn_count, 5) == 0 do
+    active_players = length(state.view_screen.players) - length(state.view_screen.eliminated)
+    round_size = active_players * 5
+
+    if round_size > 0 && rem(turn_count, round_size) == 0 do
       text = Spitegear.Slack.Message.text(:turn_stats, history, state.game_id)
       Spitegear.PubSub.msg(:spitegear, text)
     end

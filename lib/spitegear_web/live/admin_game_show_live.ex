@@ -1,0 +1,193 @@
+defmodule SpitegearWeb.AdminGameShowLive do
+  use SpitegearWeb, :live_view
+  alias Spitegear.Games
+
+  @refresh_interval 10_000
+
+  def mount(%{"game_id" => game_id}, _session, socket) do
+    if connected?(socket), do: Process.send_after(self(), :refresh, @refresh_interval)
+    {:ok, assign(socket, load(game_id))}
+  end
+
+  def handle_info(:refresh, socket) do
+    Process.send_after(self(), :refresh, @refresh_interval)
+    {:noreply, assign(socket, load(socket.assigns.game_id))}
+  end
+
+  def handle_event("start_poller", _params, socket) do
+    Games.start_poller(socket.assigns.game_id)
+    {:noreply, assign(socket, load(socket.assigns.game_id))}
+  end
+
+  def handle_event("stop_poller", _params, socket) do
+    Games.stop_poller(socket.assigns.game_id)
+    {:noreply, assign(socket, load(socket.assigns.game_id))}
+  end
+
+  defp load(game_id) do
+    game = Games.get_game(game_id)
+    turn = Games.get_current_turn(game_id)
+    history = Games.list_turn_history(game_id)
+    stats = Games.turn_stats(game_id)
+    total_turns = Games.completed_turn_count(game_id)
+    poller_alive = Games.poller_alive?(game_id)
+
+    %{
+      game_id: game_id,
+      game: game,
+      turn: turn,
+      history: history,
+      stats: stats,
+      total_turns: total_turns,
+      poller_alive: poller_alive
+    }
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div class="max-w-4xl mx-auto mt-16 p-6 flex flex-col gap-10">
+      <div class="flex items-center justify-between">
+        <div>
+          <a href="/admin/games" class="text-sm text-blue-600 hover:underline">← Games</a>
+          <h1 class="text-2xl font-bold mt-1">
+            <%= if @game, do: @game.game_name, else: "Game #{@game_id}" %>
+          </h1>
+          <%= if @game && @game.board_name do %>
+            <p class="text-sm text-gray-500"><%= @game.board_name %></p>
+          <% end %>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class={if @poller_alive, do: "text-green-600 text-sm font-medium", else: "text-gray-400 text-sm"}>
+            <%= if @poller_alive, do: "● polling", else: "○ stopped" %>
+          </span>
+          <%= if @poller_alive do %>
+            <button phx-click="stop_poller" class="text-sm text-red-600 hover:underline">Stop</button>
+          <% else %>
+            <button phx-click="start_poller" class="text-sm text-blue-600 hover:underline">Start</button>
+          <% end %>
+          <a
+            href={"https://www.wargear.net/games/view/#{@game_id}"}
+            target="_blank"
+            class="text-sm text-blue-600 hover:underline"
+          >
+            wargear.net ↗
+          </a>
+        </div>
+      </div>
+
+      <section class="grid grid-cols-2 gap-6">
+        <div class="border border-gray-200 rounded p-4">
+          <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Current Turn</h2>
+          <%= if @turn do %>
+            <p class="text-xl font-bold"><%= @turn.player.name %></p>
+            <p class="text-sm text-gray-500"><%= @turn.player.slack_name %></p>
+            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <dt class="text-gray-500">Started</dt>
+              <dd><%= format_datetime(@turn.started) %></dd>
+              <dt class="text-gray-500">Duration</dt>
+              <dd><%= elapsed(@turn.started) %></dd>
+              <dt class="text-gray-500">Reminders</dt>
+              <dd><%= @turn.reminders %></dd>
+            </dl>
+          <% else %>
+            <p class="text-gray-400 text-sm">No active turn</p>
+          <% end %>
+        </div>
+
+        <div class="border border-gray-200 rounded p-4">
+          <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Game Stats</h2>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <dt class="text-gray-500">Game ID</dt>
+            <dd class="font-mono"><%= @game_id %></dd>
+            <dt class="text-gray-500">Completed turns</dt>
+            <dd><%= @total_turns %></dd>
+            <%= if @game && @game.created do %>
+              <dt class="text-gray-500">Created</dt>
+              <dd><%= @game.created %></dd>
+            <% end %>
+          </dl>
+        </div>
+      </section>
+
+      <%= if Enum.any?(@stats) do %>
+        <section>
+          <h2 class="text-lg font-semibold mb-3">Turn Stats</h2>
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="text-left border-b border-gray-200">
+                <th class="pb-2 pr-4">Player</th>
+                <th class="pb-2 pr-4">Turns</th>
+                <th class="pb-2 pr-4">Avg</th>
+                <th class="pb-2 pr-4">Fastest</th>
+                <th class="pb-2">Slowest</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for s <- @stats do %>
+                <tr class="border-b border-gray-100">
+                  <td class="py-1 pr-4"><%= s.player_name %></td>
+                  <td class="py-1 pr-4"><%= s.count %></td>
+                  <td class="py-1 pr-4"><%= format_duration(s.avg_seconds) %></td>
+                  <td class="py-1 pr-4"><%= format_duration(s.fastest_seconds) %></td>
+                  <td class="py-1"><%= format_duration(s.slowest_seconds) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </section>
+      <% end %>
+
+      <%= if Enum.any?(@history) do %>
+        <section>
+          <h2 class="text-lg font-semibold mb-3">Recent Turns</h2>
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="text-left border-b border-gray-200">
+                <th class="pb-2 pr-4">Player</th>
+                <th class="pb-2 pr-4">Started</th>
+                <th class="pb-2">Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for t <- @history do %>
+                <tr class="border-b border-gray-100">
+                  <td class="py-1 pr-4"><%= t.player_name %></td>
+                  <td class="py-1 pr-4"><%= format_datetime(t.started) %></td>
+                  <td class="py-1"><%= format_duration(DateTime.diff(t.ended, t.started)) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </section>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp format_datetime(nil), do: "—"
+
+  defp format_datetime(dt) do
+    dt
+    |> DateTime.shift_zone!("America/Chicago")
+    |> Calendar.strftime("%b %d %I:%M %p")
+  end
+
+  defp elapsed(nil), do: "—"
+
+  defp elapsed(started) do
+    diff = DateTime.diff(DateTime.utc_now(), started)
+    format_duration(diff)
+  end
+
+  defp format_duration(seconds) when seconds < 60, do: "#{seconds}s"
+
+  defp format_duration(seconds) when seconds < 3600 do
+    "#{div(seconds, 60)}m"
+  end
+
+  defp format_duration(seconds) do
+    h = div(seconds, 3600)
+    m = div(rem(seconds, 3600), 60)
+    if m > 0, do: "#{h}h #{m}m", else: "#{h}h"
+  end
+end

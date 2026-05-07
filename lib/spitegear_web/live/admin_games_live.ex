@@ -83,7 +83,7 @@ defmodule SpitegearWeb.AdminGamesLive do
               <%= for %{game: game, turn: turn, poller_alive: alive} <- @games do %>
                 <tr class="border-b border-gray-100 align-middle">
                   <td class="py-2 pr-4 font-mono">
-                    <a href={"https://www.wargear.net/games/view/#{game.game_id}"} target="_blank" class="text-blue-600 hover:underline">
+                    <a href={"/admin/games/#{game.game_id}"} class="text-blue-600 hover:underline">
                       <%= game.game_id %>
                     </a>
                   </td>

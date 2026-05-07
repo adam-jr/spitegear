@@ -76,6 +76,19 @@ defmodule Spitegear.Games do
     Repo.aggregate(from(t in TurnHistory, where: t.game_id == ^game_id), :count)
   end
 
+  def get_game(game_id) do
+    Repo.get_by(Game, game_id: game_id)
+  end
+
+  def list_turn_history(game_id, limit \\ 30) do
+    Repo.all(
+      from t in TurnHistory,
+        where: t.game_id == ^game_id,
+        order_by: [desc: t.started],
+        limit: ^limit
+    )
+  end
+
   def add_game(game_id) do
     Repo.insert(%Game{game_id: game_id},
       on_conflict: :nothing,

@@ -18,7 +18,10 @@ defmodule Spitegear.Worker.GamePoller do
     last_turn_id: nil,
     status: :players_joining,
     view_screen_timer: nil,
-    view_screen_polls_remaining: 0
+    view_screen_polls_remaining: 0,
+    turn_history: [],
+    turn_count: 0,
+    moving_announced: false
   }
 
   def child_spec(game_id: game_id) do
@@ -117,6 +120,7 @@ defmodule Spitegear.Worker.GamePoller do
       {:ok, view_screen} ->
         state =
           %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
+          |> maybe_announce_moving()
           |> update_status()
           |> update_turn()
           |> update_eliminated()
@@ -207,6 +211,8 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("Notifying #{player.name} of turn...")
     Spitegear.PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
+    state = record_completed_turn(state)
+
     turn = %Spitegear.Turn{
       game_id: state.game_id,
       player: state.view_screen.current_player,
@@ -217,7 +223,43 @@ defmodule Spitegear.Worker.GamePoller do
 
     Spitegear.Games.upsert_turn(turn)
 
-    %{state | current_turn: turn}
+    %{state | current_turn: turn, moving_announced: false}
+  end
+
+  defp record_completed_turn(%{current_turn: nil} = state), do: state
+
+  defp record_completed_turn(state) do
+    duration = DateTime.diff(DateTime.utc_now() |> DateTime.truncate(:second), state.current_turn.started)
+    entry = %{player_name: state.current_turn.player.name, duration_seconds: duration}
+    history = [entry | state.turn_history]
+    turn_count = state.turn_count + 1
+
+    if rem(turn_count, 5) == 0 do
+      text = Spitegear.Slack.Message.text(:turn_stats, history, state.game_id)
+      Spitegear.PubSub.msg(:spitegear, text)
+    end
+
+    %{state | turn_history: history, turn_count: turn_count}
+  end
+
+  defp maybe_announce_moving(%{current_turn: nil} = state), do: state
+  defp maybe_announce_moving(%{moving_announced: true} = state), do: state
+
+  defp maybe_announce_moving(state) do
+    %{view_screen: view_screen, current_turn: current_turn} = state
+
+    same_player? =
+      view_screen.current_player != nil &&
+        view_screen.current_player.name == current_turn.player.name
+
+    if same_player? && current_turn.reminders >= 1 do
+      Logger.info("#{current_turn.player.name} is taking their turn...")
+      text = Spitegear.Slack.Message.text(:player_moving, current_turn.player)
+      Spitegear.PubSub.msg(:spitegear, text)
+      %{state | moving_announced: true}
+    else
+      state
+    end
   end
 
   defp update_game, do: send(self(), :update_game)

@@ -3,12 +3,6 @@ defmodule Spitegear.Slack.Message do
     do:
       "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
 
-  @spec text(
-          :game_started | :next_turn,
-          atom()
-          | {atom() | %{:slack_name => any(), optional(any()) => any()}, any()}
-          | %{:game_id => any(), :name => any(), optional(any()) => any()}
-        ) :: <<_::64, _::_*8>>
   def text(:game_started, game),
     do:
       "I wuv you, waiting to start #{game.name} https://www.wargear.net/games/view/#{game.game_id} 🧸💕"
@@ -17,11 +11,31 @@ defmodule Spitegear.Slack.Message do
     do:
       "<#{player.slack_name}>, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
 
+  def text(:player_moving, player),
+    do: "<#{player.slack_name}> is taking their turn! 👀"
+
   def text(:player_died, player, game_id),
     do: "<#{player.slack_name}> died in https://www.wargear.net/games/view/#{game_id}"
 
   def text(:game_winners, players, game_id),
     do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
+
+  def text(:turn_stats, history, game_id) do
+    lines =
+      history
+      |> Enum.group_by(& &1.player_name)
+      |> Enum.map(fn {name, turns} ->
+        durations = Enum.map(turns, & &1.duration_seconds)
+        avg = Enum.sum(durations) |> div(length(durations))
+        fastest = Enum.min(durations)
+        slowest = Enum.max(durations)
+        "#{name}: avg #{format_duration(avg)}, fastest #{format_duration(fastest)}, slowest #{format_duration(slowest)}"
+      end)
+      |> Enum.sort()
+      |> Enum.join("\n")
+
+    "*Turn stats after #{length(history)} turns — game ##{game_id}*\n#{lines}"
+  end
 
   def text(:cards_traded, name, last_card), do: "#{name} just traded for #{last_card} units"
 
@@ -41,6 +55,18 @@ defmodule Spitegear.Slack.Message do
     *Games Won by #{player.name}: #{Enum.count(wins)}*
     #{lines}
     """
+  end
+
+  defp format_duration(seconds) when seconds < 60, do: "#{seconds}s"
+
+  defp format_duration(seconds) when seconds < 3600 do
+    "#{div(seconds, 60)}m"
+  end
+
+  defp format_duration(seconds) do
+    h = div(seconds, 3600)
+    m = div(rem(seconds, 3600), 60)
+    if m > 0, do: "#{h}h#{m}m", else: "#{h}h"
   end
 
   defp slack_names(players) do

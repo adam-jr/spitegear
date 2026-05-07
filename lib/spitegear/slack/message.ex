@@ -1,7 +1,7 @@
 defmodule Spitegear.Slack.Message do
   def text(:kind_reminder, turn),
     do:
-      "#{handle(turn.player)} #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
+      "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
 
   def text(:game_started, game),
     do:
@@ -9,13 +9,13 @@ defmodule Spitegear.Slack.Message do
 
   def text(:next_turn, {player, game_id}),
     do:
-      "#{handle(player)}, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
+      "<#{player.slack_name}>, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
 
   def text(:player_moving, player),
     do: "#{handle(player)} is taking their turn! 👀"
 
   def text(:player_died, player, game_id),
-    do: "#{handle(player)} died in https://www.wargear.net/games/view/#{game_id}"
+    do: "<#{player.slack_name}> died in https://www.wargear.net/games/view/#{game_id}"
 
   def text(:game_winners, players, game_id),
     do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
@@ -68,7 +68,7 @@ defmodule Spitegear.Slack.Message do
   defp handle(player), do: String.trim_leading(player.slack_name, "@")
 
   defp slack_names(players) do
-    players |> Enum.map(&handle/1) |> Enum.join(" and ")
+    players |> Enum.map(&"<#{&1.slack_name}>") |> Enum.join(" and ")
   end
 
   defp winning_gif(_game_id) do

@@ -1,7 +1,9 @@
 defmodule Spitegear.GamesTest do
   use Spitegear.DataCase, async: true
 
-  alias Spitegear.{Repo, Games, Game, Turn}
+  import Ecto.Query
+
+  alias Spitegear.{Repo, Games, Game, Turn, TurnHistory, GameDeath}
   alias Spitegear.HTML.ViewScreen
 
   defp build_view_screen(attrs \\ []) do
@@ -119,5 +121,131 @@ defmodule Spitegear.GamesTest do
       Games.upsert_turn(build_turn(reminders: 2))
       assert Games.get_current_turn("11111").reminders == 2
     end
+  end
+
+  describe "record_completed_turn/2" do
+    test "inserts a turn_history record with correct fields" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      ended = now |> DateTime.add(300)
+      turn = build_turn(started: now)
+
+      assert {:ok, record} = Games.record_completed_turn(turn, ended)
+      assert record.game_id == "11111"
+      assert record.player_name == "adam jormp jomp"
+      assert record.started == now
+      assert record.ended == ended
+    end
+
+    test "allows multiple history records for the same game and player" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      turn = build_turn(started: now)
+
+      Games.record_completed_turn(turn, DateTime.add(now, 100))
+      Games.record_completed_turn(turn, DateTime.add(now, 200))
+
+      assert Repo.aggregate(TurnHistory, :count) == 2
+    end
+  end
+
+  describe "record_death/3" do
+    test "inserts a game_death record" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      assert {:ok, death} = Games.record_death("11111", "adam", now)
+      assert death.game_id == "11111"
+      assert death.player_name == "adam"
+      assert death.eliminated_at == now
+    end
+
+    test "is idempotent — second insert is a no-op" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      {:ok, _} = Games.record_death("11111", "adam", now)
+      {:ok, _} = Games.record_death("11111", "adam", now)
+
+      assert Repo.aggregate(from(d in GameDeath, where: d.game_id == "11111"), :count) == 1
+    end
+  end
+
+  describe "completed_rounds/1" do
+    test "returns 0 with no turn history" do
+      assert Games.completed_rounds("11111") == 0
+    end
+
+    test "returns minimum turn count across all active players" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      insert_turns("11111", "adam", now, 3)
+      insert_turns("11111", "bob", now, 2)
+
+      assert Games.completed_rounds("11111") == 2
+    end
+
+    test "excludes eliminated players from the calculation" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      insert_turns("11111", "adam", now, 5)
+      insert_turns("11111", "bob", now, 2)
+      Games.record_death("11111", "bob", now)
+
+      assert Games.completed_rounds("11111") == 5
+    end
+
+    test "returns 5 at the five-round boundary (triggers stats post)" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      insert_turns("11111", "adam", now, 5)
+      insert_turns("11111", "bob", now, 5)
+
+      completed = Games.completed_rounds("11111")
+      assert completed == 5
+      assert rem(completed, 5) == 0
+    end
+
+    test "does not reach 5 until all active players complete round 5" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      insert_turns("11111", "adam", now, 5)
+      insert_turns("11111", "bob", now, 4)
+
+      assert Games.completed_rounds("11111") == 4
+    end
+  end
+
+  describe "turn_stats/1" do
+    test "returns avg, fastest, and slowest durations per player" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      insert_turns_with_durations("11111", "adam", now, [60, 120, 180])
+
+      stats = Games.turn_stats("11111")
+      assert length(stats) == 1
+
+      [s] = stats
+      assert s.player_name == "adam"
+      assert s.count == 3
+      assert s.avg_seconds == 120
+      assert s.fastest_seconds == 60
+      assert s.slowest_seconds == 180
+    end
+
+    test "returns stats for multiple players sorted by name" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      insert_turns_with_durations("11111", "zara", now, [100])
+      insert_turns_with_durations("11111", "adam", now, [200])
+
+      stats = Games.turn_stats("11111")
+      assert Enum.map(stats, & &1.player_name) == ["adam", "zara"]
+    end
+  end
+
+  defp insert_turns(game_id, player_name, base_time, count) do
+    for i <- 1..count do
+      started = DateTime.add(base_time, (i - 1) * 600)
+      ended = DateTime.add(base_time, i * 600 - 1)
+      Repo.insert!(%TurnHistory{game_id: game_id, player_name: player_name, started: started, ended: ended})
+    end
+  end
+
+  defp insert_turns_with_durations(game_id, player_name, base_time, durations) do
+    Enum.reduce(durations, base_time, fn duration, offset ->
+      started = offset
+      ended = DateTime.add(offset, duration)
+      Repo.insert!(%TurnHistory{game_id: game_id, player_name: player_name, started: started, ended: ended})
+      DateTime.add(ended, 60)
+    end)
   end
 end

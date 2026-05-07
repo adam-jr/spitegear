@@ -20,21 +20,17 @@ defmodule Spitegear.Slack.Message do
   def text(:game_winners, players, game_id),
     do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
 
-  def text(:turn_stats, history, game_id) do
+  def text(:turn_stats, stats, game_id) do
+    total = Enum.sum(Enum.map(stats, & &1.count))
+
     lines =
-      history
-      |> Enum.group_by(& &1.player_name)
-      |> Enum.map(fn {name, turns} ->
-        durations = Enum.map(turns, & &1.duration_seconds)
-        avg = Enum.sum(durations) |> div(length(durations))
-        fastest = Enum.min(durations)
-        slowest = Enum.max(durations)
-        "#{name}: avg #{format_duration(avg)}, fastest #{format_duration(fastest)}, slowest #{format_duration(slowest)}"
+      stats
+      |> Enum.map(fn s ->
+        "#{s.player_name}: avg #{format_duration(s.avg_seconds)}, fastest #{format_duration(s.fastest_seconds)}, slowest #{format_duration(s.slowest_seconds)}"
       end)
-      |> Enum.sort()
       |> Enum.join("\n")
 
-    "*Turn stats after #{length(history)} turns — game ##{game_id}*\n#{lines}"
+    "*Turn stats after #{total} turns — game ##{game_id}*\n#{lines}"
   end
 
   def text(:cards_traded, name, last_card), do: "#{name} just traded for #{last_card} units"

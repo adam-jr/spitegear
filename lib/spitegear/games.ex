@@ -1,6 +1,6 @@
 defmodule Spitegear.Games do
   import Ecto.Query
-  alias Spitegear.{Repo, Game, Turn}
+  alias Spitegear.{Repo, Game, Turn, TurnHistory}
 
   def list_active_games do
     Repo.all(from g in Game, where: is_nil(g.finished))
@@ -41,6 +41,39 @@ defmodule Spitegear.Games do
       on_conflict: {:replace, [:player_name, :started, :reminded, :reminders, :updated_at]},
       conflict_target: :game_id
     )
+  end
+
+  def record_completed_turn(turn, ended) do
+    Repo.insert(%TurnHistory{
+      game_id: turn.game_id,
+      player_name: turn.player.name,
+      started: turn.started,
+      ended: ended
+    })
+  end
+
+  def turn_stats(game_id) do
+    Repo.all(
+      from t in TurnHistory,
+        where: t.game_id == ^game_id,
+        select: %{player_name: t.player_name, started: t.started, ended: t.ended}
+    )
+    |> Enum.group_by(& &1.player_name)
+    |> Enum.map(fn {player_name, turns} ->
+      durations = Enum.map(turns, &DateTime.diff(&1.ended, &1.started))
+      %{
+        player_name: player_name,
+        count: length(turns),
+        avg_seconds: Enum.sum(durations) |> div(length(durations)),
+        fastest_seconds: Enum.min(durations),
+        slowest_seconds: Enum.max(durations)
+      }
+    end)
+    |> Enum.sort_by(& &1.player_name)
+  end
+
+  def completed_turn_count(game_id) do
+    Repo.aggregate(from(t in TurnHistory, where: t.game_id == ^game_id), :count)
   end
 
   def add_game(game_id) do

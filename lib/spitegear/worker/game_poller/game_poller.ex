@@ -19,8 +19,6 @@ defmodule Spitegear.Worker.GamePoller do
     status: :players_joining,
     view_screen_timer: nil,
     view_screen_polls_remaining: 0,
-    turn_history: [],
-    turn_count: 0,
     moving_announced: false
   }
 
@@ -229,20 +227,23 @@ defmodule Spitegear.Worker.GamePoller do
   defp record_completed_turn(%{current_turn: nil} = state), do: state
 
   defp record_completed_turn(state) do
-    duration = DateTime.diff(DateTime.utc_now() |> DateTime.truncate(:second), state.current_turn.started)
-    entry = %{player_name: state.current_turn.player.name, duration_seconds: duration}
-    history = [entry | state.turn_history]
-    turn_count = state.turn_count + 1
+    ended = DateTime.utc_now() |> DateTime.truncate(:second)
+    Spitegear.Games.record_completed_turn(state.current_turn, ended)
 
     active_players = length(state.view_screen.players) - length(state.view_screen.eliminated)
     round_size = active_players * 5
 
-    if round_size > 0 && rem(turn_count, round_size) == 0 do
-      text = Spitegear.Slack.Message.text(:turn_stats, history, state.game_id)
-      Spitegear.PubSub.msg(:spitegear, text)
+    if round_size > 0 do
+      turn_count = Spitegear.Games.completed_turn_count(state.game_id)
+
+      if rem(turn_count, round_size) == 0 do
+        stats = Spitegear.Games.turn_stats(state.game_id)
+        text = Spitegear.Slack.Message.text(:turn_stats, stats, state.game_id)
+        Spitegear.PubSub.msg(:spitegear, text)
+      end
     end
 
-    %{state | turn_history: history, turn_count: turn_count}
+    state
   end
 
   defp maybe_announce_moving(%{current_turn: nil} = state), do: state

@@ -8,6 +8,7 @@ defmodule Spitegear.Turn do
     field :started, :utc_datetime
     field :reminded, :utc_datetime
     field :reminders, :integer, default: 0
+    field :moving_announced, :boolean, default: false
 
     timestamps()
   end

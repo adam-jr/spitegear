@@ -1,6 +1,6 @@
 defmodule Spitegear.Games do
   import Ecto.Query
-  alias Spitegear.{Repo, Game, Turn, TurnHistory}
+  alias Spitegear.{Repo, Game, Turn, TurnHistory, GameDeath}
 
   def list_active_games do
     Repo.all(from g in Game, where: is_nil(g.finished))
@@ -36,9 +36,10 @@ defmodule Spitegear.Games do
         player_name: turn.player.name,
         started: turn.started,
         reminded: turn.reminded,
-        reminders: turn.reminders
+        reminders: turn.reminders,
+        moving_announced: turn.moving_announced
       },
-      on_conflict: {:replace, [:player_name, :started, :reminded, :reminders, :updated_at]},
+      on_conflict: {:replace, [:player_name, :started, :reminded, :reminders, :moving_announced, :updated_at]},
       conflict_target: :game_id
     )
   end
@@ -50,6 +51,29 @@ defmodule Spitegear.Games do
       started: turn.started,
       ended: ended
     })
+  end
+
+  def record_death(game_id, player_name, eliminated_at) do
+    Repo.insert(
+      %GameDeath{game_id: game_id, player_name: player_name, eliminated_at: eliminated_at},
+      on_conflict: :nothing,
+      conflict_target: [:game_id, :player_name]
+    )
+  end
+
+  def completed_rounds(game_id) do
+    dead_names =
+      Repo.all(from d in GameDeath, where: d.game_id == ^game_id, select: d.player_name)
+
+    counts =
+      Repo.all(
+        from t in TurnHistory,
+          where: t.game_id == ^game_id and t.player_name not in ^dead_names,
+          group_by: t.player_name,
+          select: count(t.id)
+      )
+
+    if Enum.empty?(counts), do: 0, else: Enum.min(counts)
   end
 
   def turn_stats(game_id) do

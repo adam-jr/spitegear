@@ -1,4 +1,5 @@
 defmodule Spitegear.PubSub do
+  @moduledoc false
   alias Phoenix.PubSub
 
   def dm(recipient, text),

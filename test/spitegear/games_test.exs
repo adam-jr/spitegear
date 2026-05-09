@@ -3,8 +3,13 @@ defmodule Spitegear.GamesTest do
 
   import Ecto.Query
 
-  alias Spitegear.{Repo, Games, Game, Turn, TurnHistory, GameDeath}
+  alias Spitegear.Game
+  alias Spitegear.GameDeath
+  alias Spitegear.Games
   alias Spitegear.HTML.ViewScreen
+  alias Spitegear.Repo
+  alias Spitegear.Turn
+  alias Spitegear.TurnHistory
 
   defp build_view_screen(attrs \\ []) do
     game_id = Keyword.get(attrs, :game_id, "11111")

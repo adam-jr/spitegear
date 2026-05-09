@@ -1,6 +1,7 @@
 defmodule SpitegearWeb.SlackController do
   use SpitegearWeb, :controller
 
+  alias Spitegear.Worker.GamePoller
   require Logger
 
   def handle_events(conn, %{"type" => "url_verification", "challenge" => challenge}) do
@@ -29,7 +30,7 @@ defmodule SpitegearWeb.SlackController do
   defp start_child(game_id) do
     DynamicSupervisor.start_child(
       GameSupervisor,
-      Spitegear.Worker.GamePoller.child_spec(game_id: game_id)
+      GamePoller.child_spec(game_id: game_id)
     )
   end
 

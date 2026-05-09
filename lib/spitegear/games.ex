@@ -1,6 +1,13 @@
 defmodule Spitegear.Games do
+  @moduledoc false
   import Ecto.Query
-  alias Spitegear.{Repo, Game, Turn, TurnHistory, GameDeath}
+  alias Spitegear.Game
+  alias Spitegear.GameDeath
+  alias Spitegear.HTML.Player
+  alias Spitegear.Repo
+  alias Spitegear.Turn
+  alias Spitegear.TurnHistory
+  alias Spitegear.Worker.GamePoller
 
   def list_active_games do
     Repo.all(from g in Game, where: is_nil(g.finished))
@@ -25,7 +32,7 @@ defmodule Spitegear.Games do
   def get_current_turn(game_id) do
     case Repo.get_by(Turn, game_id: game_id) do
       nil -> nil
-      turn -> %{turn | player: Spitegear.HTML.Player.from_name(turn.player_name)}
+      turn -> %{turn | player: Player.from_name(turn.player_name)}
     end
   end
 
@@ -123,7 +130,7 @@ defmodule Spitegear.Games do
   def start_poller(game_id) do
     DynamicSupervisor.start_child(
       GameSupervisor,
-      Spitegear.Worker.GamePoller.child_spec(game_id: game_id)
+      GamePoller.child_spec(game_id: game_id)
     )
   end
 
@@ -142,10 +149,10 @@ defmodule Spitegear.Games do
     Enum.each(list_active_games(), fn game ->
       DynamicSupervisor.start_child(
         GameSupervisor,
-        Spitegear.Worker.GamePoller.child_spec(game_id: game.game_id)
+        GamePoller.child_spec(game_id: game.game_id)
       )
     end)
   end
 
-  defp poller_name(game_id), do: Spitegear.Worker.GamePoller.name(game_id)
+  defp poller_name(game_id), do: GamePoller.name(game_id)
 end

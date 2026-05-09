@@ -1,4 +1,5 @@
 defmodule Spitegear.Slack.API do
+  @moduledoc false
   def post_message(text, channel \\ :spitegear) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
 

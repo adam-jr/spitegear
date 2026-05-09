@@ -1,4 +1,8 @@
 defmodule Spitegear.HTML.ViewScreen do
+  @moduledoc false
+
+  alias Spitegear.HTML.Player
+
   defstruct game_id: nil,
             url: nil,
             game_name: nil,
@@ -22,7 +26,7 @@ defmodule Spitegear.HTML.ViewScreen do
          {:ok, created} <- created_time(document),
          {:ok, finished} <- finished_time(document),
          {:ok, player_table_rows} <- get_players(document),
-         players <- Enum.map(player_table_rows, &Spitegear.HTML.Player.from_table_row/1) do
+         players <- Enum.map(player_table_rows, &Player.from_table_row/1) do
       {:ok,
        %__MODULE__{
          game_id: game_id,

@@ -1,4 +1,5 @@
 defmodule Spitegear.Release do
+  @moduledoc false
   @app :spitegear
 
   def migrate do

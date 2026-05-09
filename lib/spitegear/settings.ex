@@ -1,4 +1,5 @@
 defmodule Spitegear.Settings do
+  @moduledoc false
   import Ecto.Query
   alias Spitegear.{Repo, Setting}
 

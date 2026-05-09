@@ -1,4 +1,5 @@
 defmodule Spitegear.Wargear.History do
+  @moduledoc false
   alias Spitegear.Settings
 
   @base_url "https://www.wargear.net/rest"

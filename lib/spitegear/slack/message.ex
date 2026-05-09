@@ -1,4 +1,6 @@
 defmodule Spitegear.Slack.Message do
+  @moduledoc false
+
   def text(:kind_reminder, turn),
     do:
       "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
@@ -24,11 +26,9 @@ defmodule Spitegear.Slack.Message do
     total = Enum.sum(Enum.map(stats, & &1.count))
 
     lines =
-      stats
-      |> Enum.map(fn s ->
+      Enum.map_join(stats, "\n", fn s ->
         "#{s.player_name}: avg #{format_duration(s.avg_seconds)}, fastest #{format_duration(s.fastest_seconds)}, slowest #{format_duration(s.slowest_seconds)}"
       end)
-      |> Enum.join("\n")
 
     "*Turn stats after #{total} turns — game ##{game_id}*\n#{lines}"
   end
@@ -37,15 +37,13 @@ defmodule Spitegear.Slack.Message do
 
   def text(:list_wins, player, wins) do
     lines =
-      wins
-      |> Enum.map(fn win ->
+      Enum.map_join(wins, "\n", fn win ->
         if win.game.utc_end_time do
           "<https://www.wargear.net/games/view/#{win.game.game_id}|*#{win.game.name}* - #{DateTime.to_date(win.game.utc_end_time)}>"
         else
           "<https://www.wargear.net/games/view/#{win.game.game_id}|*#{win.game.name}*>"
         end
       end)
-      |> Enum.join("\n")
 
     """
     *Games Won by #{player.name}: #{Enum.count(wins)}*
@@ -68,7 +66,7 @@ defmodule Spitegear.Slack.Message do
   defp handle(player), do: String.trim_leading(player.slack_name, "@")
 
   defp slack_names(players) do
-    players |> Enum.map(&"<#{&1.slack_name}>") |> Enum.join(" and ")
+    Enum.map_join(players, " and ", &"<#{&1.slack_name}>")
   end
 
   defp winning_gif(_game_id) do

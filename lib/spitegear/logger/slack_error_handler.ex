@@ -4,9 +4,11 @@ defmodule Spitegear.Logger.SlackErrorHandler do
   # Erlang :logger handler — posts :error and above to #spitegear-alerts.
   # Registered in Application.start/2 after the supervision tree is up.
 
+  alias Spitegear.Slack.API
+
   def log(%{level: level, msg: msg}, _config) when level in [:error, :critical, :alert, :emergency] do
     channel_id =
-      Application.get_env(:spitegear, Spitegear.Slack.API, [])
+      Application.get_env(:spitegear, API, [])
       |> Keyword.get(:channel_ids, [])
       |> Keyword.get(:spitegear_alerts)
 
@@ -15,7 +17,7 @@ defmodule Spitegear.Logger.SlackErrorHandler do
 
       spawn(fn ->
         try do
-          Spitegear.Slack.API.post_message(":rotating_light: [#{level}] #{text}", :spitegear_alerts)
+          API.post_message(":rotating_light: [#{level}] #{text}", :spitegear_alerts)
         rescue
           _ -> :ok
         catch

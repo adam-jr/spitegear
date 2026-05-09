@@ -3,8 +3,8 @@ defmodule Spitegear.TradingView do
     coins = get_coins(columns)
 
     if is_list(coins) do
-      adv = Enum.filter(coins, fn {_coin, _close, delta} -> delta > 0 end) |> Enum.count()
-      dec = Enum.filter(coins, fn {_coin, _close, delta} -> delta < 0 end) |> Enum.count()
+      adv = Enum.count(coins, fn {_coin, _close, delta} -> delta > 0 end)
+      dec = Enum.count(coins, fn {_coin, _close, delta} -> delta < 0 end)
       {:ok, {adv, dec}}
     else
       :error

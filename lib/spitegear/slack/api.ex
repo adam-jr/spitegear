@@ -14,6 +14,17 @@ defmodule Spitegear.Slack.API do
     HTTPoison.post(url, body, headers)
   end
 
+  def post_blocks(blocks, fallback_text, channel \\ :spitegear) do
+    config = Application.get_env(:spitegear, API)
+    url = %{config[:url] | path: config[:endpoints][:post_message]}
+
+    body =
+      %{channel: channel_id(channel), blocks: blocks, text: fallback_text}
+      |> Jason.encode!()
+
+    HTTPoison.post(url, body, headers())
+  end
+
   def post_dm(text, recipient) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
 

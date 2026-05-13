@@ -1,6 +1,37 @@
 defmodule Spitegear.Slack.Message do
   @moduledoc false
 
+  def blocks(:turn_stats, stats, game_id) do
+    total = Enum.sum(Enum.map(stats, & &1.count))
+    sorted = Enum.sort_by(stats, & &1.avg_seconds, :desc)
+    last_idx = length(sorted) - 1
+
+    shame_lines =
+      sorted
+      |> Enum.with_index()
+      |> Enum.map_join("\n", fn {s, i} ->
+        prefix =
+          cond do
+            i == 0 -> "🐢 "
+            i == last_idx -> "⚡ "
+            true -> "     "
+          end
+
+        "#{prefix}*#{s.player_name}* — avg #{format_duration(s.avg_seconds)}, fastest #{format_duration(s.fastest_seconds)}, slowest #{format_duration(s.slowest_seconds)}"
+      end)
+
+    [
+      %{
+        "type" => "header",
+        "text" => %{"type" => "plain_text", "text" => "📊 Turn Shame — game ##{game_id} (#{total} turns)"}
+      },
+      %{
+        "type" => "section",
+        "text" => %{"type" => "mrkdwn", "text" => shame_lines}
+      }
+    ]
+  end
+
   def text(:kind_reminder, turn),
     do:
       "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"

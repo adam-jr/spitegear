@@ -1,6 +1,8 @@
 defmodule SpitegearWeb.AdminGameShowLive do
   use SpitegearWeb, :live_view
   alias Spitegear.Games
+  alias Spitegear.PubSub
+  alias Spitegear.Slack.Message
 
   @refresh_interval 10_000
 
@@ -22,6 +24,13 @@ defmodule SpitegearWeb.AdminGameShowLive do
   def handle_event("stop_poller", _params, socket) do
     Games.stop_poller(socket.assigns.game_id)
     {:noreply, assign(socket, load(socket.assigns.game_id))}
+  end
+
+  def handle_event("send_test_stats", _params, socket) do
+    blocks = Message.blocks(:turn_stats, socket.assigns.stats, socket.assigns.game_id)
+    fallback = Message.text(:turn_stats, socket.assigns.stats, socket.assigns.game_id)
+    PubSub.msg(:spitegear_test, type: :turn_stats, payload: {blocks, fallback})
+    {:noreply, socket}
   end
 
   defp load(game_id) do
@@ -111,7 +120,12 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
       <%= if Enum.any?(@stats) do %>
         <section>
-          <h2 class="text-lg font-semibold mb-3">Turn Stats</h2>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Turn Stats</h2>
+            <button phx-click="send_test_stats" class="text-sm text-blue-600 hover:underline">
+              Send to #spitegear-test
+            </button>
+          </div>
           <table class="w-full text-sm border-collapse">
             <thead>
               <tr class="text-left border-b border-gray-200">

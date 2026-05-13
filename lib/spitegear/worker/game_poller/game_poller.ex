@@ -247,8 +247,9 @@ defmodule Spitegear.Worker.GamePoller do
 
     if completed > 0 && rem(completed, 5) == 0 && completed != state.last_stats_round do
       stats = Games.turn_stats(state.game_id)
-      text = Message.text(:turn_stats, stats, state.game_id)
-      PubSub.msg(:spitegear, text)
+      blocks = Message.blocks(:turn_stats, stats, state.game_id)
+      fallback = Message.text(:turn_stats, stats, state.game_id)
+      PubSub.msg(:spitegear_test, type: :turn_stats, payload: {blocks, fallback})
       %{state | last_stats_round: completed}
     else
       state

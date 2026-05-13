@@ -15,7 +15,7 @@ defmodule Spitegear.Slack.API do
   end
 
   def post_blocks(blocks, fallback_text, channel \\ :spitegear) do
-    config = Application.get_env(:spitegear, API)
+    config = Application.get_env(:spitegear, __MODULE__)
     url = %{config[:url] | path: config[:endpoints][:post_message]}
 
     body =

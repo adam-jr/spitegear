@@ -52,6 +52,18 @@ defmodule Spitegear.Worker.GamePoller do
     {:ok, %{@state | game_id: game_id}}
   end
 
+  def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
+    case History.latest_turn(game_id) do
+      {:ok, %{"turnid" => turn_id}} ->
+        schedule_work()
+        {:noreply, %{state | last_turn_id: turn_id}}
+
+      _ ->
+        schedule_work()
+        {:noreply, state}
+    end
+  end
+
   def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
     case History.latest_turn(game_id) do
       {:ok, %{"turnid" => ^last_turn_id}} ->

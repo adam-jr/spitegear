@@ -61,6 +61,9 @@ defmodule Spitegear.Slack.Message do
     "*Turn stats after #{rounds} rounds — game ##{game_id}*\n#{lines}"
   end
 
+  def text(:round_complete, game_id, round),
+    do: "⚔️ Round #{round} complete — round #{round + 1} begins! https://www.wargear.net/games/view/#{game_id}"
+
   def text(:cards_traded, name, last_card), do: "#{name} just traded for #{last_card} units"
 
   def text(:list_wins, player, wins) do

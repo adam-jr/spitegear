@@ -25,6 +25,7 @@ defmodule Spitegear.Worker.GamePoller do
     view_screen_timer: nil,
     view_screen_polls_remaining: 0,
     moving_announced: false,
+    last_round: 0,
     last_stats_round: 0
   }
 
@@ -49,7 +50,7 @@ defmodule Spitegear.Worker.GamePoller do
     update_current_turn()
     schedule_work()
 
-    {:ok, %{@state | game_id: game_id}}
+    {:ok, %{@state | game_id: game_id, last_round: Games.completed_rounds(game_id)}}
   end
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
@@ -257,6 +258,20 @@ defmodule Spitegear.Worker.GamePoller do
 
     completed = Games.completed_rounds(state.game_id)
 
+    state
+    |> maybe_announce_round(completed)
+    |> maybe_post_round_stats(completed)
+  end
+
+  defp maybe_announce_round(%{last_round: last_round} = state, completed) when completed > last_round do
+    text = Message.text(:round_complete, state.game_id, completed)
+    PubSub.msg(:spitegear, text)
+    %{state | last_round: completed}
+  end
+
+  defp maybe_announce_round(state, _completed), do: state
+
+  defp maybe_post_round_stats(state, completed) do
     if completed > 0 && rem(completed, 5) == 0 && completed != state.last_stats_round do
       stats = Games.turn_stats(state.game_id)
       blocks = Message.blocks(:turn_stats, stats, state.game_id, completed)

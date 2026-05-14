@@ -197,6 +197,21 @@ defmodule Spitegear.GamesTest do
       insert_turn_sequence("11111", ~w[adam bob adam bob adam adam adam])
       assert Games.completed_rounds("11111") == 5
     end
+
+    test "increments when the last player in a round finishes — triggers round announcement" do
+      base = ~U[2024-01-01 00:00:00Z]
+
+      Repo.insert!(%TurnHistory{game_id: "11111", player_name: "adam", started: base, ended: DateTime.add(base, 599)})
+      Repo.insert!(%TurnHistory{game_id: "11111", player_name: "bob", started: DateTime.add(base, 600), ended: DateTime.add(base, 1199)})
+
+      # [adam, bob] — no repeat yet, round 1 not counted
+      assert Games.completed_rounds("11111") == 0
+
+      Repo.insert!(%TurnHistory{game_id: "11111", player_name: "adam", started: DateTime.add(base, 1200), ended: DateTime.add(base, 1799)})
+
+      # [adam, bob, adam] — adam repeated, round 1 is now complete
+      assert Games.completed_rounds("11111") == 1
+    end
   end
 
   describe "turn_stats/1" do

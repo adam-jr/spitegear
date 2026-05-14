@@ -175,39 +175,27 @@ defmodule Spitegear.GamesTest do
       assert Games.completed_rounds("11111") == 0
     end
 
-    test "returns minimum turn count across all active players" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      insert_turns("11111", "adam", now, 3)
-      insert_turns("11111", "bob", now, 2)
-
+    test "counts complete rounds from turn sequence" do
+      insert_turn_sequence("11111", ~w[adam bob adam bob adam])
       assert Games.completed_rounds("11111") == 2
     end
 
-    test "excludes eliminated players from the calculation" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      insert_turns("11111", "adam", now, 5)
-      insert_turns("11111", "bob", now, 2)
-      Games.record_death("11111", "bob", now)
-
-      assert Games.completed_rounds("11111") == 5
-    end
-
     test "returns 5 at the five-round boundary (triggers stats post)" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      insert_turns("11111", "adam", now, 5)
-      insert_turns("11111", "bob", now, 5)
-
+      insert_turn_sequence("11111", ~w[adam bob adam bob adam bob adam bob adam bob])
       completed = Games.completed_rounds("11111")
       assert completed == 5
       assert rem(completed, 5) == 0
     end
 
-    test "does not reach 5 until all active players complete round 5" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      insert_turns("11111", "adam", now, 5)
-      insert_turns("11111", "bob", now, 4)
-
+    test "does not count a partial round as complete" do
+      insert_turn_sequence("11111", ~w[adam bob adam bob adam bob adam bob adam])
       assert Games.completed_rounds("11111") == 4
+    end
+
+    test "infers eliminated player from turn sequence gaps" do
+      # bob eliminated after round 2; adam continues alone for rounds 3-5
+      insert_turn_sequence("11111", ~w[adam bob adam bob adam adam adam])
+      assert Games.completed_rounds("11111") == 5
     end
   end
 
@@ -237,12 +225,14 @@ defmodule Spitegear.GamesTest do
     end
   end
 
-  defp insert_turns(game_id, player_name, base_time, count) do
-    for i <- 1..count do
-      started = DateTime.add(base_time, (i - 1) * 600)
-      ended = DateTime.add(base_time, i * 600 - 1)
-      Repo.insert!(%TurnHistory{game_id: game_id, player_name: player_name, started: started, ended: ended})
-    end
+  defp insert_turn_sequence(game_id, players) do
+    base = ~U[2024-01-01 00:00:00Z]
+
+    Enum.with_index(players, fn player, i ->
+      started = DateTime.add(base, i * 600)
+      ended = DateTime.add(base, i * 600 + 599)
+      Repo.insert!(%TurnHistory{game_id: game_id, player_name: player, started: started, ended: ended})
+    end)
   end
 
   defp insert_turns_with_durations(game_id, player_name, base_time, durations) do

@@ -69,18 +69,32 @@ defmodule Spitegear.Games do
   end
 
   def completed_rounds(game_id) do
-    dead_names =
-      Repo.all(from d in GameDeath, where: d.game_id == ^game_id, select: d.player_name)
+    Repo.all(
+      from t in TurnHistory,
+        where: t.game_id == ^game_id,
+        order_by: [asc: t.started],
+        select: t.player_name
+    )
+    |> count_completed_rounds()
+  end
 
-    counts =
-      Repo.all(
-        from t in TurnHistory,
-          where: t.game_id == ^game_id and t.player_name not in ^dead_names,
-          group_by: t.player_name,
-          select: count(t.id)
-      )
+  defp count_completed_rounds([]), do: 0
 
-    if Enum.empty?(counts), do: 0, else: Enum.min(counts)
+  defp count_completed_rounds(turns) do
+    {rounds, current_cycle, last_complete_cycle} =
+      Enum.reduce(turns, {0, [], []}, fn player, {rounds, cycle, last_complete} ->
+        if player in cycle do
+          {rounds + 1, [player], cycle}
+        else
+          {rounds, [player | cycle], last_complete}
+        end
+      end)
+
+    if MapSet.equal?(MapSet.new(current_cycle), MapSet.new(last_complete_cycle)) do
+      rounds + 1
+    else
+      rounds
+    end
   end
 
   def turn_stats(game_id) do

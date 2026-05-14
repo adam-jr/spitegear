@@ -52,15 +52,6 @@ defmodule Spitegear.Slack.Message do
   def text(:game_winners, players, game_id),
     do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
 
-  def text(:turn_stats, stats, game_id, rounds) do
-    lines =
-      Enum.map_join(stats, "\n", fn s ->
-        "#{s.player_name}: avg #{format_duration(s.avg_seconds)}, fastest #{format_duration(s.fastest_seconds)}, slowest #{format_duration(s.slowest_seconds)}"
-      end)
-
-    "*Turn stats after #{rounds} rounds — game ##{game_id}*\n#{lines}"
-  end
-
   def text(:round_complete, game_id, round),
     do: "⚔️ Round #{round} complete — round #{round + 1} begins! https://www.wargear.net/games/view/#{game_id}"
 
@@ -80,6 +71,15 @@ defmodule Spitegear.Slack.Message do
     *Games Won by #{player.name}: #{Enum.count(wins)}*
     #{lines}
     """
+  end
+
+  def text(:turn_stats, stats, game_id, rounds) do
+    lines =
+      Enum.map_join(stats, "\n", fn s ->
+        "#{s.player_name}: avg #{format_duration(s.avg_seconds)}, fastest #{format_duration(s.fastest_seconds)}, slowest #{format_duration(s.slowest_seconds)}"
+      end)
+
+    "*Turn stats after #{rounds} rounds — game ##{game_id}*\n#{lines}"
   end
 
   defp format_duration(seconds) when seconds < 60, do: "#{seconds}s"

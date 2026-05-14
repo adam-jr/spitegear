@@ -1,8 +1,7 @@
 defmodule Spitegear.Slack.Message do
   @moduledoc false
 
-  def blocks(:turn_stats, stats, game_id) do
-    total = Enum.sum(Enum.map(stats, & &1.count))
+  def blocks(:turn_stats, stats, game_id, rounds) do
     sorted = Enum.sort_by(stats, & &1.avg_seconds, :desc)
     last_idx = length(sorted) - 1
 
@@ -23,7 +22,7 @@ defmodule Spitegear.Slack.Message do
     [
       %{
         "type" => "header",
-        "text" => %{"type" => "plain_text", "text" => "📊 Turn Shame — game ##{game_id} (#{total} turns)"}
+        "text" => %{"type" => "plain_text", "text" => "📊 Turn Shame — game ##{game_id} (#{rounds} rounds)"}
       },
       %{
         "type" => "section",
@@ -53,15 +52,13 @@ defmodule Spitegear.Slack.Message do
   def text(:game_winners, players, game_id),
     do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
 
-  def text(:turn_stats, stats, game_id) do
-    total = Enum.sum(Enum.map(stats, & &1.count))
-
+  def text(:turn_stats, stats, game_id, rounds) do
     lines =
       Enum.map_join(stats, "\n", fn s ->
         "#{s.player_name}: avg #{format_duration(s.avg_seconds)}, fastest #{format_duration(s.fastest_seconds)}, slowest #{format_duration(s.slowest_seconds)}"
       end)
 
-    "*Turn stats after #{total} turns — game ##{game_id}*\n#{lines}"
+    "*Turn stats after #{rounds} rounds — game ##{game_id}*\n#{lines}"
   end
 
   def text(:cards_traded, name, last_card), do: "#{name} just traded for #{last_card} units"

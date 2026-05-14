@@ -27,8 +27,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
   end
 
   def handle_event("send_test_stats", _params, socket) do
-    blocks = Message.blocks(:turn_stats, socket.assigns.stats, socket.assigns.game_id)
-    fallback = Message.text(:turn_stats, socket.assigns.stats, socket.assigns.game_id)
+    blocks = Message.blocks(:turn_stats, socket.assigns.stats, socket.assigns.game_id, socket.assigns.completed_rounds)
+    fallback = Message.text(:turn_stats, socket.assigns.stats, socket.assigns.game_id, socket.assigns.completed_rounds)
     PubSub.msg(:spitegear_test, type: :turn_stats, payload: {blocks, fallback})
     {:noreply, socket}
   end
@@ -39,6 +39,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
     history = Games.list_turn_history(game_id)
     stats = Games.turn_stats(game_id)
     total_turns = Games.completed_turn_count(game_id)
+    completed_rounds = Games.completed_rounds(game_id)
     poller_alive = Games.poller_alive?(game_id)
 
     %{
@@ -48,6 +49,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
       history: history,
       stats: stats,
       total_turns: total_turns,
+      completed_rounds: completed_rounds,
       poller_alive: poller_alive
     }
   end

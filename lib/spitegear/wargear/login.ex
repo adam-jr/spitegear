@@ -51,7 +51,7 @@ defmodule Spitegear.Wargear.Login do
 
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 
-    case HTTPoison.post(@base_url <> "/users/login", body, headers, follow_redirect: false) do
+    case HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false) do
       {:ok, %{headers: resp_headers}} ->
         case extract_cookie(resp_headers) do
           "" -> {:error, :no_cookie_in_response}

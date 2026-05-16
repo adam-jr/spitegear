@@ -40,26 +40,38 @@ defmodule Spitegear.Wargear.Login do
   end
 
   defp login(username, password) do
-    body =
-      URI.encode_query(%{
-        "username" => username,
-        "password" => password,
-        "cookie_setting" => "autologin",
-        "loginbtn" => "loginbtn",
-        "uid" => ""
-      })
+    with {:ok, initial_cookies} <- get_initial_cookies() do
+      body =
+        URI.encode_query(%{
+          "username" => username,
+          "password" => password,
+          "cookie_setting" => "autologin",
+          "loginbtn" => "loginbtn",
+          "uid" => ""
+        })
 
-    headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
+      headers = [
+        {"Content-Type", "application/x-www-form-urlencoded"},
+        {"Cookie", initial_cookies}
+      ]
 
-    case HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false) do
-      {:ok, %{headers: resp_headers}} ->
-        case extract_cookie(resp_headers) do
-          "" -> {:error, :no_cookie_in_response}
-          cookie -> {:ok, cookie}
-        end
+      case HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false) do
+        {:ok, %{headers: resp_headers}} ->
+          case extract_cookie(resp_headers) do
+            "" -> {:error, :no_cookie_in_response}
+            cookie -> {:ok, cookie}
+          end
 
-      {:error, reason} ->
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  defp get_initial_cookies do
+    case HTTPoison.get(@base_url <> "/player/login", [], timeout: 15_000, recv_timeout: 15_000) do
+      {:ok, %{headers: headers}} -> {:ok, extract_cookie(headers)}
+      {:error, reason} -> {:error, reason}
     end
   end
 end

@@ -1,5 +1,6 @@
 defmodule Spitegear.HTML.ViewScreen do
   @moduledoc false
+  require Logger
 
   alias Spitegear.HTML.Player
 
@@ -15,10 +16,13 @@ defmodule Spitegear.HTML.ViewScreen do
             eliminated: [],
             winners: []
 
-  def get_game(game_id) do
+  def get_game(game_id), do: fetch_game(game_id, false)
+
+  defp fetch_game(game_id, retried) do
     with base_url <- URI.parse("https://www.wargear.net"),
          url <- %{base_url | path: "/games/view/#{game_id}"},
          {:ok, %{body: body}} <- HTTPoison.get(url, [{"Cookie", wargear_cookie()}], timeout: 30_000, recv_timeout: 30_000),
+         :ok <- check_session(body),
          {:ok, document} <- Floki.parse_document(body),
          {:ok, card} <- get_next_card(document),
          {:ok, game_name} <- game_name(document),
@@ -42,9 +46,18 @@ defmodule Spitegear.HTML.ViewScreen do
          winners: Enum.filter(players, & &1.winner?)
        }}
     else
+      :session_expired when not retried ->
+        Logger.info("#{__MODULE__} session expired, refreshing cookie and retrying")
+        Spitegear.Wargear.Login.refresh_cookie()
+        fetch_game(game_id, true)
+
       _ ->
         :error
     end
+  end
+
+  defp check_session(body) do
+    if String.contains?(body, "login_required=1"), do: :session_expired, else: :ok
   end
 
   def created_time(document) do

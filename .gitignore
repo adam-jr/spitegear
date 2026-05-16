@@ -37,4 +37,5 @@ npm-debug.log
 
 # Local secrets, never commit
 /config/dev.secret.exs
+.envrc
 

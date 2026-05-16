@@ -92,6 +92,15 @@ config :spitegear, Spitegear.TradingView.API,
     crypto_coins: "/coin/scan"
   ]
 
+config :spitegear, Spitegear.Scheduler,
+  jobs: [
+    cookie_refresh: [
+      # 3am on the 1st and 15th of each month (~every 2 weeks)
+      schedule: "0 3 1,15 * *",
+      task: {Spitegear.Wargear.Login, :refresh_cookie, []}
+    ]
+  ]
+
 config :spitegear, :env, config_env()
 
 # Import environment specific config. This must remain at the bottom

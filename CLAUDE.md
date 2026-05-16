@@ -50,7 +50,9 @@ Secondary feature: a daily cron job that pulls crypto market breadth data from T
 | `DATABASE_URL` | Postgres connection (prod only, e.g. `ecto://USER:PASS@HOST/DATABASE`) |
 | `SECRET_KEY_BASE` | Phoenix endpoint (prod only, generate with `mix phx.gen.secret`) |
 | `PHX_HOST` / `PORT` | Phoenix endpoint (prod only) |
+| `WARGEAR_USERNAME` | wargear.net login for cookie refresh job |
+| `WARGEAR_PASSWORD` | wargear.net login for cookie refresh job |
 
 ## Deployment
 
-Deployed on Fly.io (`fly.toml`). Release config in `rel/env.sh.eex`. Assets built with `mix assets.deploy` (minifies Tailwind + esbuild, runs `phx.digest`).
+Deployed on a self-hosted Beelink server via GitHub Actions (`.github/workflows/deploy.yml`). The deploy job runs on a `self-hosted` runner, writes secrets to `$HOME/spitegear/.env`, pulls the latest code, then runs `make deploy` (builds a Docker image and restarts the container with `--env-file`). Assets built with `mix assets.deploy` (minifies Tailwind + esbuild, runs `phx.digest`).

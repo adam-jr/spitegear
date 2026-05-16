@@ -21,6 +21,8 @@ jobs:
           PHX_HOST=spitegear.duckdns.org
           PORT=4001
           PHX_SERVER=true
+          WARGEAR_USERNAME=${{ secrets.WARGEAR_USERNAME }}
+          WARGEAR_PASSWORD=${{ secrets.WARGEAR_PASSWORD }}
           EOF
 
       - name: Pull latest code

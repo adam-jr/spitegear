@@ -55,4 +55,4 @@ Secondary feature: a daily cron job that pulls crypto market breadth data from T
 
 ## Deployment
 
-Deployed on Fly.io (`fly.toml`). Release config in `rel/env.sh.eex`. Assets built with `mix assets.deploy` (minifies Tailwind + esbuild, runs `phx.digest`).
+Deployed on a self-hosted Beelink server via GitHub Actions (`.github/workflows/deploy.yml`). The deploy job runs on a `self-hosted` runner, writes secrets to `$HOME/spitegear/.env`, pulls the latest code, then runs `make deploy` (builds a Docker image and restarts the container with `--env-file`). Assets built with `mix assets.deploy` (minifies Tailwind + esbuild, runs `phx.digest`).

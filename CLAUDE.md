@@ -50,6 +50,8 @@ Secondary feature: a daily cron job that pulls crypto market breadth data from T
 | `DATABASE_URL` | Postgres connection (prod only, e.g. `ecto://USER:PASS@HOST/DATABASE`) |
 | `SECRET_KEY_BASE` | Phoenix endpoint (prod only, generate with `mix phx.gen.secret`) |
 | `PHX_HOST` / `PORT` | Phoenix endpoint (prod only) |
+| `WARGEAR_USERNAME` | wargear.net login for cookie refresh job |
+| `WARGEAR_PASSWORD` | wargear.net login for cookie refresh job |
 
 ## Deployment
 

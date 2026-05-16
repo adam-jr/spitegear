@@ -40,7 +40,15 @@ defmodule Spitegear.Wargear.Login do
   end
 
   defp login(username, password) do
-    body = URI.encode_query(%{"data[User][username]" => username, "data[User][password]" => password})
+    body =
+      URI.encode_query(%{
+        "username" => username,
+        "password" => password,
+        "cookie_setting" => "autologin",
+        "loginbtn" => "loginbtn",
+        "uid" => ""
+      })
+
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 
     case HTTPoison.post(@base_url <> "/users/login", body, headers, follow_redirect: false) do

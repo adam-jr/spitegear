@@ -125,6 +125,30 @@ defmodule Spitegear.Games do
     Repo.get_by(Game, game_id: game_id)
   end
 
+  def list_player_statuses(game_id) do
+    all_players =
+      Repo.all(
+        from t in TurnHistory,
+          where: t.game_id == ^game_id,
+          select: t.player_name,
+          distinct: true
+      )
+
+    dead =
+      Repo.all(from d in GameDeath, where: d.game_id == ^game_id)
+      |> Map.new(&{&1.player_name, &1.eliminated_at})
+
+    alive = Enum.reject(all_players, &Map.has_key?(dead, &1))
+
+    alive_entries = Enum.map(alive, &%{player_name: &1, alive: true, eliminated_at: nil})
+
+    dead_entries =
+      Enum.map(dead, fn {name, at} -> %{player_name: name, alive: false, eliminated_at: at} end)
+      |> Enum.sort_by(& &1.eliminated_at, {:desc, DateTime})
+
+    alive_entries ++ dead_entries
+  end
+
   def list_turn_history(game_id, limit \\ 30) do
     Repo.all(
       from t in TurnHistory,

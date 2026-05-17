@@ -238,11 +238,12 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp new_turn(state) do
     player = state.view_screen.current_player
-    Logger.info("Notifying #{player.name} of turn...")
-    PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
     state = record_completed_turn(state)
     state = infer_deaths_from_skip(state)
+
+    Logger.info("Notifying #{player.name} of turn...")
+    PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
     turn = %Turn{
       game_id: state.game_id,

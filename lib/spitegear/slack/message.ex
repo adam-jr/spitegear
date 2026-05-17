@@ -39,9 +39,9 @@ defmodule Spitegear.Slack.Message do
     do:
       "I wuv you, waiting to start #{game.name} https://www.wargear.net/games/view/#{game.game_id} 🧸💕"
 
-  def text(:next_turn, {player, game_id}),
+  def text(:next_turn, {player, game_id, round, turn_number}),
     do:
-      "<#{player.slack_name}>, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
+      "Round #{round}, turn #{turn_number} — <#{player.slack_name}>, you are ON THE CLOCK https://www.wargear.net/games/view/#{game_id}"
 
   def text(:player_moving, player),
     do: "#{handle(player)} is taking their turn! 👀"

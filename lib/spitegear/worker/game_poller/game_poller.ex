@@ -53,10 +53,12 @@ defmodule Spitegear.Worker.GamePoller do
     dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
 
     {:ok,
-     %{@state
+     %{
+       @state
        | game_id: game_id,
          last_round: Games.completed_rounds(game_id),
-         dead_players: dead_players}}
+         dead_players: dead_players
+     }}
   end
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
@@ -114,7 +116,7 @@ defmodule Spitegear.Worker.GamePoller do
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         Games.upsert_game(view_screen)
-        {:noreply, state}
+        {:noreply, %{state | view_screen: view_screen}}
 
       _ ->
         {:noreply, state}
@@ -166,7 +168,10 @@ defmodule Spitegear.Worker.GamePoller do
         end
 
       error ->
-        Logger.error("#{__MODULE__} ViewScreen.get_game failed for game #{state.game_id}: #{inspect(error)}")
+        Logger.error(
+          "#{__MODULE__} ViewScreen.get_game failed for game #{state.game_id}: #{inspect(error)}"
+        )
+
         {timer, remaining} = maybe_schedule_view_screen_poll(polls_remaining)
         {:continue, %{state | view_screen_timer: timer, view_screen_polls_remaining: remaining}}
     end
@@ -246,7 +251,11 @@ defmodule Spitegear.Worker.GamePoller do
     turn_number = Games.completed_turn_count(state.game_id) + 1
     Logger.info("Notifying #{player.name} of turn (round #{round}, turn #{turn_number})...")
     game_name = state.view_screen.game_name
-    PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id, round, turn_number, game_name})
+
+    PubSub.msg(:spitegear,
+      type: :next_turn,
+      payload: {player, state.game_id, round, turn_number, game_name}
+    )
 
     turn = %Turn{
       game_id: state.game_id,
@@ -274,7 +283,8 @@ defmodule Spitegear.Worker.GamePoller do
     |> maybe_post_round_stats(completed)
   end
 
-  defp maybe_announce_round(%{last_round: last_round} = state, completed) when completed > last_round do
+  defp maybe_announce_round(%{last_round: last_round} = state, completed)
+       when completed > last_round do
     text = Message.text(:round_complete, state.game_id, completed, state.view_screen.game_name)
     PubSub.msg(:spitegear, text)
     %{state | last_round: completed}
@@ -398,7 +408,14 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp maybe_announce_winners(state) do
     if Enum.any?(state.view_screen.winners) do
-      text = Message.text(:game_winners, state.view_screen.winners, state.game_id, state.view_screen.game_name)
+      text =
+        Message.text(
+          :game_winners,
+          state.view_screen.winners,
+          state.game_id,
+          state.view_screen.game_name
+        )
+
       PubSub.msg(:spitegear, text)
       PubSub.msg(:spitegear, text)
       PubSub.msg(:spitegear, text)

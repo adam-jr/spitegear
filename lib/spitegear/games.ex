@@ -125,6 +125,10 @@ defmodule Spitegear.Games do
     Repo.get_by(Game, game_id: game_id)
   end
 
+  def list_deaths(game_id) do
+    Repo.all(from d in GameDeath, where: d.game_id == ^game_id)
+  end
+
   def list_player_statuses(game_id) do
     all_players =
       Repo.all(

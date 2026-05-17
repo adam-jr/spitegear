@@ -50,7 +50,13 @@ defmodule Spitegear.Worker.GamePoller do
     update_current_turn()
     schedule_work()
 
-    {:ok, %{@state | game_id: game_id, last_round: Games.completed_rounds(game_id)}}
+    dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
+
+    {:ok,
+     %{@state
+       | game_id: game_id,
+         last_round: Games.completed_rounds(game_id),
+         dead_players: dead_players}}
   end
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
@@ -236,6 +242,7 @@ defmodule Spitegear.Worker.GamePoller do
     PubSub.msg(:spitegear, type: :next_turn, payload: {player, state.game_id})
 
     state = record_completed_turn(state)
+    state = infer_deaths_from_skip(state)
 
     turn = %Turn{
       game_id: state.game_id,
@@ -311,11 +318,14 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp schedule_work, do: Process.send_after(self(), :work, @interval)
 
-  defp update_eliminated(state) do
-    last_eliminated = Enum.map(state.dead_players, & &1.name)
-    newly_eliminated = state.view_screen.eliminated
+  defp update_eliminated(%{view_screen: %{fogged?: true}} = state), do: state
+  defp update_eliminated(%{view_screen: %{winners: [_ | _]}} = state), do: state
 
-    case Enum.reject(newly_eliminated, &(&1.name in last_eliminated)) do
+  defp update_eliminated(state) do
+    known_dead = MapSet.new(state.dead_players, & &1.name)
+    newly_dead = Enum.reject(state.view_screen.eliminated, &MapSet.member?(known_dead, &1.name))
+
+    case newly_dead do
       [] ->
         state
 
@@ -328,8 +338,58 @@ defmodule Spitegear.Worker.GamePoller do
           PubSub.msg(:spitegear_test, text)
         end)
 
-        %{state | dead_players: state.view_screen.eliminated}
+        %{state | dead_players: Enum.uniq_by(state.dead_players ++ newly_dead, & &1.name)}
     end
+  end
+
+  defp infer_deaths_from_skip(%{current_turn: nil} = state), do: state
+
+  defp infer_deaths_from_skip(state) do
+    prev_name = state.current_turn.player.name
+    curr_name = state.view_screen.current_player.name
+
+    known_dead = MapSet.new(state.dead_players, & &1.name)
+
+    alive_players =
+      Enum.reject(state.view_screen.players, fn p ->
+        MapSet.member?(known_dead, p.name) or p.eliminated? or p.winner?
+      end)
+
+    n = length(alive_players)
+    prev_idx = Enum.find_index(alive_players, &(&1.name == prev_name))
+    curr_idx = Enum.find_index(alive_players, &(&1.name == curr_name))
+
+    alive_players
+    |> skipped_players(n, prev_idx, curr_idx)
+    |> record_inferred_deaths(state)
+  end
+
+  defp skipped_players(_players, n, prev_idx, curr_idx)
+       when is_nil(prev_idx) or is_nil(curr_idx) or n < 2,
+       do: []
+
+  defp skipped_players(players, n, prev_idx, curr_idx) do
+    Stream.iterate(rem(prev_idx + 1, n), &rem(&1 + 1, n))
+    |> Enum.take_while(&(&1 != curr_idx))
+    |> Enum.map(&Enum.at(players, &1))
+  end
+
+  defp record_inferred_deaths([], state), do: state
+
+  defp record_inferred_deaths(newly_dead, state) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Enum.each(newly_dead, fn player ->
+      Logger.info("#{__MODULE__} inferring #{player.name} dead (skipped in turn order)")
+      Games.record_death(state.game_id, player.name, now)
+
+      unless state.view_screen.fogged? do
+        text = Message.text(:player_died, player, state.game_id)
+        PubSub.msg(:spitegear_test, text)
+      end
+    end)
+
+    %{state | dead_players: Enum.uniq_by(state.dead_players ++ newly_dead, & &1.name)}
   end
 
   defp maybe_announce_winners(state) do

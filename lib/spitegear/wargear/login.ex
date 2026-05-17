@@ -10,8 +10,6 @@ defmodule Spitegear.Wargear.Login do
     username = System.fetch_env!("WARGEAR_USERNAME")
     password = System.fetch_env!("WARGEAR_PASSWORD")
 
-    logout(Settings.get("wargear_cookie") || "")
-
     case login(username, password) do
       {:ok, cookie} ->
         Settings.put("wargear_cookie", cookie)
@@ -30,13 +28,6 @@ defmodule Spitegear.Wargear.Login do
     |> Enum.map_join("; ", fn {_, value} ->
       value |> String.split(";") |> List.first() |> String.trim()
     end)
-  end
-
-  defp logout(""), do: :ok
-
-  defp logout(cookie) do
-    HTTPoison.post(@base_url <> "/users/logout", "", [{"Cookie", cookie}])
-    :ok
   end
 
   defp login(username, password) do

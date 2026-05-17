@@ -15,7 +15,8 @@ defmodule Spitegear.HTML.ViewScreen do
             players: [],
             current_player: nil,
             eliminated: [],
-            winners: []
+            winners: [],
+            fogged?: false
 
   def get_game(game_id), do: fetch_game(game_id, false)
 
@@ -44,7 +45,8 @@ defmodule Spitegear.HTML.ViewScreen do
          players: players,
          current_player: Enum.find(players, & &1.current_turn?),
          eliminated: Enum.filter(players, & &1.eliminated?),
-         winners: Enum.filter(players, & &1.winner?)
+         winners: Enum.filter(players, & &1.winner?),
+         fogged?: Enum.any?(players, & &1.fogged?)
        }}
     else
       :session_expired when not retried ->

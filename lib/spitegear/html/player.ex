@@ -14,6 +14,7 @@ defmodule Spitegear.HTML.Player do
     field(:current_turn?, :boolean, virtual: true)
     field(:eliminated?, :boolean, virtual: true)
     field(:winner?, :boolean, virtual: true)
+    field(:fogged?, :boolean, virtual: true)
   end
 
   @players [
@@ -46,7 +47,8 @@ defmodule Spitegear.HTML.Player do
       player
       | current_turn?: current_turn?(tr),
         eliminated?: eliminated?(tr),
-        winner?: winner?(tr)
+        winner?: winner?(tr),
+        fogged?: fogged?(tr)
     }
   end
 
@@ -96,6 +98,15 @@ defmodule Spitegear.HTML.Player do
 
     case winner_td do
       {"td", [], ["Winner"]} -> true
+      _ -> false
+    end
+  end
+
+  defp fogged?(tr) do
+    {"tr", [], tds} = tr
+
+    case Enum.at(tds, -3) do
+      {"td", [], ["?"]} -> true
       _ -> false
     end
   end

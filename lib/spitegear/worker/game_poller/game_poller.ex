@@ -212,7 +212,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp remind_player(state) do
     player = state.current_turn.player
     Logger.info("Reminding #{player.name} of turn...")
-    text = Message.text(:kind_reminder, state.current_turn)
+    text = Message.text(:kind_reminder, state.current_turn, state.view_screen.game_name)
     PubSub.msg(:spitegear, text)
 
     turn = %{
@@ -275,7 +275,7 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp maybe_announce_round(%{last_round: last_round} = state, completed) when completed > last_round do
-    text = Message.text(:round_complete, state.game_id, completed)
+    text = Message.text(:round_complete, state.game_id, completed, state.view_screen.game_name)
     PubSub.msg(:spitegear, text)
     %{state | last_round: completed}
   end
@@ -338,7 +338,7 @@ defmodule Spitegear.Worker.GamePoller do
 
         Enum.each(newly_dead, fn player ->
           Games.record_death(state.game_id, player.name, now)
-          text = Message.text(:player_died, player, state.game_id)
+          text = Message.text(:player_died, player, state.game_id, state.view_screen.game_name)
           PubSub.msg(:spitegear_test, text)
         end)
 
@@ -388,7 +388,7 @@ defmodule Spitegear.Worker.GamePoller do
       Games.record_death(state.game_id, player.name, now)
 
       unless state.view_screen.fogged? do
-        text = Message.text(:player_died, player, state.game_id)
+        text = Message.text(:player_died, player, state.game_id, state.view_screen.game_name)
         PubSub.msg(:spitegear_test, text)
       end
     end)
@@ -398,7 +398,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp maybe_announce_winners(state) do
     if Enum.any?(state.view_screen.winners) do
-      text = Message.text(:game_winners, state.view_screen.winners, state.game_id)
+      text = Message.text(:game_winners, state.view_screen.winners, state.game_id, state.view_screen.game_name)
       PubSub.msg(:spitegear, text)
       PubSub.msg(:spitegear, text)
       PubSub.msg(:spitegear, text)

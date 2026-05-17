@@ -4,17 +4,19 @@ defmodule Spitegear.Slack.MessageTest do
 
   alias Spitegear.Slack.Message
 
-  describe "text(:round_complete, game_id, round)" do
+  describe "text(:round_complete, game_id, round, game_name)" do
     test "includes the completed round number" do
-      assert Message.text(:round_complete, "99999", 5) =~ "Round 5 complete"
+      assert Message.text(:round_complete, "99999", 5, "My Game") =~ "Round 5 complete"
     end
 
     test "includes the next round number" do
-      assert Message.text(:round_complete, "99999", 5) =~ "round 6 begins"
+      assert Message.text(:round_complete, "99999", 5, "My Game") =~ "round 6 begins"
     end
 
     test "includes a link to the game" do
-      assert Message.text(:round_complete, "99999", 5) =~ "99999"
+      text = Message.text(:round_complete, "99999", 5, "My Game")
+      assert text =~ "99999"
+      assert text =~ "My Game"
     end
   end
 

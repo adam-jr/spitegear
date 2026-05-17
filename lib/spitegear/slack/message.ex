@@ -31,29 +31,22 @@ defmodule Spitegear.Slack.Message do
     ]
   end
 
-  def text(:kind_reminder, turn),
-    do:
-      "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} https://www.wargear.net/games/view/#{turn.game_id}"
-
+  # text/2
   def text(:game_started, game),
     do:
       "I wuv you, waiting to start #{game.name} https://www.wargear.net/games/view/#{game.game_id} 🧸💕"
+
+  def text(:player_moving, player),
+    do: "#{handle(player)} is taking their turn! 👀"
 
   def text(:next_turn, {player, game_id, round, turn_number, game_name}),
     do:
       "*Round #{round}, turn #{turn_number}* — <#{player.slack_name}>, you're up in <https://www.wargear.net/games/view/#{game_id}|#{game_name}>"
 
-  def text(:player_moving, player),
-    do: "#{handle(player)} is taking their turn! 👀"
-
-  def text(:player_died, player, game_id),
-    do: "<#{player.slack_name}> died in https://www.wargear.net/games/view/#{game_id}"
-
-  def text(:game_winners, players, game_id),
-    do: "#{slack_names(players)} won game ##{game_id}, huzzah #{winning_gif(game_id)} <@channel>"
-
-  def text(:round_complete, game_id, round),
-    do: "⚔️ Round #{round} complete — round #{round + 1} begins! https://www.wargear.net/games/view/#{game_id}"
+  # text/3
+  def text(:kind_reminder, turn, game_name),
+    do:
+      "<#{turn.player.slack_name}> #{reminder_text(turn.reminders)} <https://www.wargear.net/games/view/#{turn.game_id}|#{game_name}>"
 
   def text(:cards_traded, name, last_card), do: "#{name} just traded for #{last_card} units"
 
@@ -72,6 +65,16 @@ defmodule Spitegear.Slack.Message do
     #{lines}
     """
   end
+
+  # text/4
+  def text(:player_died, player, game_id, game_name),
+    do: "<#{player.slack_name}> died in <https://www.wargear.net/games/view/#{game_id}|#{game_name}>"
+
+  def text(:game_winners, players, game_id, game_name),
+    do: "#{slack_names(players)} won <https://www.wargear.net/games/view/#{game_id}|#{game_name}>, huzzah #{winning_gif(game_id)} <@channel>"
+
+  def text(:round_complete, game_id, round, game_name),
+    do: "⚔️ Round #{round} complete — round #{round + 1} begins! <https://www.wargear.net/games/view/#{game_id}|#{game_name}>"
 
   def text(:turn_stats, stats, game_id, rounds) do
     lines =

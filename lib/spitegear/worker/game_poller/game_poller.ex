@@ -137,7 +137,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   def update_current_turn, do: send(self(), :update_current_turn)
 
-  def state do
+  def update_status(state) do
     if state.view_screen.current_player do
       %{state | status: :in_progress}
     else

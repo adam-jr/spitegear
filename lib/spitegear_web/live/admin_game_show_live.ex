@@ -41,6 +41,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
     total_turns = Games.completed_turn_count(game_id)
     completed_rounds = Games.completed_rounds(game_id)
     poller_alive = Games.poller_alive?(game_id)
+    poller_turn_id = Games.poller_turn_id(game_id)
     player_statuses = Games.list_player_statuses(game_id)
 
     %{
@@ -52,6 +53,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
       total_turns: total_turns,
       completed_rounds: completed_rounds,
       poller_alive: poller_alive,
+      poller_turn_id: poller_turn_id,
       player_statuses: player_statuses
     }
   end
@@ -114,6 +116,10 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <dd class="font-mono"><%= @game_id %></dd>
             <dt class="text-gray-500">Completed turns</dt>
             <dd><%= @total_turns %></dd>
+            <%= if @poller_turn_id do %>
+              <dt class="text-gray-500">Turn ID</dt>
+              <dd class="font-mono"><%= @poller_turn_id %></dd>
+            <% end %>
             <%= if @game && @game.created do %>
               <dt class="text-gray-500">Created</dt>
               <dd><%= @game.created %></dd>

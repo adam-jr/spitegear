@@ -116,7 +116,7 @@ defmodule Spitegear.Worker.GamePoller do
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         Games.upsert_game(view_screen)
-        {:noreply, %{state | view_screen: view_screen}}
+        {:noreply, update_status(%{state | view_screen: view_screen})}
 
       _ ->
         {:noreply, state}
@@ -137,7 +137,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   def update_current_turn, do: send(self(), :update_current_turn)
 
-  def update_status(state) do
+  def state do
     if state.view_screen.current_player do
       %{state | status: :in_progress}
     else

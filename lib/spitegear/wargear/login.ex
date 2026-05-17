@@ -40,31 +40,23 @@ defmodule Spitegear.Wargear.Login do
   end
 
   defp login(username, password) do
-    with {:ok, initial_cookies} <- get_initial_cookies() do
-      body =
-        URI.encode_query(%{
-          "username" => username,
-          "password" => password,
-          "cookie_setting" => "autologin",
-          "loginbtn" => "loginbtn",
-          "uid" => ""
-        })
+    body =
+      URI.encode_query(%{
+        "username" => username,
+        "password" => password,
+        "cookie_setting" => "autologin",
+        "loginbtn" => "loginbtn",
+        "uid" => ""
+      })
 
-      headers = [
-        {"Content-Type", "application/x-www-form-urlencoded"},
-        {"Cookie", initial_cookies}
-      ]
-
-      case HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false) do
-        {:ok, %{headers: resp_headers}} ->
-          case extract_cookie(resp_headers) do
-            "" -> {:error, :no_cookie_in_response}
-            cookie -> {:ok, cookie}
-          end
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+    with {:ok, initial_cookies} <- get_initial_cookies(),
+         headers = [{"Content-Type", "application/x-www-form-urlencoded"}, {"Cookie", initial_cookies}],
+         {:ok, %{headers: resp_headers}} <- HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false),
+         cookie when cookie != "" <- extract_cookie(resp_headers) do
+      {:ok, cookie}
+    else
+      "" -> {:error, :no_cookie_in_response}
+      {:error, reason} -> {:error, reason}
     end
   end
 

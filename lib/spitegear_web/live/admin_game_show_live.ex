@@ -41,6 +41,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
     total_turns = Games.completed_turn_count(game_id)
     completed_rounds = Games.completed_rounds(game_id)
     poller_alive = Games.poller_alive?(game_id)
+    player_statuses = Games.list_player_statuses(game_id)
 
     %{
       game_id: game_id,
@@ -50,7 +51,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
       stats: stats,
       total_turns: total_turns,
       completed_rounds: completed_rounds,
-      poller_alive: poller_alive
+      poller_alive: poller_alive,
+      player_statuses: player_statuses
     }
   end
 
@@ -119,6 +121,25 @@ defmodule SpitegearWeb.AdminGameShowLive do
           </dl>
         </div>
       </section>
+
+      <%= if Enum.any?(@player_statuses) do %>
+        <section>
+          <h2 class="text-lg font-semibold mb-3">Players</h2>
+          <div class="flex flex-wrap gap-2">
+            <%= for p <- @player_statuses do %>
+              <span class={[
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium",
+                if(p.alive, do: "bg-green-100 text-green-800", else: "bg-gray-100 text-gray-500 line-through")
+              ]}>
+                <span class={if p.alive, do: "text-green-500", else: "text-gray-400"}>
+                  <%= if p.alive, do: "●", else: "✕" %>
+                </span>
+                <%= p.player_name %>
+              </span>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
 
       <%= if Enum.any?(@stats) do %>
         <section>

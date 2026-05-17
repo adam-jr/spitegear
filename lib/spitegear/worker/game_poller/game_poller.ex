@@ -325,7 +325,7 @@ defmodule Spitegear.Worker.GamePoller do
         Enum.each(newly_dead, fn player ->
           Games.record_death(state.game_id, player.name, now)
           text = Message.text(:player_died, player, state.game_id)
-          PubSub.msg(:spitegear, text)
+          PubSub.msg(:spitegear_test, text)
         end)
 
         %{state | dead_players: state.view_screen.eliminated}

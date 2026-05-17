@@ -3,6 +3,7 @@ defmodule Spitegear.HTML.ViewScreen do
   require Logger
 
   alias Spitegear.HTML.Player
+  alias Spitegear.Wargear.Login
 
   defstruct game_id: nil,
             url: nil,
@@ -48,7 +49,7 @@ defmodule Spitegear.HTML.ViewScreen do
     else
       :session_expired when not retried ->
         Logger.info("#{__MODULE__} session expired, refreshing cookie and retrying")
-        Spitegear.Wargear.Login.refresh_cookie()
+        Login.refresh_cookie()
         fetch_game(game_id, true)
 
       _ ->

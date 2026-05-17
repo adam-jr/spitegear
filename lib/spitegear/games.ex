@@ -187,6 +187,13 @@ defmodule Spitegear.Games do
     Process.whereis(poller_name(game_id)) != nil
   end
 
+  def poller_turn_id(game_id) do
+    case Process.whereis(poller_name(game_id)) do
+      nil -> nil
+      pid -> :sys.get_state(pid).last_turn_id
+    end
+  end
+
   def resume_games do
     Enum.each(list_active_games(), fn game ->
       DynamicSupervisor.start_child(

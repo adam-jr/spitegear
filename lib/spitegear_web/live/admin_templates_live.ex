@@ -1,6 +1,7 @@
 defmodule SpitegearWeb.AdminTemplatesLive do
   use SpitegearWeb, :live_view
   alias Spitegear.MessageTemplates
+  alias Spitegear.PubSub
 
   def mount(params, _session, socket) do
     game_id = Map.get(params, "game_id")
@@ -56,6 +57,12 @@ defmodule SpitegearWeb.AdminTemplatesLive do
 
   def handle_event("update_gif_preview", %{"template" => url}, socket) do
     {:noreply, assign(socket, gif_preview_url: url)}
+  end
+
+  def handle_event("test_template", %{"key" => key}, socket) do
+    text = MessageTemplates.render_sample(key, socket.assigns.game_id)
+    PubSub.msg(:spitegear_test, text)
+    {:noreply, socket}
   end
 
   defp load_templates(nil), do: {%{}, MessageTemplates.list_global()}
@@ -145,6 +152,16 @@ defmodule SpitegearWeb.AdminTemplatesLive do
               <% end %>
               <div class="flex items-center gap-3">
                 <button type="submit" class="text-sm text-blue-600 hover:underline">Save</button>
+                <%= if key_str != "game_winners_gif" do %>
+                  <button
+                    type="button"
+                    phx-click="test_template"
+                    phx-value-key={key_str}
+                    class="text-sm text-gray-500 hover:underline"
+                  >
+                    Test →#spitegear-test
+                  </button>
+                <% end %>
                 <%= if @saved_template == key_str do %>
                   <span class="text-green-600 text-xs">Saved</span>
                 <% end %>

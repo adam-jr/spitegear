@@ -4,12 +4,14 @@ defmodule SpitegearWeb.AdminLive do
 
   @cookie_key "wargear_cookie"
   @api_key_key "wargear_api_key"
+  @slack_name_key "admin_slack_name"
 
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
        cookie: Settings.get(@cookie_key) || "",
        api_key: Settings.get(@api_key_key) || "",
+       slack_name: Settings.get(@slack_name_key) || "",
        saved: nil,
        revealed: MapSet.new()
      )}
@@ -23,6 +25,11 @@ defmodule SpitegearWeb.AdminLive do
   def handle_event("save_api_key", %{"api_key" => value}, socket) do
     {:ok, _} = Settings.put(@api_key_key, value)
     {:noreply, assign(socket, api_key: value, saved: :api_key)}
+  end
+
+  def handle_event("save_slack_name", %{"slack_name" => value}, socket) do
+    {:ok, _} = Settings.put(@slack_name_key, value)
+    {:noreply, assign(socket, slack_name: value, saved: :slack_name)}
   end
 
   def handle_event("toggle_reveal", %{"key" => key}, socket) do
@@ -48,6 +55,28 @@ defmodule SpitegearWeb.AdminLive do
           <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
         </div>
       </div>
+
+      <section>
+        <h2 class="text-lg font-semibold mb-3">Your Slack Name</h2>
+        <p class="text-sm text-gray-500 mb-3">Used as the player in template test messages.</p>
+        <form phx-submit="save_slack_name" class="flex flex-col gap-4">
+          <input
+            type="text"
+            name="slack_name"
+            value={@slack_name}
+            class="w-full font-mono text-sm border border-gray-300 rounded p-2"
+            placeholder="e.g. @yourname"
+          />
+          <div class="flex items-center gap-4">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              Save
+            </button>
+            <%= if @saved == :slack_name do %>
+              <span class="text-green-600 text-sm">Saved</span>
+            <% end %>
+          </div>
+        </form>
+      </section>
 
       <section>
         <h2 class="text-lg font-semibold mb-3">Wargear API Key</h2>

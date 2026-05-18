@@ -115,21 +115,17 @@ defmodule Spitegear.MessageTemplates do
 
   def get(key, game_id) do
     key = to_string(key)
-
-    case Repo.get_by(MessageTemplate, key: key, game_id: game_id) do
-      nil -> Repo.get_by(MessageTemplate, key: key, game_id: nil)
-      template -> template
-    end
+    fetch(key, game_id) || fetch(key, nil)
   end
 
   def get_exact(key, game_id) do
-    Repo.get_by(MessageTemplate, key: to_string(key), game_id: game_id)
+    fetch(to_string(key), game_id)
   end
 
   def put(key, template_str, game_id \\ nil) do
     key = to_string(key)
 
-    case Repo.get_by(MessageTemplate, key: key, game_id: game_id) do
+    case fetch(key, game_id) do
       nil ->
         Repo.insert(%MessageTemplate{key: key, template: template_str, game_id: game_id})
 
@@ -141,7 +137,7 @@ defmodule Spitegear.MessageTemplates do
   def delete(key, game_id \\ nil) do
     key = to_string(key)
 
-    case Repo.get_by(MessageTemplate, key: key, game_id: game_id) do
+    case fetch(key, game_id) do
       nil -> :ok
       template -> Repo.delete(template) && :ok
     end
@@ -158,6 +154,14 @@ defmodule Spitegear.MessageTemplates do
   end
 
   # --- Private ---
+
+  defp fetch(key, nil) do
+    Repo.one(from t in MessageTemplate, where: t.key == ^key and is_nil(t.game_id))
+  end
+
+  defp fetch(key, game_id) do
+    Repo.get_by(MessageTemplate, key: key, game_id: game_id)
+  end
 
   defp render(key, vars, game_id) do
     template_str =

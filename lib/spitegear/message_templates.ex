@@ -4,7 +4,7 @@ defmodule Spitegear.MessageTemplates do
   alias Spitegear.MessageTemplate
   alias Spitegear.Repo
 
-  @keys ~w(next_turn kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4 player_moving player_died game_winners round_complete)a
+  @keys ~w(next_turn kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4 player_moving player_died game_winners game_winners_gif round_complete)a
 
   def all_keys, do: @keys
 
@@ -38,6 +38,9 @@ defmodule Spitegear.MessageTemplates do
   def default_template(:game_winners),
     do: "%{players_slack} won <%{game_url}|%{game_name}>, huzzah %{gif_url} <@channel>"
 
+  def default_template(:game_winners_gif),
+    do: "https://media.giphy.com/media/a0h7sAqON67nO/giphy.gif"
+
   def default_template(:round_complete),
     do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|%{game_name}>"
 
@@ -48,6 +51,7 @@ defmodule Spitegear.MessageTemplates do
   def available_vars(:player_moving), do: ~w(player_handle)
   def available_vars(:player_died), do: ~w(player_slack game_name game_url)
   def available_vars(:game_winners), do: ~w(players_slack game_name game_url gif_url)
+  def available_vars(:game_winners_gif), do: []
   def available_vars(:round_complete), do: ~w(round next_round game_name game_url)
 
   # --- High-level builders (called from GamePoller) ---
@@ -94,7 +98,7 @@ defmodule Spitegear.MessageTemplates do
       players_slack: players_slack,
       game_name: game_name,
       game_url: game_url(game_id),
-      gif_url: "https://media.giphy.com/media/a0h7sAqON67nO/giphy.gif"
+      gif_url: render(:game_winners_gif, %{}, game_id)
     }, game_id)
   end
 

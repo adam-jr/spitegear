@@ -416,8 +416,6 @@ defmodule Spitegear.Worker.GamePoller do
 
       payload = [type: :game_winners, payload: {blocks, fallback}]
       PubSub.msg(:spitegear, payload)
-      PubSub.msg(:spitegear, payload)
-      PubSub.msg(:spitegear, payload)
     end
 
     state

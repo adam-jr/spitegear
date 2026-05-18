@@ -1,17 +1,17 @@
 defmodule Spitegear.Slack.API do
   @moduledoc false
+  @bot_name "General Patton"
+
   def post_message(text, channel \\ :spitegear) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
 
     url = %{config[:url] | path: config[:endpoints][:post_message]}
-    headers = headers()
 
     body =
-      %{text: text}
-      |> Map.put(:channel, channel_id(channel))
+      %{text: text, channel: channel_id(channel), username: @bot_name}
       |> Jason.encode!()
 
-    HTTPoison.post(url, body, headers)
+    HTTPoison.post(url, body, headers())
   end
 
   def post_blocks(blocks, fallback_text, channel \\ :spitegear) do
@@ -19,7 +19,7 @@ defmodule Spitegear.Slack.API do
     url = %{config[:url] | path: config[:endpoints][:post_message]}
 
     body =
-      %{channel: channel_id(channel), blocks: blocks, text: fallback_text}
+      %{channel: channel_id(channel), blocks: blocks, text: fallback_text, username: @bot_name}
       |> Jason.encode!()
 
     HTTPoison.post(url, body, headers())

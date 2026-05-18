@@ -4,6 +4,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   alias Spitegear.Games
   alias Spitegear.HTML.ViewScreen
+  alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Slack.Message
   alias Spitegear.Turn
@@ -217,7 +218,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp remind_player(state) do
     player = state.current_turn.player
     Logger.info("Reminding #{player.name} of turn...")
-    text = Message.text(:kind_reminder, state.current_turn, state.view_screen.game_name)
+    text = MessageTemplates.kind_reminder(state.current_turn, state.view_screen.game_name)
     PubSub.msg(:spitegear, text)
 
     turn = %{
@@ -252,10 +253,8 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("Notifying #{player.name} of turn (round #{round}, turn #{turn_number})...")
     game_name = state.view_screen.game_name
 
-    PubSub.msg(:spitegear,
-      type: :next_turn,
-      payload: {player, state.game_id, round, turn_number, game_name}
-    )
+    text = MessageTemplates.next_turn(player, state.game_id, round, turn_number, game_name)
+    PubSub.msg(:spitegear, text)
 
     turn = %Turn{
       game_id: state.game_id,
@@ -285,7 +284,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp maybe_announce_round(%{last_round: last_round} = state, completed)
        when completed > last_round do
-    text = Message.text(:round_complete, state.game_id, completed, state.view_screen.game_name)
+    text = MessageTemplates.round_complete(state.game_id, completed, state.view_screen.game_name)
     PubSub.msg(:spitegear, text)
     %{state | last_round: completed}
   end
@@ -316,7 +315,7 @@ defmodule Spitegear.Worker.GamePoller do
 
     if same_player? && current_turn.reminders >= 1 do
       Logger.info("#{current_turn.player.name} is taking their turn...")
-      text = Message.text(:player_moving, current_turn.player)
+      text = MessageTemplates.player_moving(current_turn.player, state.game_id)
       PubSub.msg(:spitegear, text)
       turn = %{current_turn | moving_announced: true}
       Games.upsert_turn(turn)
@@ -348,7 +347,7 @@ defmodule Spitegear.Worker.GamePoller do
 
         Enum.each(newly_dead, fn player ->
           Games.record_death(state.game_id, player.name, now)
-          text = Message.text(:player_died, player, state.game_id, state.view_screen.game_name)
+          text = MessageTemplates.player_died(player, state.game_id, state.view_screen.game_name)
           PubSub.msg(:spitegear_test, text)
         end)
 
@@ -398,7 +397,7 @@ defmodule Spitegear.Worker.GamePoller do
       Games.record_death(state.game_id, player.name, now)
 
       unless state.view_screen.fogged? do
-        text = Message.text(:player_died, player, state.game_id, state.view_screen.game_name)
+        text = MessageTemplates.player_died(player, state.game_id, state.view_screen.game_name)
         PubSub.msg(:spitegear_test, text)
       end
     end)
@@ -409,8 +408,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp maybe_announce_winners(state) do
     if Enum.any?(state.view_screen.winners) do
       text =
-        Message.text(
-          :game_winners,
+        MessageTemplates.game_winners(
           state.view_screen.winners,
           state.game_id,
           state.view_screen.game_name

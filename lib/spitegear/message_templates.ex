@@ -1,0 +1,166 @@
+defmodule Spitegear.MessageTemplates do
+  @moduledoc false
+  import Ecto.Query
+  alias Spitegear.MessageTemplate
+  alias Spitegear.Repo
+
+  @keys ~w(next_turn kind_reminder player_moving player_died game_winners round_complete)a
+
+  def all_keys, do: @keys
+
+  # --- Default templates (used as fallback and shown in admin UI) ---
+
+  def default_template(:next_turn),
+    do:
+      "*Round %{round}, turn %{turn_number}* — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
+
+  def default_template(:kind_reminder),
+    do: "<%{player_slack}> %{reminder_text} <%{game_url}|%{game_name}>"
+
+  def default_template(:player_moving),
+    do: "%{player_handle} is taking their turn! 👀"
+
+  def default_template(:player_died),
+    do: "<%{player_slack}> died in <%{game_url}|%{game_name}>"
+
+  def default_template(:game_winners),
+    do: "%{players_slack} won <%{game_url}|%{game_name}>, huzzah %{gif_url} <@channel>"
+
+  def default_template(:round_complete),
+    do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|%{game_name}>"
+
+  def available_vars(:next_turn), do: ~w(player_slack round turn_number game_name game_url)
+  def available_vars(:kind_reminder), do: ~w(player_slack reminders reminder_text game_name game_url)
+  def available_vars(:player_moving), do: ~w(player_handle)
+  def available_vars(:player_died), do: ~w(player_slack game_name game_url)
+  def available_vars(:game_winners), do: ~w(players_slack game_name game_url gif_url)
+  def available_vars(:round_complete), do: ~w(round next_round game_name game_url)
+
+  # --- High-level builders (called from GamePoller) ---
+
+  def next_turn(player, game_id, round, turn_number, game_name) do
+    render(:next_turn, %{
+      player_slack: player.slack_name,
+      round: round,
+      turn_number: turn_number,
+      game_name: game_name,
+      game_url: game_url(game_id)
+    }, game_id)
+  end
+
+  def kind_reminder(turn, game_name) do
+    render(:kind_reminder, %{
+      player_slack: turn.player.slack_name,
+      reminders: turn.reminders,
+      reminder_text: reminder_text(turn.reminders),
+      game_name: game_name,
+      game_url: game_url(turn.game_id)
+    }, turn.game_id)
+  end
+
+  def player_moving(player, game_id) do
+    render(:player_moving, %{
+      player_handle: String.trim_leading(player.slack_name, "@")
+    }, game_id)
+  end
+
+  def player_died(player, game_id, game_name) do
+    render(:player_died, %{
+      player_slack: player.slack_name,
+      game_name: game_name,
+      game_url: game_url(game_id)
+    }, game_id)
+  end
+
+  def game_winners(players, game_id, game_name) do
+    players_slack = Enum.map_join(players, " and ", &"<#{&1.slack_name}>")
+
+    render(:game_winners, %{
+      players_slack: players_slack,
+      game_name: game_name,
+      game_url: game_url(game_id),
+      gif_url: "https://media.giphy.com/media/a0h7sAqON67nO/giphy.gif"
+    }, game_id)
+  end
+
+  def round_complete(game_id, round, game_name) do
+    render(:round_complete, %{
+      round: round,
+      next_round: round + 1,
+      game_name: game_name,
+      game_url: game_url(game_id)
+    }, game_id)
+  end
+
+  # --- DB access ---
+
+  def get(key, game_id) do
+    key = to_string(key)
+
+    case Repo.get_by(MessageTemplate, key: key, game_id: game_id) do
+      nil -> Repo.get_by(MessageTemplate, key: key, game_id: nil)
+      template -> template
+    end
+  end
+
+  def get_exact(key, game_id) do
+    Repo.get_by(MessageTemplate, key: to_string(key), game_id: game_id)
+  end
+
+  def put(key, template_str, game_id \\ nil) do
+    key = to_string(key)
+
+    case Repo.get_by(MessageTemplate, key: key, game_id: game_id) do
+      nil ->
+        Repo.insert(%MessageTemplate{key: key, template: template_str, game_id: game_id})
+
+      existing ->
+        Repo.update(Ecto.Changeset.change(existing, template: template_str))
+    end
+  end
+
+  def delete(key, game_id \\ nil) do
+    key = to_string(key)
+
+    case Repo.get_by(MessageTemplate, key: key, game_id: game_id) do
+      nil -> :ok
+      template -> Repo.delete(template) && :ok
+    end
+  end
+
+  def list_global do
+    Repo.all(from t in MessageTemplate, where: is_nil(t.game_id))
+    |> Map.new(&{&1.key, &1.template})
+  end
+
+  def list_for_game(game_id) do
+    Repo.all(from t in MessageTemplate, where: t.game_id == ^game_id)
+    |> Map.new(&{&1.key, &1.template})
+  end
+
+  # --- Private ---
+
+  defp render(key, vars, game_id) do
+    template_str =
+      case get(key, game_id) do
+        nil -> default_template(key)
+        t -> t.template
+      end
+
+    interpolate(template_str, vars)
+  end
+
+  defp interpolate(template, vars) do
+    Enum.reduce(vars, template, fn {k, v}, acc ->
+      String.replace(acc, "%{#{k}}", to_string(v))
+    end)
+  end
+
+  defp game_url(game_id), do: "https://www.wargear.net/games/view/#{game_id}"
+
+  defp reminder_text(0), do: "I wuv you 🧸💕, can you go now?"
+  defp reminder_text(1), do: "I wuv you 🧸💕, did you see that it's your turn still?"
+  defp reminder_text(2), do: "I wuv you 🧸💕, you just gotta click the buttons, ok? 🧸💕"
+  defp reminder_text(3), do: "I wuv you 🧸💕, you can always rest in the next game, or in the afterlife 🧸💕"
+  defp reminder_text(_), do: "Strong bears also cry... strong bears also cry... 🧸"
+end

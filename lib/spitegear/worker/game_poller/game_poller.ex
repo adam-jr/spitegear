@@ -407,16 +407,15 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp maybe_announce_winners(state) do
     if Enum.any?(state.view_screen.winners) do
-      text =
-        MessageTemplates.game_winners(
+      {blocks, fallback} =
+        MessageTemplates.game_winners_blocks(
           state.view_screen.winners,
           state.game_id,
           state.view_screen.game_name
         )
 
-      PubSub.msg(:spitegear, text)
-      PubSub.msg(:spitegear, text)
-      PubSub.msg(:spitegear, text)
+      payload = [type: :game_winners, payload: {blocks, fallback}]
+      PubSub.msg(:spitegear, payload)
     end
 
     state

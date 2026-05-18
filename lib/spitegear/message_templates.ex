@@ -41,7 +41,7 @@ defmodule Spitegear.MessageTemplates do
     do: "<%{player_slack}> died in <%{game_url}|%{game_name}>"
 
   def default_template(:game_winners),
-    do: "%{players_slack} won <%{game_url}|%{game_name}>, huzzah %{gif_url} <@channel>"
+    do: "%{players_slack} won <%{game_url}|%{game_name}>, huzzah! :tada: <!channel>"
 
   def default_template(:game_winners_gif),
     do: "https://media.giphy.com/media/a0h7sAqON67nO/giphy.gif"
@@ -57,7 +57,7 @@ defmodule Spitegear.MessageTemplates do
 
   def available_vars(:player_moving), do: ~w(player_handle)
   def available_vars(:player_died), do: ~w(player_slack game_name game_url)
-  def available_vars(:game_winners), do: ~w(players_slack game_name game_url gif_url)
+  def available_vars(:game_winners), do: ~w(players_slack game_name game_url)
   def available_vars(:game_winners_gif), do: []
   def available_vars(:round_complete), do: ~w(round next_round game_name game_url)
 
@@ -114,19 +114,23 @@ defmodule Spitegear.MessageTemplates do
     )
   end
 
-  def game_winners(players, game_id, game_name) do
+  def game_winners_blocks(players, game_id, game_name) do
     players_slack = Enum.map_join(players, " and ", &"<#{&1.slack_name}>")
+    gif_url = render(:game_winners_gif, %{}, game_id)
 
-    render(
-      :game_winners,
-      %{
-        players_slack: players_slack,
-        game_name: game_name,
-        game_url: game_url(game_id),
-        gif_url: render(:game_winners_gif, %{}, game_id)
-      },
-      game_id
-    )
+    text =
+      render(
+        :game_winners,
+        %{players_slack: players_slack, game_name: game_name, game_url: game_url(game_id)},
+        game_id
+      )
+
+    blocks = [
+      %{"type" => "section", "text" => %{"type" => "mrkdwn", "text" => text}},
+      %{"type" => "image", "image_url" => gif_url, "alt_text" => "celebration"}
+    ]
+
+    {blocks, text}
   end
 
   def round_complete(game_id, round, game_name) do

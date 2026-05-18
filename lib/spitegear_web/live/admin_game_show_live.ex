@@ -1,7 +1,6 @@
 defmodule SpitegearWeb.AdminGameShowLive do
   use SpitegearWeb, :live_view
   alias Spitegear.Games
-  alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Slack.Message
 
@@ -15,28 +14,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
   def handle_info(:refresh, socket) do
     Process.send_after(self(), :refresh, @refresh_interval)
     {:noreply, assign(socket, load(socket.assigns.game_id))}
-  end
-
-  def handle_event("save_game_template", %{"key" => key, "template" => template}, socket) do
-    game_id = socket.assigns.game_id
-    MessageTemplates.put(key, template, game_id)
-
-    {:noreply,
-     assign(socket,
-       game_templates: MessageTemplates.list_for_game(game_id),
-       saved_template: key
-     )}
-  end
-
-  def handle_event("reset_game_template", %{"key" => key}, socket) do
-    game_id = socket.assigns.game_id
-    MessageTemplates.delete(key, game_id)
-
-    {:noreply,
-     assign(socket,
-       game_templates: MessageTemplates.list_for_game(game_id),
-       saved_template: nil
-     )}
   end
 
   def handle_event("start_poller", _params, socket) do
@@ -66,8 +43,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
     poller_alive = Games.poller_alive?(game_id)
     poller_turn_id = Games.poller_turn_id(game_id)
     player_statuses = Games.list_player_statuses(game_id)
-    game_templates = MessageTemplates.list_for_game(game_id)
-    global_templates = MessageTemplates.list_global()
 
     %{
       game_id: game_id,
@@ -79,10 +54,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
       completed_rounds: completed_rounds,
       poller_alive: poller_alive,
       poller_turn_id: poller_turn_id,
-      player_statuses: player_statuses,
-      game_templates: game_templates,
-      global_templates: global_templates,
-      saved_template: nil
+      player_statuses: player_statuses
     }
   end
 
@@ -108,6 +80,9 @@ defmodule SpitegearWeb.AdminGameShowLive do
           <% else %>
             <button phx-click="start_poller" class="text-sm text-blue-600 hover:underline">Start</button>
           <% end %>
+          <a href={"/admin/games/#{@game_id}/templates"} class="text-sm text-blue-600 hover:underline">
+            Templates →
+          </a>
           <a
             href={"https://www.wargear.net/games/view/#{@game_id}"}
             target="_blank"
@@ -231,59 +206,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
           </table>
         </section>
       <% end %>
-      <section>
-        <h2 class="text-lg font-semibold mb-3">Message Templates</h2>
-        <p class="text-sm text-gray-500 mb-4">
-          Game-specific overrides. Falls back to global defaults if not set.
-          Use <code class="bg-gray-100 px-1 rounded">%{"{var}"}</code> for variables.
-        </p>
-        <div class="flex flex-col gap-6">
-          <%= for key <- MessageTemplates.all_keys() do %>
-            <% key_str = to_string(key) %>
-            <% game_custom = Map.get(@game_templates, key_str) %>
-            <% global_custom = Map.get(@global_templates, key_str) %>
-            <div class="border border-gray-200 rounded p-4">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-sm font-medium font-mono"><%= key_str %></span>
-                <div class="flex items-center gap-3">
-                  <%= cond do %>
-                    <% game_custom -> %>
-                      <span class="text-xs text-blue-600 font-medium">game override</span>
-                      <button
-                        phx-click="reset_game_template"
-                        phx-value-key={key_str}
-                        class="text-xs text-red-500 hover:underline"
-                      >
-                        Reset to <%= if global_custom, do: "global", else: "default" %>
-                      </button>
-                    <% global_custom -> %>
-                      <span class="text-xs text-yellow-600 font-medium">global</span>
-                    <% true -> %>
-                      <span class="text-xs text-gray-400">default</span>
-                  <% end %>
-                </div>
-              </div>
-              <p class="text-xs text-gray-400 mb-2">
-                vars: <%= Enum.join(MessageTemplates.available_vars(key), ", ") %>
-              </p>
-              <form phx-submit="save_game_template" class="flex flex-col gap-2">
-                <input type="hidden" name="key" value={key_str} />
-                <textarea
-                  name="template"
-                  rows="2"
-                  class="w-full font-mono text-sm border border-gray-300 rounded p-2"
-                ><%= game_custom || global_custom || MessageTemplates.default_template(key) %></textarea>
-                <div class="flex items-center gap-3">
-                  <button type="submit" class="text-sm text-blue-600 hover:underline">Save</button>
-                  <%= if @saved_template == key_str do %>
-                    <span class="text-green-600 text-xs">Saved</span>
-                  <% end %>
-                </div>
-              </form>
-            </div>
-          <% end %>
-        </div>
-      </section>
     </div>
     """
   end

@@ -1,6 +1,5 @@
 defmodule SpitegearWeb.AdminLive do
   use SpitegearWeb, :live_view
-  alias Spitegear.MessageTemplates
   alias Spitegear.Settings
 
   @cookie_key "wargear_cookie"
@@ -12,9 +11,7 @@ defmodule SpitegearWeb.AdminLive do
        cookie: Settings.get(@cookie_key) || "",
        api_key: Settings.get(@api_key_key) || "",
        saved: nil,
-       revealed: MapSet.new(),
-       global_templates: MessageTemplates.list_global(),
-       saved_template: nil
+       revealed: MapSet.new()
      )}
   end
 
@@ -26,16 +23,6 @@ defmodule SpitegearWeb.AdminLive do
   def handle_event("save_api_key", %{"api_key" => value}, socket) do
     {:ok, _} = Settings.put(@api_key_key, value)
     {:noreply, assign(socket, api_key: value, saved: :api_key)}
-  end
-
-  def handle_event("save_template", %{"key" => key, "template" => template}, socket) do
-    MessageTemplates.put(key, template)
-    {:noreply, assign(socket, global_templates: MessageTemplates.list_global(), saved_template: key)}
-  end
-
-  def handle_event("reset_template", %{"key" => key}, socket) do
-    MessageTemplates.delete(key)
-    {:noreply, assign(socket, global_templates: MessageTemplates.list_global(), saved_template: nil)}
   end
 
   def handle_event("toggle_reveal", %{"key" => key}, socket) do
@@ -56,7 +43,10 @@ defmodule SpitegearWeb.AdminLive do
     <div class="max-w-xl mx-auto mt-16 p-6 flex flex-col gap-10">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Admin</h1>
-        <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
+          <div class="flex items-center gap-4">
+          <a href="/admin/templates" class="text-sm text-blue-600 hover:underline">Templates →</a>
+          <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
+        </div>
       </div>
 
       <section>
@@ -100,54 +90,6 @@ defmodule SpitegearWeb.AdminLive do
             <% end %>
           </div>
         </form>
-      </section>
-      <section>
-        <h2 class="text-lg font-semibold mb-3">Message Templates</h2>
-        <p class="text-sm text-gray-500 mb-4">
-          Global defaults for all games. Use <code class="bg-gray-100 px-1 rounded">%{"{var}"}</code> for variables.
-        </p>
-        <div class="flex flex-col gap-6">
-          <%= for key <- MessageTemplates.all_keys() do %>
-            <% key_str = to_string(key) %>
-            <% custom = Map.get(@global_templates, key_str) %>
-            <div class="border border-gray-200 rounded p-4">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-sm font-medium font-mono"><%= key_str %></span>
-                <div class="flex items-center gap-3">
-                  <%= if custom do %>
-                    <span class="text-xs text-blue-600 font-medium">custom</span>
-                    <button
-                      phx-click="reset_template"
-                      phx-value-key={key_str}
-                      class="text-xs text-red-500 hover:underline"
-                    >
-                      Reset to default
-                    </button>
-                  <% else %>
-                    <span class="text-xs text-gray-400">default</span>
-                  <% end %>
-                </div>
-              </div>
-              <p class="text-xs text-gray-400 mb-2">
-                vars: <%= Enum.join(MessageTemplates.available_vars(key), ", ") %>
-              </p>
-              <form phx-submit="save_template" class="flex flex-col gap-2">
-                <input type="hidden" name="key" value={key_str} />
-                <textarea
-                  name="template"
-                  rows="2"
-                  class="w-full font-mono text-sm border border-gray-300 rounded p-2"
-                ><%= custom || MessageTemplates.default_template(key) %></textarea>
-                <div class="flex items-center gap-3">
-                  <button type="submit" class="text-sm text-blue-600 hover:underline">Save</button>
-                  <%= if @saved_template == key_str do %>
-                    <span class="text-green-600 text-xs">Saved</span>
-                  <% end %>
-                </div>
-              </form>
-            </div>
-          <% end %>
-        </div>
       </section>
     </div>
     """

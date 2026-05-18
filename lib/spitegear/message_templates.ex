@@ -118,25 +118,35 @@ defmodule Spitegear.MessageTemplates do
 
   def render_sample(key, game_id), do: render(key, sample_vars(key, game_id), game_id)
 
-  defp sample_vars(:next_turn, game_id),
-    do: %{player_slack: "@testplayer", round: 3, turn_number: 42, game_name: "Test Game", game_url: game_url(game_id || "00000000")}
+  defp sample_vars(:next_turn, game_id) do
+    %{player_slack: "@testplayer", round: 3, turn_number: 42,
+      game_name: "Test Game", game_url: game_url(game_id || "00000000")}
+  end
 
   defp sample_vars(key, game_id)
        when key in ~w(kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4)a do
     n = key |> to_string() |> String.split("_") |> List.last() |> String.to_integer()
-    %{player_slack: "@testplayer", reminders: n, game_name: "Test Game", game_url: game_url(game_id || "00000000")}
+    %{player_slack: "@testplayer", reminders: n,
+      game_name: "Test Game", game_url: game_url(game_id || "00000000")}
   end
 
   defp sample_vars(:player_moving, _game_id), do: %{player_handle: "testplayer"}
 
-  defp sample_vars(:player_died, game_id),
-    do: %{player_slack: "@testplayer", game_name: "Test Game", game_url: game_url(game_id || "00000000")}
+  defp sample_vars(:player_died, game_id) do
+    %{player_slack: "@testplayer", game_name: "Test Game",
+      game_url: game_url(game_id || "00000000")}
+  end
 
-  defp sample_vars(:game_winners, game_id),
-    do: %{players_slack: "<@testplayer>", game_name: "Test Game", game_url: game_url(game_id || "00000000"), gif_url: render(:game_winners_gif, %{}, game_id)}
+  defp sample_vars(:game_winners, game_id) do
+    %{players_slack: "<@testplayer>", game_name: "Test Game",
+      game_url: game_url(game_id || "00000000"),
+      gif_url: render(:game_winners_gif, %{}, game_id)}
+  end
 
-  defp sample_vars(:round_complete, game_id),
-    do: %{round: 5, next_round: 6, game_name: "Test Game", game_url: game_url(game_id || "00000000")}
+  defp sample_vars(:round_complete, game_id) do
+    %{round: 5, next_round: 6, game_name: "Test Game",
+      game_url: game_url(game_id || "00000000")}
+  end
 
   # --- DB access ---
 

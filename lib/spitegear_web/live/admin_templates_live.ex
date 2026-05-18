@@ -141,7 +141,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
                 class="w-full font-mono text-sm border border-gray-300 rounded p-2"
               ><%= active || MessageTemplates.default_template(key) %></textarea>
               <%= if key_str == "game_winners_gif" do %>
-                <img src={@gif_preview_url} alt="GIF preview" class="max-h-28 w-auto rounded mt-1" />
+                <img src={@gif_preview_url} alt="GIF preview" class="max-h-28 w-auto self-start rounded mt-1" />
               <% end %>
               <div class="flex items-center gap-3">
                 <button type="submit" class="text-sm text-blue-600 hover:underline">Save</button>

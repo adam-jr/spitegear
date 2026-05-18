@@ -4,7 +4,7 @@ defmodule Spitegear.MessageTemplates do
   alias Spitegear.MessageTemplate
   alias Spitegear.Repo
 
-  @keys ~w(next_turn kind_reminder player_moving player_died game_winners round_complete)a
+  @keys ~w(next_turn kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4 player_moving player_died game_winners round_complete)a
 
   def all_keys, do: @keys
 
@@ -14,8 +14,20 @@ defmodule Spitegear.MessageTemplates do
     do:
       "*Round %{round}, turn %{turn_number}* — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
 
-  def default_template(:kind_reminder),
-    do: "<%{player_slack}> %{reminder_text} <%{game_url}|%{game_name}>"
+  def default_template(:kind_reminder_0),
+    do: "<%{player_slack}> I wuv you 🧸💕, can you go now? <%{game_url}|%{game_name}>"
+
+  def default_template(:kind_reminder_1),
+    do: "<%{player_slack}> I wuv you 🧸💕, did you see that it's your turn still? <%{game_url}|%{game_name}>"
+
+  def default_template(:kind_reminder_2),
+    do: "<%{player_slack}> I wuv you 🧸💕, you just gotta click the buttons, ok? 🧸💕 <%{game_url}|%{game_name}>"
+
+  def default_template(:kind_reminder_3),
+    do: "<%{player_slack}> I wuv you 🧸💕, you can always rest in the next game, or in the afterlife 🧸💕 <%{game_url}|%{game_name}>"
+
+  def default_template(:kind_reminder_4),
+    do: "<%{player_slack}> Strong bears also cry... strong bears also cry... 🧸 <%{game_url}|%{game_name}>"
 
   def default_template(:player_moving),
     do: "%{player_handle} is taking their turn! 👀"
@@ -30,7 +42,9 @@ defmodule Spitegear.MessageTemplates do
     do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|%{game_name}>"
 
   def available_vars(:next_turn), do: ~w(player_slack round turn_number game_name game_url)
-  def available_vars(:kind_reminder), do: ~w(player_slack reminders reminder_text game_name game_url)
+  def available_vars(key)
+      when key in ~w(kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4)a,
+      do: ~w(player_slack reminders game_name game_url)
   def available_vars(:player_moving), do: ~w(player_handle)
   def available_vars(:player_died), do: ~w(player_slack game_name game_url)
   def available_vars(:game_winners), do: ~w(players_slack game_name game_url gif_url)
@@ -49,10 +63,11 @@ defmodule Spitegear.MessageTemplates do
   end
 
   def kind_reminder(turn, game_name) do
-    render(:kind_reminder, %{
+    key = :"kind_reminder_#{min(turn.reminders, 4)}"
+
+    render(key, %{
       player_slack: turn.player.slack_name,
       reminders: turn.reminders,
-      reminder_text: reminder_text(turn.reminders),
       game_name: game_name,
       game_url: game_url(turn.game_id)
     }, turn.game_id)
@@ -158,9 +173,4 @@ defmodule Spitegear.MessageTemplates do
 
   defp game_url(game_id), do: "https://www.wargear.net/games/view/#{game_id}"
 
-  defp reminder_text(0), do: "I wuv you 🧸💕, can you go now?"
-  defp reminder_text(1), do: "I wuv you 🧸💕, did you see that it's your turn still?"
-  defp reminder_text(2), do: "I wuv you 🧸💕, you just gotta click the buttons, ok? 🧸💕"
-  defp reminder_text(3), do: "I wuv you 🧸💕, you can always rest in the next game, or in the afterlife 🧸💕"
-  defp reminder_text(_), do: "Strong bears also cry... strong bears also cry... 🧸"
 end

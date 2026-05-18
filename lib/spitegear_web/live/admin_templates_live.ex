@@ -59,6 +59,18 @@ defmodule SpitegearWeb.AdminTemplatesLive do
     {:noreply, assign(socket, gif_preview_url: url)}
   end
 
+  def handle_event("test_template", %{"key" => "game_winners"}, socket) do
+    game_id = socket.assigns.game_id
+    slack_name = Spitegear.Settings.get("admin_slack_name") || "@testplayer"
+    player = %{slack_name: slack_name}
+
+    {blocks, fallback} =
+      MessageTemplates.game_winners_blocks([player], game_id || "00000000", "Test Game")
+
+    PubSub.msg(:spitegear_test, type: :game_winners, payload: {blocks, fallback})
+    {:noreply, socket}
+  end
+
   def handle_event("test_template", %{"key" => key}, socket) do
     text = MessageTemplates.render_sample(key, socket.assigns.game_id)
     PubSub.msg(:spitegear_test, text)

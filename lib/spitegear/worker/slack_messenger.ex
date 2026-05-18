@@ -38,7 +38,8 @@ defmodule Spitegear.Worker.SlackMessenger do
     {:noreply, state}
   end
 
-  def handle_info({:message, channel, [type: :turn_stats, payload: {blocks, fallback}]}, state) do
+  def handle_info({:message, channel, [type: _type, payload: {blocks, fallback}]}, state)
+      when is_list(blocks) do
     if post_to_slack?(),
       do: API.post_blocks(blocks, fallback, channel),
       else: Logger.info("[Slack:#{channel}] #{fallback}")

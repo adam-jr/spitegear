@@ -41,8 +41,12 @@ defmodule Spitegear.Wargear.Login do
       })
 
     with {:ok, initial_cookies} <- get_initial_cookies(),
-         headers = [{"Content-Type", "application/x-www-form-urlencoded"}, {"Cookie", initial_cookies}],
-         {:ok, %{headers: resp_headers}} <- HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false),
+         headers = [
+           {"Content-Type", "application/x-www-form-urlencoded"},
+           {"Cookie", initial_cookies}
+         ],
+         {:ok, %{headers: resp_headers}} <-
+           HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false),
          cookie when cookie != "" <- extract_cookie(resp_headers) do
       {:ok, cookie}
     else

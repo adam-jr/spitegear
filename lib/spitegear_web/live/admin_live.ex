@@ -43,7 +43,7 @@ defmodule SpitegearWeb.AdminLive do
     <div class="max-w-xl mx-auto mt-16 p-6 flex flex-col gap-10">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Admin</h1>
-          <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4">
           <a href="/admin/templates" class="text-sm text-blue-600 hover:underline">Templates →</a>
           <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
         </div>
@@ -51,7 +51,11 @@ defmodule SpitegearWeb.AdminLive do
 
       <section>
         <h2 class="text-lg font-semibold mb-3">Wargear API Key</h2>
-        <.secret_row key="wargear_api_key" value={@api_key} revealed={revealed?(@revealed, "wargear_api_key")} />
+        <.secret_row
+          key="wargear_api_key"
+          value={@api_key}
+          revealed={revealed?(@revealed, "wargear_api_key")}
+        />
         <form phx-submit="save_api_key" class="flex flex-col gap-4 mt-4">
           <input
             type="text"
@@ -73,7 +77,11 @@ defmodule SpitegearWeb.AdminLive do
 
       <section>
         <h2 class="text-lg font-semibold mb-3">Wargear Session Cookie</h2>
-        <.secret_row key="wargear_cookie" value={@cookie} revealed={revealed?(@revealed, "wargear_cookie")} />
+        <.secret_row
+          key="wargear_cookie"
+          value={@cookie}
+          revealed={revealed?(@revealed, "wargear_cookie")}
+        />
         <form phx-submit="save_cookie" class="flex flex-col gap-4 mt-4">
           <textarea
             name="cookie"

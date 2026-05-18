@@ -22,7 +22,16 @@ defmodule Spitegear.Slack.MessageTest do
 
   describe "text(:turn_stats, stats, game_id, rounds)" do
     test "shows rounds not turns in header" do
-      stats = [%{player_name: "adam", count: 5, avg_seconds: 300, fastest_seconds: 100, slowest_seconds: 500}]
+      stats = [
+        %{
+          player_name: "adam",
+          count: 5,
+          avg_seconds: 300,
+          fastest_seconds: 100,
+          slowest_seconds: 500
+        }
+      ]
+
       text = Message.text(:turn_stats, stats, "99999", 5)
       assert text =~ "5 rounds"
       refute text =~ "turns"

@@ -66,10 +66,12 @@ defmodule SpitegearWeb.AdminTemplatesLive do
   end
 
   defp load_templates(nil), do: {%{}, MessageTemplates.list_global()}
-  defp load_templates(game_id), do: {MessageTemplates.list_for_game(game_id), MessageTemplates.list_global()}
+
+  defp load_templates(game_id),
+    do: {MessageTemplates.list_for_game(game_id), MessageTemplates.list_global()}
 
   defp current_gif_url(game_id, game_templates, global_templates) do
-    (if game_id, do: Map.get(game_templates, "game_winners_gif")) ||
+    if(game_id, do: Map.get(game_templates, "game_winners_gif")) ||
       Map.get(global_templates, "game_winners_gif") ||
       MessageTemplates.default_template(:game_winners_gif)
   end
@@ -91,7 +93,8 @@ defmodule SpitegearWeb.AdminTemplatesLive do
           <% else %>
             Global defaults for all games.
           <% end %>
-          Use <code class="bg-gray-100 px-1 rounded">%{"{var}"}</code> for variables.
+          Use <code class="bg-gray-100 px-1 rounded">%{"{var}"}</code>
+          for variables.
         </p>
       </div>
 
@@ -148,7 +151,11 @@ defmodule SpitegearWeb.AdminTemplatesLive do
                 class="w-full font-mono text-sm border border-gray-300 rounded p-2"
               ><%= active || MessageTemplates.default_template(key) %></textarea>
               <%= if key_str == "game_winners_gif" do %>
-                <img src={@gif_preview_url} alt="GIF preview" class="max-h-28 w-auto self-start rounded mt-1" />
+                <img
+                  src={@gif_preview_url}
+                  alt="GIF preview"
+                  class="max-h-28 w-auto self-start rounded mt-1"
+                />
               <% end %>
               <div class="flex items-center gap-3">
                 <button type="submit" class="text-sm text-blue-600 hover:underline">Save</button>

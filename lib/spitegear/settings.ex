@@ -17,6 +17,6 @@ defmodule Spitegear.Settings do
   end
 
   def all do
-    Repo.all(from s in Setting, order_by: s.key)
+    Repo.all(from(s in Setting, order_by: s.key))
   end
 end

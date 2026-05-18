@@ -3,9 +3,9 @@ defmodule Spitegear.MessageTemplate do
   import Ecto.Changeset
 
   schema "message_templates" do
-    field :key, :string
-    field :template, :string
-    field :game_id, :string
+    field(:key, :string)
+    field(:template, :string)
+    field(:game_id, :string)
 
     timestamps()
   end

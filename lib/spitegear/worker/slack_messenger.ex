@@ -31,23 +31,36 @@ defmodule Spitegear.Worker.SlackMessenger do
   end
 
   def handle_info({:dm, recipient, text}, state) do
-    if post_to_slack?(), do: API.post_dm(text, recipient), else: Logger.info("[Slack DM:#{recipient}] #{text}")
+    if post_to_slack?(),
+      do: API.post_dm(text, recipient),
+      else: Logger.info("[Slack DM:#{recipient}] #{text}")
+
     {:noreply, state}
   end
 
   def handle_info({:message, channel, [type: :turn_stats, payload: {blocks, fallback}]}, state) do
-    if post_to_slack?(), do: API.post_blocks(blocks, fallback, channel), else: Logger.info("[Slack:#{channel}] #{fallback}")
+    if post_to_slack?(),
+      do: API.post_blocks(blocks, fallback, channel),
+      else: Logger.info("[Slack:#{channel}] #{fallback}")
+
     {:noreply, state}
   end
 
   def handle_info({:message, channel, [type: type, payload: payload]}, state) do
     text = Message.text(type, payload)
-    if post_to_slack?(), do: API.post_message(text, channel), else: Logger.info("[Slack:#{channel}] #{text}")
+
+    if post_to_slack?(),
+      do: API.post_message(text, channel),
+      else: Logger.info("[Slack:#{channel}] #{text}")
+
     {:noreply, state}
   end
 
   def handle_info({:message, channel, text}, state) do
-    if post_to_slack?(), do: API.post_message(text, channel), else: Logger.info("[Slack:#{channel}] #{text}")
+    if post_to_slack?(),
+      do: API.post_message(text, channel),
+      else: Logger.info("[Slack:#{channel}] #{text}")
+
     {:noreply, state}
   end
 

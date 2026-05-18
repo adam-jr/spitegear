@@ -4,7 +4,7 @@ defmodule Spitegear.Setting do
 
   @primary_key {:key, :string, autogenerate: false}
   schema "settings" do
-    field :value, :string
+    field(:value, :string)
     timestamps()
   end
 

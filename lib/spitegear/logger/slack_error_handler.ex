@@ -6,7 +6,8 @@ defmodule Spitegear.Logger.SlackErrorHandler do
 
   alias Spitegear.Slack.API
 
-  def log(%{level: level, msg: msg}, _config) when level in [:error, :critical, :alert, :emergency] do
+  def log(%{level: level, msg: msg}, _config)
+      when level in [:error, :critical, :alert, :emergency] do
     channel_id =
       Application.get_env(:spitegear, API, [])
       |> Keyword.get(:channel_ids, [])

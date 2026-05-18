@@ -16,23 +16,20 @@ defmodule Spitegear.MessageTemplates do
       "*Round %{round}, turn %{turn_number}* — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
 
   def default_template(:kind_reminder_0),
-    do: "<%{player_slack}> I wuv you 🧸💕, can you go now? <%{game_url}|%{game_name}>"
+    do: "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> 🎖️"
 
   def default_template(:kind_reminder_1),
-    do:
-      "<%{player_slack}> I wuv you 🧸💕, did you see that it's your turn still? <%{game_url}|%{game_name}>"
+    do: "<%{player_slack}> the front lines are stalled. your move. <%{game_url}|%{game_name}>"
 
   def default_template(:kind_reminder_2),
-    do:
-      "<%{player_slack}> I wuv you 🧸💕, you just gotta click the buttons, ok? 🧸💕 <%{game_url}|%{game_name}>"
+    do: "<%{player_slack}> insubordination noted. take your turn. <%{game_url}|%{game_name}>"
 
   def default_template(:kind_reminder_3),
     do:
-      "<%{player_slack}> I wuv you 🧸💕, you can always rest in the next game, or in the afterlife 🧸💕 <%{game_url}|%{game_name}>"
+      "<%{player_slack}> desertion is punishable by... well, more reminders. <%{game_url}|%{game_name}>"
 
   def default_template(:kind_reminder_4),
-    do:
-      "<%{player_slack}> Strong bears also cry... strong bears also cry... 🧸 <%{game_url}|%{game_name}>"
+    do: "<%{player_slack}> court martial pending <%{game_url}|%{game_name}> ⚖️"
 
   def default_template(:player_moving),
     do: "%{player_handle} is taking their turn! 👀"

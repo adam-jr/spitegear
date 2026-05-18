@@ -10,7 +10,7 @@ defmodule Spitegear.Games do
   alias Spitegear.Worker.GamePoller
 
   def list_active_games do
-    Repo.all(from g in Game, where: is_nil(g.finished))
+    Repo.all(from(g in Game, where: is_nil(g.finished)))
   end
 
   def upsert_game(view_screen) do
@@ -24,7 +24,8 @@ defmodule Spitegear.Games do
         finished: view_screen.finished,
         winners: Enum.map(view_screen.winners, & &1.name)
       },
-      on_conflict: {:replace, [:url, :game_name, :board_name, :created, :finished, :winners, :updated_at]},
+      on_conflict:
+        {:replace, [:url, :game_name, :board_name, :created, :finished, :winners, :updated_at]},
       conflict_target: :game_id
     )
   end
@@ -46,7 +47,9 @@ defmodule Spitegear.Games do
         reminders: turn.reminders,
         moving_announced: turn.moving_announced
       },
-      on_conflict: {:replace, [:player_name, :started, :reminded, :reminders, :moving_announced, :updated_at]},
+      on_conflict:
+        {:replace,
+         [:player_name, :started, :reminded, :reminders, :moving_announced, :updated_at]},
       conflict_target: :game_id
     )
   end
@@ -70,10 +73,11 @@ defmodule Spitegear.Games do
 
   def completed_rounds(game_id) do
     Repo.all(
-      from t in TurnHistory,
+      from(t in TurnHistory,
         where: t.game_id == ^game_id,
         order_by: [asc: t.started],
         select: t.player_name
+      )
     )
     |> count_completed_rounds()
   end
@@ -99,13 +103,15 @@ defmodule Spitegear.Games do
 
   def turn_stats(game_id) do
     Repo.all(
-      from t in TurnHistory,
+      from(t in TurnHistory,
         where: t.game_id == ^game_id,
         select: %{player_name: t.player_name, started: t.started, ended: t.ended}
+      )
     )
     |> Enum.group_by(& &1.player_name)
     |> Enum.map(fn {player_name, turns} ->
       durations = Enum.map(turns, &DateTime.diff(&1.ended, &1.started))
+
       %{
         player_name: player_name,
         count: length(turns),
@@ -126,20 +132,21 @@ defmodule Spitegear.Games do
   end
 
   def list_deaths(game_id) do
-    Repo.all(from d in GameDeath, where: d.game_id == ^game_id)
+    Repo.all(from(d in GameDeath, where: d.game_id == ^game_id))
   end
 
   def list_player_statuses(game_id) do
     all_players =
       Repo.all(
-        from t in TurnHistory,
+        from(t in TurnHistory,
           where: t.game_id == ^game_id,
           select: t.player_name,
           distinct: true
+        )
       )
 
     dead =
-      Repo.all(from d in GameDeath, where: d.game_id == ^game_id)
+      Repo.all(from(d in GameDeath, where: d.game_id == ^game_id))
       |> Map.new(&{&1.player_name, &1.eliminated_at})
 
     alive = Enum.reject(all_players, &Map.has_key?(dead, &1))
@@ -155,10 +162,11 @@ defmodule Spitegear.Games do
 
   def list_turn_history(game_id, limit \\ 30) do
     Repo.all(
-      from t in TurnHistory,
+      from(t in TurnHistory,
         where: t.game_id == ^game_id,
         order_by: [desc: t.started],
         limit: ^limit
+      )
     )
   end
 

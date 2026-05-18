@@ -22,7 +22,10 @@ defmodule Spitegear.Slack.Message do
     [
       %{
         "type" => "header",
-        "text" => %{"type" => "plain_text", "text" => "📊 Turn Shame — game ##{game_id} (#{rounds} rounds)"}
+        "text" => %{
+          "type" => "plain_text",
+          "text" => "📊 Turn Shame — game ##{game_id} (#{rounds} rounds)"
+        }
       },
       %{
         "type" => "section",
@@ -68,13 +71,16 @@ defmodule Spitegear.Slack.Message do
 
   # text/4
   def text(:player_died, player, game_id, game_name),
-    do: "<#{player.slack_name}> died in <https://www.wargear.net/games/view/#{game_id}|#{game_name}>"
+    do:
+      "<#{player.slack_name}> died in <https://www.wargear.net/games/view/#{game_id}|#{game_name}>"
 
   def text(:game_winners, players, game_id, game_name),
-    do: "#{slack_names(players)} won <https://www.wargear.net/games/view/#{game_id}|#{game_name}>, huzzah #{winning_gif(game_id)} <@channel>"
+    do:
+      "#{slack_names(players)} won <https://www.wargear.net/games/view/#{game_id}|#{game_name}>, huzzah #{winning_gif(game_id)} <@channel>"
 
   def text(:round_complete, game_id, round, game_name),
-    do: "⚔️ Round #{round} complete — round #{round + 1} begins! <https://www.wargear.net/games/view/#{game_id}|#{game_name}>"
+    do:
+      "⚔️ Round #{round} complete — round #{round + 1} begins! <https://www.wargear.net/games/view/#{game_id}|#{game_name}>"
 
   def text(:turn_stats, stats, game_id, rounds) do
     lines =

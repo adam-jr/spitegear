@@ -27,8 +27,22 @@ defmodule SpitegearWeb.AdminGameShowLive do
   end
 
   def handle_event("send_test_stats", _params, socket) do
-    blocks = Message.blocks(:turn_stats, socket.assigns.stats, socket.assigns.game_id, socket.assigns.completed_rounds)
-    fallback = Message.text(:turn_stats, socket.assigns.stats, socket.assigns.game_id, socket.assigns.completed_rounds)
+    blocks =
+      Message.blocks(
+        :turn_stats,
+        socket.assigns.stats,
+        socket.assigns.game_id,
+        socket.assigns.completed_rounds
+      )
+
+    fallback =
+      Message.text(
+        :turn_stats,
+        socket.assigns.stats,
+        socket.assigns.game_id,
+        socket.assigns.completed_rounds
+      )
+
     PubSub.msg(:spitegear_test, type: :turn_stats, payload: {blocks, fallback})
     {:noreply, socket}
   end
@@ -72,14 +86,21 @@ defmodule SpitegearWeb.AdminGameShowLive do
           <% end %>
         </div>
         <div class="flex items-center gap-3">
-          <span class={if @poller_alive, do: "text-green-600 text-sm font-medium", else: "text-gray-400 text-sm"}>
+          <span class={
+            if @poller_alive, do: "text-green-600 text-sm font-medium", else: "text-gray-400 text-sm"
+          }>
             <%= if @poller_alive, do: "● polling", else: "○ stopped" %>
           </span>
           <%= if @poller_alive do %>
             <button phx-click="stop_poller" class="text-sm text-red-600 hover:underline">Stop</button>
           <% else %>
-            <button phx-click="start_poller" class="text-sm text-blue-600 hover:underline">Start</button>
+            <button phx-click="start_poller" class="text-sm text-blue-600 hover:underline">
+              Start
+            </button>
           <% end %>
+          <a href={"/admin/games/#{@game_id}/templates"} class="text-sm text-blue-600 hover:underline">
+            Templates →
+          </a>
           <a
             href={"https://www.wargear.net/games/view/#{@game_id}"}
             target="_blank"
@@ -92,7 +113,9 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
       <section class="grid grid-cols-2 gap-6">
         <div class="border border-gray-200 rounded p-4">
-          <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Current Turn</h2>
+          <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Current Turn
+          </h2>
           <%= if @turn do %>
             <p class="text-xl font-bold"><%= @turn.player.name %></p>
             <p class="text-sm text-gray-500"><%= @turn.player.slack_name %></p>
@@ -135,7 +158,10 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <%= for p <- @player_statuses do %>
               <span class={[
                 "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium",
-                if(p.alive, do: "bg-green-100 text-green-800", else: "bg-gray-100 text-gray-500 line-through")
+                if(p.alive,
+                  do: "bg-green-100 text-green-800",
+                  else: "bg-gray-100 text-gray-500 line-through"
+                )
               ]}>
                 <span class={if p.alive, do: "text-green-500", else: "text-gray-400"}>
                   <%= if p.alive, do: "●", else: "✕" %>

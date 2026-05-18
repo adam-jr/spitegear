@@ -55,7 +55,10 @@ defmodule SpitegearWeb.AdminGamesLive do
             class="font-mono text-sm border border-gray-300 rounded p-2 w-48"
             required
           />
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+          <button
+            type="submit"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+          >
             Add
           </button>
           <%= if @error do %>
@@ -96,13 +99,19 @@ defmodule SpitegearWeb.AdminGamesLive do
                   </td>
                   <td class="py-2 flex gap-3">
                     <%= if alive do %>
-                      <button phx-click="stop_poller" phx-value-game_id={game.game_id}
-                        class="text-red-600 hover:underline">
+                      <button
+                        phx-click="stop_poller"
+                        phx-value-game_id={game.game_id}
+                        class="text-red-600 hover:underline"
+                      >
                         Stop
                       </button>
                     <% else %>
-                      <button phx-click="start_poller" phx-value-game_id={game.game_id}
-                        class="text-blue-600 hover:underline">
+                      <button
+                        phx-click="start_poller"
+                        phx-value-game_id={game.game_id}
+                        class="text-blue-600 hover:underline"
+                      >
                         Start
                       </button>
                     <% end %>

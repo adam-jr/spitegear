@@ -23,7 +23,11 @@ defmodule Spitegear.HTML.ViewScreen do
   defp fetch_game(game_id, retried) do
     with base_url <- URI.parse("https://www.wargear.net"),
          url <- %{base_url | path: "/games/view/#{game_id}"},
-         {:ok, %{body: body}} <- HTTPoison.get(url, [{"Cookie", wargear_cookie()}], timeout: 30_000, recv_timeout: 30_000),
+         {:ok, %{body: body}} <-
+           HTTPoison.get(url, [{"Cookie", wargear_cookie()}],
+             timeout: 30_000,
+             recv_timeout: 30_000
+           ),
          :ok <- check_session(body),
          {:ok, document} <- Floki.parse_document(body),
          {:ok, card} <- get_next_card(document),

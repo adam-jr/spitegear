@@ -1,7 +1,6 @@
 defmodule SpitegearWeb.AdminGamesLive do
   use SpitegearWeb, :live_view
   alias Spitegear.Games
-  alias Spitegear.Wargear.GameList
 
   def mount(_params, _session, socket) do
     {:ok,
@@ -13,8 +12,7 @@ defmodule SpitegearWeb.AdminGamesLive do
        new_game_id: "",
        error: nil,
        hist_game_id: "",
-       hist_status: nil,
-       seed_status: nil
+       hist_status: nil
      )}
   end
 
@@ -30,15 +28,9 @@ defmodule SpitegearWeb.AdminGamesLive do
     end
   end
 
-  def handle_event("seed_game_list", _params, socket) do
-    lv = self()
-
-    Task.start(fn ->
-      GameList.seed()
-      send(lv, :seed_complete)
-    end)
-
-    {:noreply, assign(socket, seed_status: :seeding)}
+  def handle_event("delete_unfetched", %{"game_id" => game_id}, socket) do
+    Games.delete_discovered_game(game_id)
+    {:noreply, assign(socket, unfetched_games: Games.list_unfetched_games())}
   end
 
   def handle_event("fetch_historical", %{"game_id" => game_id}, socket) do
@@ -55,14 +47,6 @@ defmodule SpitegearWeb.AdminGamesLive do
   def handle_event("stop_poller", %{"game_id" => game_id}, socket) do
     Games.stop_poller(game_id)
     {:noreply, assign(socket, games: load_games())}
-  end
-
-  def handle_info(:seed_complete, socket) do
-    {:noreply,
-     assign(socket,
-       seed_status: :done,
-       unfetched_games: Games.list_unfetched_games()
-     )}
   end
 
   def handle_info({:historical_result, _game_id, {:ok, view_screen}}, socket) do
@@ -158,25 +142,9 @@ defmodule SpitegearWeb.AdminGamesLive do
       </section>
 
       <section>
-        <div class="flex items-baseline gap-4 mb-1">
+        <div class="flex items-baseline gap-4 mb-4">
           <h2 class="text-lg font-semibold">Unfetched Games</h2>
           <span class="text-sm text-gray-400"><%= length(@unfetched_games) %> games</span>
-        </div>
-        <p class="text-sm text-gray-500 mb-4">
-          Games added to the DB but not yet fetched from wargear.net.
-          Seed loads all 166 discovered game IDs at once.
-        </p>
-        <div class="flex items-center gap-4 mb-4">
-          <button
-            phx-click="seed_game_list"
-            disabled={@seed_status == :seeding}
-            class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm disabled:opacity-50"
-          >
-            <%= if @seed_status == :seeding, do: "Seeding…", else: "Seed All 166 Discovered Games" %>
-          </button>
-          <%= if @seed_status == :done do %>
-            <span class="text-green-600 text-sm">✓ Seeded</span>
-          <% end %>
         </div>
         <%= if Enum.empty?(@unfetched_games) do %>
           <p class="text-gray-500 text-sm">No unfetched games.</p>
@@ -200,7 +168,7 @@ defmodule SpitegearWeb.AdminGamesLive do
                       <%= game.game_id %>
                     </a>
                   </td>
-                  <td class="py-2">
+                  <td class="py-2 flex gap-4">
                     <button
                       phx-click="fetch_historical"
                       phx-value-game_id={game.game_id}
@@ -210,6 +178,13 @@ defmodule SpitegearWeb.AdminGamesLive do
                       <%= if @hist_status == :fetching && @hist_game_id == game.game_id,
                         do: "Fetching…",
                         else: "Fetch" %>
+                    </button>
+                    <button
+                      phx-click="delete_unfetched"
+                      phx-value-game_id={game.game_id}
+                      class="text-red-500 hover:underline text-xs"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>

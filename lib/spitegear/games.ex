@@ -216,6 +216,11 @@ defmodule Spitegear.Games do
     )
   end
 
+  def delete_discovered_game(game_id) do
+    Repo.delete_all(from(g in Game, where: g.game_id == ^game_id and g.discovered))
+    :ok
+  end
+
   def start_poller(game_id) do
     DynamicSupervisor.start_child(
       GameSupervisor,

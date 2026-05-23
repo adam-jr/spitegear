@@ -569,11 +569,12 @@ defmodule Spitegear.GameLog.ParserTest do
   end
 
   describe "parse_row/1 — attacked with no territory_to" do
-    test "attacked no territory_to — dice immediately follow >" do
+    # Floki produces double whitespace after ">" when the territory_to cell is empty in the HTML
+    test "attacked no territory_to — double space after > (production format)" do
       result =
         Parser.parse_row(
           row(
-            "pants off vant hof attacked Hesh Burkina Faso > (5,5,3) (6,2)",
+            "pants off vant hof attacked Hesh Burkina Faso >  (5,5,3) (6,2)",
             %{ad: "5,5,3", dd: "6,2", bmod: "0", al: "0", dl: "1"}
           )
         )
@@ -592,12 +593,39 @@ defmodule Spitegear.GameLog.ParserTest do
 
     test "attacked no territory_to — single dice each" do
       assert {:ok, %{event_type: "attacked", attacker: "Hesh", territory_to: nil}} =
-               Parser.parse_row(row("Hesh attacked pants off vant hof Guinea > (4,1) (3,2)"))
+               Parser.parse_row(row("Hesh attacked pants off vant hof Guinea >  (4,1) (3,2)"))
+    end
+
+    test "attacked no territory_to — game 784989 seq 702" do
+      assert {:ok, %{event_type: "attacked", territory_to: nil}} =
+               Parser.parse_row(row("Hesh attacked pants off vant hof Guinea >  (1) (4)"))
+    end
+
+    test "attacked no territory_to — game 784989 seq 1530" do
+      assert {:ok, %{event_type: "attacked", attacker: "adam jormp jomp", territory_to: nil}} =
+               Parser.parse_row(
+                 row("adam jormp jomp attacked pants off vant hof Ghana >  (3,1) (1)")
+               )
+    end
+
+    test "attacked no territory_to — game 784989 seq 1557" do
+      assert {:ok, %{event_type: "attacked", territory_to: nil}} =
+               Parser.parse_row(
+                 row("pants off vant hof attacked adam jormp jomp Burkina Faso >  (6,3,2) (6,5)")
+               )
+    end
+
+    test "attacked no territory_to — game 784989 seq 1609" do
+      assert {:ok, %{event_type: "attacked", territory_to: nil}} =
+               Parser.parse_row(
+                 row("pants off vant hof attacked adam jormp jomp Guinea >  (6,2,1) (3)")
+               )
     end
   end
 
   describe "parse_row/1 — occupied with no territory_to" do
-    test "occupied no territory_to" do
+    # Floki produces double whitespace after ">" when the territory_to cell is empty in the HTML
+    test "occupied no territory_to — double space after > (production format)" do
       assert {:ok,
               %{
                 event_type: "occupied",
@@ -606,18 +634,34 @@ defmodule Spitegear.GameLog.ParserTest do
                 units: 2
               }} =
                Parser.parse_row(
-                 row("pants off vant hof occupied Hesh Burkina Faso > with 2 units")
+                 row("pants off vant hof occupied Hesh Burkina Faso >  with 2 units")
                )
     end
 
-    test "occupied no territory_to singular unit" do
+    test "occupied no territory_to — game 784989 seq 1531" do
+      assert {:ok,
+              %{event_type: "occupied", attacker: "adam jormp jomp", territory_to: nil, units: 2}} =
+               Parser.parse_row(
+                 row("adam jormp jomp occupied pants off vant hof Ghana >  with 2 units")
+               )
+    end
+
+    test "occupied no territory_to — game 784989 seq 1610" do
+      assert {:ok, %{event_type: "occupied", territory_to: nil, units: 3}} =
+               Parser.parse_row(
+                 row("pants off vant hof occupied adam jormp jomp Guinea >  with 3 units")
+               )
+    end
+
+    test "occupied no territory_to — single space still works" do
       assert {:ok, %{event_type: "occupied", territory_to: nil, units: 1}} =
                Parser.parse_row(row("Player occupied Foo Bar > with 1 unit"))
     end
   end
 
   describe "parse_row/1 — transferred edge cases" do
-    test "transferred only destination (no source)" do
+    # Floki produces double whitespace before ">" when the source territory cell is empty in the HTML
+    test "transferred only destination — double space before > (production format)" do
       assert {:ok,
               %{
                 event_type: "transferred",
@@ -625,10 +669,21 @@ defmodule Spitegear.GameLog.ParserTest do
                 units: 6,
                 territory_to: "Guinea"
               }} =
-               Parser.parse_row(row("adam jormp jomp transferred 6 units > Guinea"))
+               Parser.parse_row(row("adam jormp jomp transferred 6 units  > Guinea"))
     end
 
-    test "transferred only destination multi-word territory" do
+    test "transferred only destination — game 784989 seq 1614" do
+      assert {:ok,
+              %{
+                event_type: "transferred",
+                attacker: "pants off vant hof",
+                units: 2,
+                territory_to: "Ghana"
+              }} =
+               Parser.parse_row(row("pants off vant hof transferred 2 units  > Ghana"))
+    end
+
+    test "transferred only destination — single space still works" do
       assert {:ok, %{event_type: "transferred", territory_to: "North Africa"}} =
                Parser.parse_row(row("Player transferred 3 units > North Africa"))
     end

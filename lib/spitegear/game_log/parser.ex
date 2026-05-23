@@ -217,10 +217,11 @@ defmodule Spitegear.GameLog.Parser do
          %{event_type: "occupied", attacker: m["p"], territory_to: m["to"], units: to_int(m["n"])}}
 
       # attacked: no territory_to — dice immediately follow ">"
-      # "pants off vant hof attacked Hesh Burkina Faso > (5,5,3) (6,2)"
+      # "pants off vant hof attacked Hesh Burkina Faso >  (5,5,3) (6,2)"
+      # Note: Floki may produce double whitespace after ">" when territory cell is empty
       m =
           match(
-            ~r/^(?P<p>.+?) attacked .+ > (?:[+-]\d+ )?\([\d,]+\)(?:[+-]\d+)? \([\d,]+\)(?:[+-]\d+)?$/,
+            ~r/^(?P<p>.+?) attacked .+>\s+(?:[+-]\d+ )?\([\d,]+\)(?:[+-]\d+)? \([\d,]+\)(?:[+-]\d+)?$/,
             action
           ) ->
         {:ok,
@@ -235,8 +236,9 @@ defmodule Spitegear.GameLog.Parser do
            defender_losses: to_int(cols[:dl])
          }}
 
-      # occupied: no territory_to — "pants off vant hof occupied Hesh Burkina Faso > with 2 units"
-      m = match(~r/^(?P<p>.+?) occupied .+ > with (?P<n>\d+) units?$/, action) ->
+      # occupied: no territory_to — "pants off vant hof occupied Hesh Burkina Faso >  with 2 units"
+      # Note: Floki may produce double whitespace after ">" when territory cell is empty
+      m = match(~r/^(?P<p>.+?) occupied .+>\s+with (?P<n>\d+) units?$/, action) ->
         {:ok,
          %{event_type: "occupied", attacker: m["p"], territory_to: nil, units: to_int(m["n"])}}
 
@@ -278,7 +280,8 @@ defmodule Spitegear.GameLog.Parser do
          }}
 
       # "transferred N units > Guinea" — only destination, no source territory
-      m = match(~r/^(?P<p>.+?) transferred (?P<n>\d+) units? > (?P<to>.+)$/, action) ->
+      # Note: Floki may produce double whitespace before ">" when source territory cell is empty
+      m = match(~r/^(?P<p>.+?) transferred (?P<n>\d+) units?\s+>\s+(?P<to>.+)$/, action) ->
         {:ok,
          %{
            event_type: "transferred",

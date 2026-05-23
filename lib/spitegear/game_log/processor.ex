@@ -95,7 +95,10 @@ defmodule Spitegear.GameLog.Processor do
     game_ids =
       Repo.all(
         from(e in GameLogEvent,
-          where: e.event_type in ["attacked", "occupied"] and is_nil(e.defender),
+          where:
+            e.event_type in ["attacked", "occupied"] and
+              is_nil(e.defender) and
+              is_nil(e.territory_from),
           select: e.game_id,
           distinct: true
         )
@@ -133,7 +136,8 @@ defmodule Spitegear.GameLog.Processor do
           where:
             e.game_id == ^game_id and
               e.event_type in ["attacked", "occupied"] and
-              is_nil(e.defender)
+              is_nil(e.defender) and
+              is_nil(e.territory_from)
         )
       )
 
@@ -156,12 +160,21 @@ defmodule Spitegear.GameLog.Processor do
     {:ok, %{attempted: length(events), filled: filled, unfilled: unfilled}}
   end
 
-  # Extracts {defender, territory_from} from an attacked/occupied action string
-  # by trying each known player name as a prefix of the middle section.
+  # Extracts {defender, territory_from} from an attacked/occupied action string.
+  #
+  # Single space after verb → "attacked PlayerName TerritoryFrom >":
+  #   tries each known player name as a prefix; returns {name, territory_from}.
+  #
+  # Double space after verb → "attacked  TerritoryFrom >" (neutral territory, no player defender):
+  #   no player name matches; returns {nil, territory_from} so territory_from is still saved.
   defp extract_defender(raw_action, player_names) do
     case Regex.run(~r/(?:attacked|occupied)\s+(.+?) >/, raw_action) do
-      [_, middle] -> Enum.find_value(player_names, &match_player_prefix(middle, &1))
-      _ -> nil
+      [_, middle] ->
+        Enum.find_value(player_names, &match_player_prefix(middle, &1)) ||
+          {nil, nilify(String.trim(middle))}
+
+      _ ->
+        nil
     end
   end
 
@@ -229,7 +242,10 @@ defmodule Spitegear.GameLog.Processor do
     pending_defenders =
       Repo.aggregate(
         from(e in GameLogEvent,
-          where: e.event_type in ["attacked", "occupied"] and is_nil(e.defender)
+          where:
+            e.event_type in ["attacked", "occupied"] and
+              is_nil(e.defender) and
+              is_nil(e.territory_from)
         ),
         :count
       )

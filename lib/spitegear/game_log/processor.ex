@@ -215,14 +215,31 @@ defmodule Spitegear.GameLog.Processor do
   end
 
   @doc """
-  Returns a summary: total events, unrecognized count, games processed.
+  Returns a summary: total events, unrecognized count, games processed,
+  and the count of attacked/occupied events still missing a defender.
   """
   def summary do
     total = Repo.aggregate(GameLogEvent, :count)
-    unrecognized = Repo.aggregate(from(e in GameLogEvent, where: e.event_type == "unrecognized"), :count)
+
+    unrecognized =
+      Repo.aggregate(from(e in GameLogEvent, where: e.event_type == "unrecognized"), :count)
+
     games = Repo.aggregate(from(e in GameLogEvent, select: e.game_id, distinct: true), :count)
 
-    %{total: total, unrecognized: unrecognized, games_processed: games}
+    pending_defenders =
+      Repo.aggregate(
+        from(e in GameLogEvent,
+          where: e.event_type in ["attacked", "occupied"] and is_nil(e.defender)
+        ),
+        :count
+      )
+
+    %{
+      total: total,
+      unrecognized: unrecognized,
+      games_processed: games,
+      pending_defenders: pending_defenders
+    }
   end
 
   # --- Private ---
@@ -286,14 +303,15 @@ defmodule Spitegear.GameLog.Processor do
       turn_id: row.turn_id
     }
 
-    parsed_result = Parser.parse_row(%{
-      action: row.action,
-      ad: row.ad,
-      dd: row.dd,
-      bmod: row.bmod,
-      al: row.al,
-      dl: row.dl
-    })
+    parsed_result =
+      Parser.parse_row(%{
+        action: row.action,
+        ad: row.ad,
+        dd: row.dd,
+        bmod: row.bmod,
+        al: row.al,
+        dl: row.dl
+      })
 
     attrs =
       case parsed_result do

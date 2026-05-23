@@ -7,7 +7,6 @@ defmodule SpitegearWeb.AdminGamesLive do
      assign(socket,
        games: load_games(),
        finished_games: Games.list_finished_games(),
-       unfetched_games: Games.list_unfetched_games(),
        snapshot_ids: Games.game_ids_with_snapshots(),
        new_game_id: "",
        error: nil,
@@ -26,11 +25,6 @@ defmodule SpitegearWeb.AdminGamesLive do
       {:error, _} ->
         {:noreply, assign(socket, error: "Failed to add game #{game_id}")}
     end
-  end
-
-  def handle_event("delete_unfetched", %{"game_id" => game_id}, socket) do
-    Games.delete_discovered_game(game_id)
-    {:noreply, assign(socket, unfetched_games: Games.list_unfetched_games())}
   end
 
   def handle_event("fetch_historical", %{"game_id" => game_id}, socket) do
@@ -55,7 +49,6 @@ defmodule SpitegearWeb.AdminGamesLive do
        hist_status: {:ok, view_screen.game_name},
        hist_game_id: "",
        finished_games: Games.list_finished_games(),
-       unfetched_games: Games.list_unfetched_games(),
        snapshot_ids: Games.game_ids_with_snapshots()
      )}
   end
@@ -142,110 +135,6 @@ defmodule SpitegearWeb.AdminGamesLive do
       </section>
 
       <section>
-        <div class="flex items-baseline gap-4 mb-4">
-          <h2 class="text-lg font-semibold">Unfetched Games</h2>
-          <span class="text-sm text-gray-400"><%= length(@unfetched_games) %> games</span>
-        </div>
-        <%= if Enum.empty?(@unfetched_games) do %>
-          <p class="text-gray-500 text-sm">No unfetched games.</p>
-        <% else %>
-          <table class="w-full text-sm border-collapse">
-            <thead>
-              <tr class="text-left border-b border-gray-200">
-                <th class="pb-2 pr-4">Game ID</th>
-                <th class="pb-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= for game <- @unfetched_games do %>
-                <tr class="border-b border-gray-100 align-middle">
-                  <td class="py-2 pr-4 font-mono text-gray-700">
-                    <a
-                      href={"https://www.wargear.net/games/view/#{game.game_id}"}
-                      target="_blank"
-                      class="hover:underline"
-                    >
-                      <%= game.game_id %>
-                    </a>
-                  </td>
-                  <td class="py-2 flex gap-4">
-                    <button
-                      phx-click="fetch_historical"
-                      phx-value-game_id={game.game_id}
-                      disabled={@hist_status == :fetching}
-                      class="text-indigo-600 hover:underline disabled:opacity-40 text-xs"
-                    >
-                      <%= if @hist_status == :fetching && @hist_game_id == game.game_id,
-                        do: "Fetching…",
-                        else: "Fetch" %>
-                    </button>
-                    <button
-                      phx-click="delete_unfetched"
-                      phx-value-game_id={game.game_id}
-                      class="text-red-500 hover:underline text-xs"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        <% end %>
-      </section>
-
-      <section>
-        <h2 class="text-lg font-semibold mb-4">Finished Games</h2>
-        <%= if Enum.empty?(@finished_games) do %>
-          <p class="text-gray-500 text-sm">No finished games on record.</p>
-        <% else %>
-          <table class="w-full text-sm border-collapse">
-            <thead>
-              <tr class="text-left border-b border-gray-200">
-                <th class="pb-2 pr-4">Game ID</th>
-                <th class="pb-2 pr-4">Name</th>
-                <th class="pb-2 pr-4">Winners</th>
-                <th class="pb-2 pr-4">Finished</th>
-                <th class="pb-2">Log</th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= for game <- @finished_games do %>
-                <tr class="border-b border-gray-100 align-middle">
-                  <td class="py-2 pr-4 font-mono">
-                    <a href={"/admin/games/#{game.game_id}"} class="text-blue-600 hover:underline">
-                      <%= game.game_id %>
-                    </a>
-                  </td>
-                  <td class="py-2 pr-4"><%= game.game_name || "—" %></td>
-                  <td class="py-2 pr-4 text-gray-600">
-                    <%= if Enum.any?(game.winners),
-                      do: Enum.join(game.winners, ", "),
-                      else: "—" %>
-                  </td>
-                  <td class="py-2 pr-4 text-gray-500"><%= game.finished || "—" %></td>
-                  <td class="py-2">
-                    <%= if MapSet.member?(@snapshot_ids, game.game_id) do %>
-                      <span class="text-green-600">✓</span>
-                    <% else %>
-                      <button
-                        phx-click="fetch_historical"
-                        phx-value-game_id={game.game_id}
-                        disabled={@hist_status == :fetching}
-                        class="text-indigo-600 hover:underline disabled:opacity-40 text-xs"
-                      >
-                        Fetch
-                      </button>
-                    <% end %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        <% end %>
-      </section>
-
-      <section>
         <h2 class="text-lg font-semibold mb-4">Active Games</h2>
         <%= if Enum.empty?(@games) do %>
           <p class="text-gray-500 text-sm">No active games.</p>
@@ -291,6 +180,59 @@ defmodule SpitegearWeb.AdminGamesLive do
                         class="text-blue-600 hover:underline"
                       >
                         Start
+                      </button>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% end %>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold mb-4">Finished Games</h2>
+        <%= if Enum.empty?(@finished_games) do %>
+          <p class="text-gray-500 text-sm">No finished games on record.</p>
+        <% else %>
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="text-left border-b border-gray-200">
+                <th class="pb-2 pr-4">Game ID</th>
+                <th class="pb-2 pr-4">Name</th>
+                <th class="pb-2 pr-4">Map</th>
+                <th class="pb-2 pr-4">Winners</th>
+                <th class="pb-2 pr-4">Finished</th>
+                <th class="pb-2">Log</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for game <- @finished_games do %>
+                <tr class="border-b border-gray-100 align-middle">
+                  <td class="py-2 pr-4 font-mono">
+                    <a href={"/admin/games/#{game.game_id}"} class="text-blue-600 hover:underline">
+                      <%= game.game_id %>
+                    </a>
+                  </td>
+                  <td class="py-2 pr-4"><%= game.game_name || "—" %></td>
+                  <td class="py-2 pr-4 text-gray-500"><%= game.board_name || "—" %></td>
+                  <td class="py-2 pr-4 text-gray-600">
+                    <%= if Enum.any?(game.winners),
+                      do: Enum.join(game.winners, ", "),
+                      else: "—" %>
+                  </td>
+                  <td class="py-2 pr-4 text-gray-500"><%= game.finished || "—" %></td>
+                  <td class="py-2">
+                    <%= if MapSet.member?(@snapshot_ids, game.game_id) do %>
+                      <span class="text-green-600">✓</span>
+                    <% else %>
+                      <button
+                        phx-click="fetch_historical"
+                        phx-value-game_id={game.game_id}
+                        disabled={@hist_status == :fetching}
+                        class="text-indigo-600 hover:underline disabled:opacity-40 text-xs"
+                      >
+                        Fetch
                       </button>
                     <% end %>
                   </td>

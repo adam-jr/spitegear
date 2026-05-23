@@ -17,7 +17,7 @@ defmodule Spitegear.Games do
   end
 
   def list_finished_games do
-    Repo.all(from(g in Game, where: not is_nil(g.finished), order_by: [desc: g.inserted_at]))
+    Repo.all(from(g in Game, where: not is_nil(g.finished), order_by: [desc: g.finished]))
   end
 
   def list_unfetched_games do

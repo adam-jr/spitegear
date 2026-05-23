@@ -9,6 +9,7 @@ defmodule Spitegear.Worker.GamePoller do
   alias Spitegear.Slack.Message
   alias Spitegear.Turn
   alias Spitegear.Wargear.History
+  alias Spitegear.Wargear.LogSnapshot
 
   require Logger
 
@@ -327,7 +328,10 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp update_game, do: send(self(), :update_game)
 
-  defp finish_game(_game_id), do: :ok
+  defp finish_game(game_id) do
+    Task.start(fn -> LogSnapshot.capture(game_id) end)
+    :ok
+  end
 
   defp schedule_work, do: Process.send_after(self(), :work, @interval)
 

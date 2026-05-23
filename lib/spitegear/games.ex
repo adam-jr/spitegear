@@ -3,14 +3,31 @@ defmodule Spitegear.Games do
   import Ecto.Query
   alias Spitegear.Game
   alias Spitegear.GameDeath
+  alias Spitegear.GameLogSnapshot
   alias Spitegear.HTML.Player
+  alias Spitegear.HTML.ViewScreen
   alias Spitegear.Repo
   alias Spitegear.Turn
   alias Spitegear.TurnHistory
+  alias Spitegear.Wargear.LogSnapshot
   alias Spitegear.Worker.GamePoller
 
   def list_active_games do
     Repo.all(from(g in Game, where: is_nil(g.finished)))
+  end
+
+  def list_finished_games do
+    Repo.all(from(g in Game, where: not is_nil(g.finished), order_by: [desc: g.inserted_at]))
+  end
+
+  def list_unfetched_games do
+    Repo.all(from(g in Game, where: is_nil(g.game_name), order_by: [desc: g.inserted_at]))
+  end
+
+  def game_ids_with_snapshots do
+    Repo.all(from(s in GameLogSnapshot, select: s.game_id))
+    |> Enum.map(&Integer.to_string/1)
+    |> MapSet.new()
   end
 
   def upsert_game(view_screen) do
@@ -168,6 +185,19 @@ defmodule Spitegear.Games do
         limit: ^limit
       )
     )
+  end
+
+  @doc """
+  Fetches a completed game from wargear.net, upserts it into the games table
+  with full metadata (name, board, finished date, winners), and snapshots the
+  raw HTML log. Safe to call more than once — both operations are idempotent.
+  """
+  def fetch_historical_game(game_id) do
+    with {:ok, view_screen} <- ViewScreen.get_game(game_id),
+         {:ok, _game} <- upsert_game(view_screen),
+         {:ok, _snapshot} <- LogSnapshot.capture(game_id) do
+      {:ok, view_screen}
+    end
   end
 
   def add_game(game_id) do

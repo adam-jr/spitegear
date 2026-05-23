@@ -58,7 +58,11 @@ defmodule SpitegearWeb.AdminLogsLive do
   end
 
   def handle_info({:task_result, :fill_defenders, {:ok, counts}}, socket) do
-    {:noreply, assign(socket, fill_defenders_status: {:ok, counts})}
+    {:noreply,
+     assign(socket,
+       fill_defenders_status: {:ok, counts},
+       summary: Processor.summary()
+     )}
   end
 
   def handle_info({:task_result, :fill_defenders, {:error, reason}}, socket) do
@@ -96,8 +100,14 @@ defmodule SpitegearWeb.AdminLogsLive do
           <div class="text-3xl font-bold"><%= @summary.games_processed %></div>
           <div class="text-sm text-gray-500 mt-1">Games Processed</div>
         </div>
-        <div class={["border rounded p-4 text-center", if(@summary.unrecognized > 0, do: "border-amber-400 bg-amber-50", else: "")]}>
-          <div class={["text-3xl font-bold", if(@summary.unrecognized > 0, do: "text-amber-600", else: "")]}>
+        <div class={[
+          "border rounded p-4 text-center",
+          if(@summary.unrecognized > 0, do: "border-amber-400 bg-amber-50", else: "")
+        ]}>
+          <div class={[
+            "text-3xl font-bold",
+            if(@summary.unrecognized > 0, do: "text-amber-600", else: "")
+          ]}>
             <%= @summary.unrecognized %>
           </div>
           <div class="text-sm text-gray-500 mt-1">Unrecognized</div>
@@ -147,22 +157,48 @@ defmodule SpitegearWeb.AdminLogsLive do
         <div class="flex flex-col gap-2">
           <button
             phx-click="fill_defenders"
-            disabled={@fill_defenders_status == :running}
+            disabled={@fill_defenders_status == :running or @summary.pending_defenders == 0}
             class="bg-emerald-600 text-white px-5 py-2 rounded hover:bg-emerald-700 disabled:opacity-50 text-sm"
           >
-            <%= if @fill_defenders_status == :running, do: "Filling…", else: "Fill Defenders" %>
+            <%= if @fill_defenders_status == :running do %>
+              Filling…
+            <% else %>
+              Fill Defenders
+              <%= if @summary.pending_defenders > 0 do %>
+                <span class="ml-1.5 bg-white/20 rounded px-1.5 py-0.5 text-xs tabular-nums">
+                  <%= @summary.pending_defenders %> pending
+                </span>
+              <% end %>
+            <% end %>
           </button>
           <p class="text-xs text-gray-400 max-w-xs">
-            Backfills defender + territory_from on attacked/occupied events using known player names.
+            Backfills defender + territory_from on attacked/occupied events using per-game player names.
           </p>
           <%= case @fill_defenders_status do %>
             <% {:ok, counts} -> %>
-              <span class="text-green-600 text-sm">
-                ✓ <%= counts.filled %> filled, <%= counts.unfilled %> unfilled
-              </span>
+              <p class="text-sm text-green-700 font-medium">✓ Done</p>
+              <table class="text-xs text-gray-700 mt-0.5 tabular-nums">
+                <tr>
+                  <td class="pr-3 text-gray-400">Attempted</td>
+                  <td><%= counts.attempted %></td>
+                </tr>
+                <tr>
+                  <td class="pr-3 text-gray-400">Filled</td>
+                  <td class="text-green-700 font-semibold"><%= counts.filled %></td>
+                </tr>
+                <tr>
+                  <td class="pr-3 text-gray-400">Still unfilled</td>
+                  <td class={if(counts.unfilled > 0, do: "text-amber-600 font-semibold", else: "")}>
+                    <%= counts.unfilled %>
+                  </td>
+                </tr>
+              </table>
             <% {:error, reason} -> %>
               <span class="text-red-600 text-sm">Error: <%= reason %></span>
             <% _ -> %>
+              <%= if @summary.pending_defenders == 0 do %>
+                <span class="text-xs text-gray-400">No events pending — all defenders filled.</span>
+              <% end %>
           <% end %>
         </div>
       </section>
@@ -182,8 +218,14 @@ defmodule SpitegearWeb.AdminLogsLive do
             </thead>
             <tbody>
               <%= for row <- @event_counts do %>
-                <tr class={["border-b border-gray-100", if(row.event_type == "unrecognized", do: "bg-amber-50", else: "")]}>
-                  <td class={["py-1.5 pr-6 font-mono text-xs", if(row.event_type == "unrecognized", do: "text-amber-700 font-semibold", else: "")]}>
+                <tr class={[
+                  "border-b border-gray-100",
+                  if(row.event_type == "unrecognized", do: "bg-amber-50", else: "")
+                ]}>
+                  <td class={[
+                    "py-1.5 pr-6 font-mono text-xs",
+                    if(row.event_type == "unrecognized", do: "text-amber-700 font-semibold", else: "")
+                  ]}>
                     <%= row.event_type %>
                   </td>
                   <td class="py-1.5 text-right tabular-nums"><%= row.count %></td>
@@ -222,7 +264,9 @@ defmodule SpitegearWeb.AdminLogsLive do
                     </td>
                     <td class="py-1.5 pr-4 text-gray-500"><%= event.log_seq %></td>
                     <td class="py-1.5 pr-4 text-gray-500"><%= event.seat %></td>
-                    <td class="py-1.5 pr-4 text-gray-400 whitespace-nowrap"><%= event.occurred_at %></td>
+                    <td class="py-1.5 pr-4 text-gray-400 whitespace-nowrap">
+                      <%= event.occurred_at %>
+                    </td>
                     <td class="py-1.5 text-gray-800 break-all"><%= event.raw_action %></td>
                   </tr>
                 <% end %>

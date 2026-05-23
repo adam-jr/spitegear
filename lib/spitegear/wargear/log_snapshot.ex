@@ -27,11 +27,17 @@ defmodule Spitegear.Wargear.LogSnapshot do
 
     with {:ok, html} <- fetch_log(game_id, false),
          {:ok, snapshot} <- insert_snapshot(game_id, html) do
-      Logger.info("#{__MODULE__} log snapshot saved for game #{game_id} (#{byte_size(html)} bytes)")
+      Logger.info(
+        "#{__MODULE__} log snapshot saved for game #{game_id} (#{byte_size(html)} bytes)"
+      )
+
       {:ok, snapshot}
     else
       {:error, reason} ->
-        Logger.error("#{__MODULE__} failed to capture log for game #{game_id}: #{inspect(reason)}")
+        Logger.error(
+          "#{__MODULE__} failed to capture log for game #{game_id}: #{inspect(reason)}"
+        )
+
         {:error, reason}
     end
   end

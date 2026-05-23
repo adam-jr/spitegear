@@ -3,9 +3,9 @@ defmodule Spitegear.GameLogSnapshot do
   import Ecto.Changeset
 
   schema "game_log_snapshots" do
-    field :game_id, :integer
-    field :html, :string
-    field :fetched_at, :utc_datetime_usec
+    field(:game_id, :integer)
+    field(:html, :string)
+    field(:fetched_at, :utc_datetime_usec)
 
     timestamps()
   end

@@ -32,10 +32,12 @@ defmodule SpitegearWeb.AdminGamesLive do
 
   def handle_event("seed_game_list", _params, socket) do
     lv = self()
+
     Task.start(fn ->
       GameList.seed()
       send(lv, :seed_complete)
     end)
+
     {:noreply, assign(socket, seed_status: :seeding)}
   end
 
@@ -79,7 +81,9 @@ defmodule SpitegearWeb.AdminGamesLive do
   end
 
   defp start_fetch(game_id, lv) do
-    Task.start(fn -> send(lv, {:historical_result, game_id, Games.fetch_historical_game(game_id)}) end)
+    Task.start(fn ->
+      send(lv, {:historical_result, game_id, Games.fetch_historical_game(game_id)})
+    end)
   end
 
   defp load_games do

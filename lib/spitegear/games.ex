@@ -4,9 +4,11 @@ defmodule Spitegear.Games do
   alias Spitegear.Game
   alias Spitegear.GameDeath
   alias Spitegear.HTML.Player
+  alias Spitegear.HTML.ViewScreen
   alias Spitegear.Repo
   alias Spitegear.Turn
   alias Spitegear.TurnHistory
+  alias Spitegear.Wargear.LogSnapshot
   alias Spitegear.Worker.GamePoller
 
   def list_active_games do
@@ -168,6 +170,19 @@ defmodule Spitegear.Games do
         limit: ^limit
       )
     )
+  end
+
+  @doc """
+  Fetches a completed game from wargear.net, upserts it into the games table
+  with full metadata (name, board, finished date, winners), and snapshots the
+  raw HTML log. Safe to call more than once — both operations are idempotent.
+  """
+  def fetch_historical_game(game_id) do
+    with {:ok, view_screen} <- ViewScreen.get_game(game_id),
+         {:ok, _game} <- upsert_game(view_screen),
+         {:ok, _snapshot} <- LogSnapshot.capture(game_id) do
+      {:ok, view_screen}
+    end
   end
 
   def add_game(game_id) do

@@ -3,7 +3,14 @@ defmodule SpitegearWeb.AdminGamesLive do
   alias Spitegear.Games
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, games: load_games(), new_game_id: "", error: nil)}
+    {:ok,
+     assign(socket,
+       games: load_games(),
+       new_game_id: "",
+       error: nil,
+       hist_game_id: "",
+       hist_status: nil
+     )}
   end
 
   def handle_event("add_game", %{"game_id" => game_id}, socket) do
@@ -18,6 +25,13 @@ defmodule SpitegearWeb.AdminGamesLive do
     end
   end
 
+  def handle_event("fetch_historical", %{"game_id" => game_id}, socket) do
+    game_id = String.trim(game_id)
+    lv = self()
+    Task.start(fn -> send(lv, {:historical_result, game_id, Games.fetch_historical_game(game_id)}) end)
+    {:noreply, assign(socket, hist_game_id: game_id, hist_status: :fetching)}
+  end
+
   def handle_event("start_poller", %{"game_id" => game_id}, socket) do
     Games.start_poller(game_id)
     {:noreply, assign(socket, games: load_games())}
@@ -26,6 +40,14 @@ defmodule SpitegearWeb.AdminGamesLive do
   def handle_event("stop_poller", %{"game_id" => game_id}, socket) do
     Games.stop_poller(game_id)
     {:noreply, assign(socket, games: load_games())}
+  end
+
+  def handle_info({:historical_result, _game_id, {:ok, view_screen}}, socket) do
+    {:noreply, assign(socket, hist_status: {:ok, view_screen.game_name}, hist_game_id: "")}
+  end
+
+  def handle_info({:historical_result, game_id, {:error, reason}}, socket) do
+    {:noreply, assign(socket, hist_status: {:error, game_id, inspect(reason)})}
   end
 
   defp load_games do
@@ -63,6 +85,38 @@ defmodule SpitegearWeb.AdminGamesLive do
           </button>
           <%= if @error do %>
             <span class="text-red-600 text-sm"><%= @error %></span>
+          <% end %>
+        </form>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold mb-1">Fetch Historical Game Log</h2>
+        <p class="text-sm text-gray-500 mb-4">
+          Fetches the ViewScreen and raw log HTML for a finished game and stores both. Safe to re-run.
+        </p>
+        <form phx-submit="fetch_historical" class="flex gap-2 items-center">
+          <input
+            type="text"
+            name="game_id"
+            value={@hist_game_id}
+            placeholder="Wargear Game ID"
+            class="font-mono text-sm border border-gray-300 rounded p-2 w-48"
+            required
+            disabled={@hist_status == :fetching}
+          />
+          <button
+            type="submit"
+            class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm disabled:opacity-50"
+            disabled={@hist_status == :fetching}
+          >
+            <%= if @hist_status == :fetching, do: "Fetching…", else: "Fetch" %>
+          </button>
+          <%= case @hist_status do %>
+            <% {:ok, game_name} -> %>
+              <span class="text-green-600 text-sm">✓ Saved — <%= game_name %></span>
+            <% {:error, gid, reason} -> %>
+              <span class="text-red-600 text-sm">Failed for <%= gid %>: <%= reason %></span>
+            <% _ -> %>
           <% end %>
         </form>
       </section>

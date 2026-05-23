@@ -33,7 +33,7 @@ defmodule SpitegearWeb.AdminGameLogLive do
         </p>
       <% else %>
         <div class="overflow-x-auto">
-          <table class="text-xs border-collapse font-mono whitespace-nowrap">
+          <table class="w-full text-xs border-collapse font-mono whitespace-nowrap">
             <thead class="sticky top-0 bg-white z-10">
               <tr class="text-left border-b-2 border-gray-300 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 <th class="pb-2 pr-4 sticky left-0 bg-white">Seq</th>
@@ -82,7 +82,9 @@ defmodule SpitegearWeb.AdminGameLogLive do
                   <td class="py-1 pr-4 text-gray-500"><%= e.battle_mod %></td>
                   <td class="py-1 pr-4"><%= e.attacker_losses %></td>
                   <td class="py-1 pr-4"><%= e.defender_losses %></td>
-                  <td class="py-1 text-gray-600 font-sans whitespace-normal max-w-sm"><%= e.raw_action %></td>
+                  <td class="py-1 text-gray-600 font-sans whitespace-normal max-w-sm">
+                    <%= e.raw_action %>
+                  </td>
                 </tr>
               <% end %>
             </tbody>

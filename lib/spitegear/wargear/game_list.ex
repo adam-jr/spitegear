@@ -38,7 +38,7 @@ defmodule Spitegear.Wargear.GameList do
 
   @doc "Insert all discovered game IDs into the games table. Safe to call multiple times."
   def seed do
-    Enum.each(@game_ids, &Games.add_game/1)
+    Enum.each(@game_ids, &Games.add_discovered_game/1)
     :ok
   end
 end

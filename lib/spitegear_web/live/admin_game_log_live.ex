@@ -8,8 +8,22 @@ defmodule SpitegearWeb.AdminGameLogLive do
      assign(socket,
        game_id: game_id,
        game: Games.get_game(game_id),
-       events: Processor.list_events(game_id)
+       events: Processor.list_events(game_id),
+       expanded: MapSet.new()
      )}
+  end
+
+  def handle_event("toggle_row", %{"seq" => seq_str}, socket) do
+    seq = String.to_integer(seq_str)
+
+    expanded =
+      if MapSet.member?(socket.assigns.expanded, seq) do
+        MapSet.delete(socket.assigns.expanded, seq)
+      else
+        MapSet.put(socket.assigns.expanded, seq)
+      end
+
+    {:noreply, assign(socket, expanded: expanded)}
   end
 
   def render(assigns) do
@@ -33,9 +47,10 @@ defmodule SpitegearWeb.AdminGameLogLive do
         </p>
       <% else %>
         <div class="overflow-x-auto">
-          <table class="text-xs border-collapse font-mono whitespace-nowrap">
+          <table class="text-xs border-collapse font-mono whitespace-nowrap w-full">
             <thead>
               <tr class="text-left border-b border-gray-300 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="pb-2 pr-1 w-4"></th>
                 <th class="pb-2 pr-3">Seq</th>
                 <th class="pb-2 pr-3">At</th>
                 <th class="pb-2 pr-3">Seat</th>
@@ -50,16 +65,25 @@ defmodule SpitegearWeb.AdminGameLogLive do
                 <th class="pb-2 pr-3">DD</th>
                 <th class="pb-2 pr-3">BMod</th>
                 <th class="pb-2 pr-3">AL</th>
-                <th class="pb-2 pr-3">DL</th>
-                <th class="pb-2">Raw Action</th>
+                <th class="pb-2">DL</th>
               </tr>
             </thead>
             <tbody>
               <%= for e <- @events do %>
                 <tr class={[
-                  "border-b border-gray-100 align-top",
-                  if(e.event_type == "unrecognized", do: "bg-amber-50", else: "")
+                  "border-b border-gray-100 align-top cursor-pointer hover:bg-gray-50",
+                  if(e.event_type == "unrecognized", do: "bg-amber-50 hover:bg-amber-100", else: "")
                 ]}>
+                  <td class="py-1 pr-1">
+                    <button
+                      phx-click="toggle_row"
+                      phx-value-seq={e.log_seq}
+                      class="text-gray-400 hover:text-gray-700 leading-none"
+                      title="Show raw action"
+                    >
+                      <%= if MapSet.member?(@expanded, e.log_seq), do: "▼", else: "▶" %>
+                    </button>
+                  </td>
                   <td class="py-1 pr-3 text-gray-400"><%= e.log_seq %></td>
                   <td class="py-1 pr-3 text-gray-400"><%= e.occurred_at %></td>
                   <td class="py-1 pr-3 text-gray-400"><%= e.seat %></td>
@@ -79,9 +103,17 @@ defmodule SpitegearWeb.AdminGameLogLive do
                   <td class="py-1 pr-3 text-gray-500"><%= e.defender_dice %></td>
                   <td class="py-1 pr-3 text-gray-500"><%= e.battle_mod %></td>
                   <td class="py-1 pr-3"><%= e.attacker_losses %></td>
-                  <td class="py-1 pr-3"><%= e.defender_losses %></td>
-                  <td class="py-1 text-gray-600 font-sans whitespace-normal max-w-xs"><%= e.raw_action %></td>
+                  <td class="py-1"><%= e.defender_losses %></td>
                 </tr>
+                <%= if MapSet.member?(@expanded, e.log_seq) do %>
+                  <tr class={if(e.event_type == "unrecognized", do: "bg-amber-50", else: "bg-gray-50")}>
+                    <td></td>
+                    <td colspan="15" class="py-2 pr-4 pb-3">
+                      <span class="font-sans text-gray-400 text-xs uppercase tracking-wide mr-2">raw</span>
+                      <span class="font-mono text-gray-800 text-xs break-all whitespace-normal"><%= e.raw_action %></span>
+                    </td>
+                  </tr>
+                <% end %>
               <% end %>
             </tbody>
           </table>

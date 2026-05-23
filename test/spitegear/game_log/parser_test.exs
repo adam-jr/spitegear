@@ -147,18 +147,46 @@ defmodule Spitegear.GameLog.ParserTest do
     end
   end
 
+  describe "parse_row/1 — factory produced" do
+    test "factory_produced with trailing modifier" do
+      assert {:ok,
+              %{
+                event_type: "factory_produced",
+                attacker: "pants off vant hof",
+                units: 4,
+                territory_to: "The Eyrie"
+              }} =
+               Parser.parse_row(row("pants off vant hof factory produced 4 units on The Eyrie +1"))
+    end
+
+    test "factory_produced without trailing modifier" do
+      assert {:ok, %{event_type: "factory_produced", attacker: "Player", units: 3, territory_to: "Alaska"}} =
+               Parser.parse_row(row("Player factory produced 3 units on Alaska"))
+    end
+
+    test "factory_produced singular unit" do
+      assert {:ok, %{event_type: "factory_produced", units: 1}} =
+               Parser.parse_row(row("Player factory produced 1 unit on Alaska"))
+    end
+  end
+
   describe "parse_row/1 — cards" do
     test "awarded_card" do
       assert {:ok, %{event_type: "awarded_card", attacker: "dandodd"}} =
                Parser.parse_row(row("dandodd awarded card"))
     end
 
-    test "traded_cards" do
-      assert {:ok, %{event_type: "traded_cards", attacker: "dandodd"}} =
+    test "traded_cards with unit count" do
+      assert {:ok, %{event_type: "traded_cards", attacker: "dandodd", units: 4}} =
                Parser.parse_row(row("dandodd traded cards (ABC) for 4 units"))
     end
 
-    test "traded_card singular" do
+    test "traded_cards with plural unit count" do
+      assert {:ok, %{event_type: "traded_cards", attacker: "Player", units: 10}} =
+               Parser.parse_row(row("Player traded cards (XYZ) for 10 units"))
+    end
+
+    test "traded_card singular without unit count" do
       assert {:ok, %{event_type: "traded_cards", attacker: "Player"}} =
                Parser.parse_row(row("Player traded card"))
     end

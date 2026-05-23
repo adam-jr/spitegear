@@ -123,8 +123,8 @@ defmodule Spitegear.GameLog.Processor do
     player_names =
       Repo.all(
         from(e in GameLogEvent,
-          where: e.game_id == ^game_id and not is_nil(e.attacker),
-          select: e.attacker,
+          where: e.game_id == ^game_id and not is_nil(e.player),
+          select: e.player,
           distinct: true
         )
       )
@@ -354,7 +354,7 @@ defmodule Spitegear.GameLog.Processor do
 
   defp mutable_fields do
     ~w(occurred_at seat player_name event_type raw_action
-       attacker defender territory_from territory_to units
+       player defender territory_from territory_to units
        attacker_dice defender_dice battle_mod
        attacker_losses defender_losses turn_id updated_at)a
   end

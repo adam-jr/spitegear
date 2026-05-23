@@ -42,7 +42,7 @@ defmodule SpitegearWeb.AdminGameLogLive do
                 <th class="pb-2 pr-4">Turn</th>
                 <th class="pb-2 pr-4">Type</th>
                 <th class="pb-2 pr-4">Player Name</th>
-                <th class="pb-2 pr-4">Attacker</th>
+                <th class="pb-2 pr-4">Player</th>
                 <th class="pb-2 pr-4">Defender</th>
                 <th class="pb-2 pr-4">From</th>
                 <th class="pb-2 pr-4">To</th>
@@ -72,7 +72,7 @@ defmodule SpitegearWeb.AdminGameLogLive do
                     <%= e.event_type %>
                   </td>
                   <td class="py-1 pr-4 text-gray-400"><%= e.player_name %></td>
-                  <td class="py-1 pr-4"><%= e.attacker %></td>
+                  <td class="py-1 pr-4"><%= e.player %></td>
                   <td class="py-1 pr-4"><%= e.defender %></td>
                   <td class="py-1 pr-4 text-gray-500"><%= e.territory_from %></td>
                   <td class="py-1 pr-4"><%= e.territory_to %></td>

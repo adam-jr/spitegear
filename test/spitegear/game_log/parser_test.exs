@@ -192,6 +192,57 @@ defmodule Spitegear.GameLog.ParserTest do
     end
   end
 
+  describe "parse_row/1 — elimination follow-on events" do
+    test "received_elimination_bonus" do
+      assert {:ok, %{event_type: "received_elimination_bonus", attacker: "dandodd", units: 10}} =
+               Parser.parse_row(row("dandodd received elimination bonus of 10 units"))
+    end
+
+    test "received_elimination_bonus larger bonus" do
+      assert {:ok, %{event_type: "received_elimination_bonus", attacker: "Kyjygyfyf", units: 12}} =
+               Parser.parse_row(row("Kyjygyfyf received elimination bonus of 12 units"))
+    end
+
+    test "captured_cards" do
+      assert {:ok,
+              %{
+                event_type: "captured_cards",
+                attacker: "dandodd",
+                units: 2,
+                defender: "Tallness"
+              }} =
+               Parser.parse_row(row("dandodd captured 2 cards from Tallness"))
+    end
+
+    test "captured_cards with multi-word defender" do
+      assert {:ok, %{event_type: "captured_cards", attacker: "dandodd", units: 3, defender: "pants off vant hof"}} =
+               Parser.parse_row(row("dandodd captured 3 cards from pants off vant hof"))
+    end
+
+    test "captured_cards singular" do
+      assert {:ok, %{event_type: "captured_cards", units: 1}} =
+               Parser.parse_row(row("Player captured 1 card from Someone"))
+    end
+  end
+
+  describe "parse_row/1 — factory destroyed" do
+    test "factory_destroyed" do
+      assert {:ok,
+              %{
+                event_type: "factory_destroyed",
+                attacker: "Hesh",
+                units: 2,
+                territory_to: "The Redwyne Straits"
+              }} =
+               Parser.parse_row(row("Hesh factory destroyed 2 units on The Redwyne Straits"))
+    end
+
+    test "factory_destroyed singular unit" do
+      assert {:ok, %{event_type: "factory_destroyed", attacker: "dandodd", units: 1, territory_to: "Bay of Seals"}} =
+               Parser.parse_row(row("dandodd factory destroyed 1 unit on Bay of Seals"))
+    end
+  end
+
   describe "parse_row/1 — game end events" do
     test "eliminated" do
       assert {:ok, %{event_type: "eliminated", attacker: "dandodd", defender: "pants off vant hof"}} =

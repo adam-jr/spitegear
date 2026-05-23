@@ -62,6 +62,9 @@ defmodule Spitegear.GameLog.Parser do
       m = match(~r/^(?P<p>.+?) received (?P<n>\d+) units?$/, action) ->
         {:ok, %{event_type: "received_units", attacker: m["p"], units: to_int(m["n"])}}
 
+      m = match(~r/^(?P<p>.+?) received elimination bonus of (?P<n>\d+) units?$/, action) ->
+        {:ok, %{event_type: "received_elimination_bonus", attacker: m["p"], units: to_int(m["n"])}}
+
       true ->
         nil
     end
@@ -75,6 +78,9 @@ defmodule Spitegear.GameLog.Parser do
       # "factory produced N units on Territory +1" — trailing modifier stripped via lazy territory match
       m = match(~r/^(?P<p>.+?) factory produced (?P<n>\d+) units? on (?P<t>.+?)(?:\s+[+-]\d+)?$/, action) ->
         {:ok, %{event_type: "factory_produced", attacker: m["p"], units: to_int(m["n"]), territory_to: m["t"]}}
+
+      m = match(~r/^(?P<p>.+?) factory destroyed (?P<n>\d+) units? on (?P<t>.+?)(?:\s+[+-]\d+)?$/, action) ->
+        {:ok, %{event_type: "factory_destroyed", attacker: m["p"], units: to_int(m["n"]), territory_to: m["t"]}}
 
       true ->
         nil
@@ -147,6 +153,9 @@ defmodule Spitegear.GameLog.Parser do
       # traded cards without a unit count in the action string
       m = match(~r/^(?P<p>.+?) traded cards?/, action) ->
         {:ok, %{event_type: "traded_cards", attacker: m["p"]}}
+
+      m = match(~r/^(?P<p>.+?) captured (?P<n>\d+) cards? from (?P<d>.+)$/, action) ->
+        {:ok, %{event_type: "captured_cards", attacker: m["p"], units: to_int(m["n"]), defender: m["d"]}}
 
       true ->
         nil

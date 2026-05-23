@@ -8,22 +8,8 @@ defmodule SpitegearWeb.AdminGameLogLive do
      assign(socket,
        game_id: game_id,
        game: Games.get_game(game_id),
-       events: Processor.list_events(game_id),
-       expanded: MapSet.new()
+       events: Processor.list_events(game_id)
      )}
-  end
-
-  def handle_event("toggle_row", %{"seq" => seq_str}, socket) do
-    seq = String.to_integer(seq_str)
-
-    expanded =
-      if MapSet.member?(socket.assigns.expanded, seq) do
-        MapSet.delete(socket.assigns.expanded, seq)
-      else
-        MapSet.put(socket.assigns.expanded, seq)
-      end
-
-    {:noreply, assign(socket, expanded: expanded)}
   end
 
   def render(assigns) do
@@ -47,73 +33,57 @@ defmodule SpitegearWeb.AdminGameLogLive do
         </p>
       <% else %>
         <div class="overflow-x-auto">
-          <table class="text-xs border-collapse font-mono whitespace-nowrap w-full">
-            <thead>
-              <tr class="text-left border-b border-gray-300 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                <th class="pb-2 pr-1 w-4"></th>
-                <th class="pb-2 pr-3">Seq</th>
-                <th class="pb-2 pr-3">At</th>
-                <th class="pb-2 pr-3">Seat</th>
-                <th class="pb-2 pr-3">Turn</th>
-                <th class="pb-2 pr-3">Type</th>
-                <th class="pb-2 pr-3">Attacker</th>
-                <th class="pb-2 pr-3">Defender</th>
-                <th class="pb-2 pr-3">From</th>
-                <th class="pb-2 pr-3">To</th>
-                <th class="pb-2 pr-3">Units</th>
-                <th class="pb-2 pr-3">AD</th>
-                <th class="pb-2 pr-3">DD</th>
-                <th class="pb-2 pr-3">BMod</th>
-                <th class="pb-2 pr-3">AL</th>
-                <th class="pb-2">DL</th>
+          <table class="text-xs border-collapse font-mono whitespace-nowrap">
+            <thead class="sticky top-0 bg-white z-10">
+              <tr class="text-left border-b-2 border-gray-300 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="pb-2 pr-4 sticky left-0 bg-white">Seq</th>
+                <th class="pb-2 pr-4">At</th>
+                <th class="pb-2 pr-4">Seat</th>
+                <th class="pb-2 pr-4">Turn</th>
+                <th class="pb-2 pr-4">Type</th>
+                <th class="pb-2 pr-4">Player Name</th>
+                <th class="pb-2 pr-4">Attacker</th>
+                <th class="pb-2 pr-4">Defender</th>
+                <th class="pb-2 pr-4">From</th>
+                <th class="pb-2 pr-4">To</th>
+                <th class="pb-2 pr-4">Units</th>
+                <th class="pb-2 pr-4">AD</th>
+                <th class="pb-2 pr-4">DD</th>
+                <th class="pb-2 pr-4">BMod</th>
+                <th class="pb-2 pr-4">AL</th>
+                <th class="pb-2 pr-4">DL</th>
+                <th class="pb-2">Raw Action</th>
               </tr>
             </thead>
             <tbody>
               <%= for e <- @events do %>
                 <tr class={[
-                  "border-b border-gray-100 align-top cursor-pointer hover:bg-gray-50",
+                  "border-b border-gray-100 align-top hover:bg-gray-50",
                   if(e.event_type == "unrecognized", do: "bg-amber-50 hover:bg-amber-100", else: "")
                 ]}>
-                  <td class="py-1 pr-1">
-                    <button
-                      phx-click="toggle_row"
-                      phx-value-seq={e.log_seq}
-                      class="text-gray-400 hover:text-gray-700 leading-none"
-                      title="Show raw action"
-                    >
-                      <%= if MapSet.member?(@expanded, e.log_seq), do: "▼", else: "▶" %>
-                    </button>
-                  </td>
-                  <td class="py-1 pr-3 text-gray-400"><%= e.log_seq %></td>
-                  <td class="py-1 pr-3 text-gray-400"><%= e.occurred_at %></td>
-                  <td class="py-1 pr-3 text-gray-400"><%= e.seat %></td>
-                  <td class="py-1 pr-3 text-gray-400"><%= e.turn_id %></td>
+                  <td class="py-1 pr-4 text-gray-400 sticky left-0 bg-inherit"><%= e.log_seq %></td>
+                  <td class="py-1 pr-4 text-gray-400"><%= e.occurred_at %></td>
+                  <td class="py-1 pr-4 text-gray-400"><%= e.seat %></td>
+                  <td class="py-1 pr-4 text-gray-400"><%= e.turn_id %></td>
                   <td class={[
-                    "py-1 pr-3 font-semibold",
+                    "py-1 pr-4 font-semibold",
                     if(e.event_type == "unrecognized", do: "text-amber-600", else: "text-blue-700")
                   ]}>
                     <%= e.event_type %>
                   </td>
-                  <td class="py-1 pr-3"><%= e.attacker %></td>
-                  <td class="py-1 pr-3 text-gray-500"><%= e.defender %></td>
-                  <td class="py-1 pr-3 text-gray-500"><%= e.territory_from %></td>
-                  <td class="py-1 pr-3"><%= e.territory_to %></td>
-                  <td class="py-1 pr-3"><%= e.units %></td>
-                  <td class="py-1 pr-3 text-gray-500"><%= e.attacker_dice %></td>
-                  <td class="py-1 pr-3 text-gray-500"><%= e.defender_dice %></td>
-                  <td class="py-1 pr-3 text-gray-500"><%= e.battle_mod %></td>
-                  <td class="py-1 pr-3"><%= e.attacker_losses %></td>
-                  <td class="py-1"><%= e.defender_losses %></td>
+                  <td class="py-1 pr-4 text-gray-400"><%= e.player_name %></td>
+                  <td class="py-1 pr-4"><%= e.attacker %></td>
+                  <td class="py-1 pr-4"><%= e.defender %></td>
+                  <td class="py-1 pr-4 text-gray-500"><%= e.territory_from %></td>
+                  <td class="py-1 pr-4"><%= e.territory_to %></td>
+                  <td class="py-1 pr-4"><%= e.units %></td>
+                  <td class="py-1 pr-4 text-gray-500"><%= e.attacker_dice %></td>
+                  <td class="py-1 pr-4 text-gray-500"><%= e.defender_dice %></td>
+                  <td class="py-1 pr-4 text-gray-500"><%= e.battle_mod %></td>
+                  <td class="py-1 pr-4"><%= e.attacker_losses %></td>
+                  <td class="py-1 pr-4"><%= e.defender_losses %></td>
+                  <td class="py-1 text-gray-600 font-sans whitespace-normal max-w-sm"><%= e.raw_action %></td>
                 </tr>
-                <%= if MapSet.member?(@expanded, e.log_seq) do %>
-                  <tr class={if(e.event_type == "unrecognized", do: "bg-amber-50", else: "bg-gray-50")}>
-                    <td></td>
-                    <td colspan="15" class="py-2 pr-4 pb-3">
-                      <span class="font-sans text-gray-400 text-xs uppercase tracking-wide mr-2">raw</span>
-                      <span class="font-mono text-gray-800 text-xs break-all whitespace-normal"><%= e.raw_action %></span>
-                    </td>
-                  </tr>
-                <% end %>
               <% end %>
             </tbody>
           </table>

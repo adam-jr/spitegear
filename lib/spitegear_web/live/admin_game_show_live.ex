@@ -98,6 +98,9 @@ defmodule SpitegearWeb.AdminGameShowLive do
               Start
             </button>
           <% end %>
+          <a href={"/admin/games/#{@game_id}/log"} class="text-sm text-blue-600 hover:underline">
+            Log →
+          </a>
           <a href={"/admin/games/#{@game_id}/templates"} class="text-sm text-blue-600 hover:underline">
             Templates →
           </a>

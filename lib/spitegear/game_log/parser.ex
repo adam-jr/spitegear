@@ -68,16 +68,26 @@ defmodule Spitegear.GameLog.Parser do
   end
 
   defp parse_placement(action) do
-    case match(~r/^(?P<p>.+?) placed (?P<n>\d+) units? on (?P<t>.+)$/, action) do
-      nil -> nil
-      m -> {:ok, %{event_type: "placed_units", attacker: m["p"], units: to_int(m["n"]), territory_to: m["t"]}}
+    cond do
+      m = match(~r/^(?P<p>.+?) placed (?P<n>\d+) units? on (?P<t>.+)$/, action) ->
+        {:ok, %{event_type: "placed_units", attacker: m["p"], units: to_int(m["n"]), territory_to: m["t"]}}
+
+      # "factory produced N units on Territory +1" — trailing modifier stripped via lazy territory match
+      m = match(~r/^(?P<p>.+?) factory produced (?P<n>\d+) units? on (?P<t>.+?)(?:\s+[+-]\d+)?$/, action) ->
+        {:ok, %{event_type: "factory_produced", attacker: m["p"], units: to_int(m["n"]), territory_to: m["t"]}}
+
+      true ->
+        nil
     end
   end
 
   defp parse_combat(action, cols) do
     cond do
-      # attacked: dice notation "(A,B,C)[-N] (D,E)" at the end
-      m = match(~r/^(?P<p>.+?) attacked .+ > (?P<to>.+?) \([\d,]+\)(?:-\d+)? \([\d,]+\)$/, action) ->
+      # attacked: handles modifier variants:
+      #   classic:  > Foo (5,3,3) (2,2)
+      #   inter:    > Foo (4,2,1)-1 (4,2)
+      #   pre+post: > Foo +0 (5,1) (1)+1
+      m = match(~r/^(?P<p>.+?) attacked .+ > (?P<to>.+?) (?:[+-]\d+ )?\([\d,]+\)(?:[+-]\d+)? \([\d,]+\)(?:[+-]\d+)?$/, action) ->
         {:ok,
          %{
            event_type: "attacked",
@@ -130,7 +140,11 @@ defmodule Spitegear.GameLog.Parser do
       m = match(~r/^(?P<p>.+?) awarded card$/, action) ->
         {:ok, %{event_type: "awarded_card", attacker: m["p"]}}
 
-      # "traded cards (CCC) for 4 units"
+      # "traded cards (CCC) for 4 units" — capture unit count
+      m = match(~r/^(?P<p>.+?) traded cards? .+ for (?P<n>\d+) units?$/, action) ->
+        {:ok, %{event_type: "traded_cards", attacker: m["p"], units: to_int(m["n"])}}
+
+      # traded cards without a unit count in the action string
       m = match(~r/^(?P<p>.+?) traded cards?/, action) ->
         {:ok, %{event_type: "traded_cards", attacker: m["p"]}}
 

@@ -95,6 +95,18 @@ defmodule Spitegear.GameLog.Processor do
   end
 
   @doc """
+  Returns all events for a game, ordered by log_seq ascending.
+  """
+  def list_events(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+  end
+
+  @doc """
   Returns all unrecognized events, ordered by game_id and log_seq.
   """
   def list_unrecognized do

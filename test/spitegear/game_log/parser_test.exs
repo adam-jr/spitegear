@@ -93,6 +93,32 @@ defmodule Spitegear.GameLog.ParserTest do
       assert {:ok, %{event_type: "occupied", units: 1}} =
                Parser.parse_row(row("P occupied foo > Bar with 1 unit"))
     end
+
+    test "attacked with pre-modifier (+N before attacker dice) and post-modifier (+N after defender dice)" do
+      result =
+        Parser.parse_row(
+          row(
+            "Hesh attacked ZachClash Union Fleet 4 > Charleston +0 (5,1) (1)+1",
+            %{ad: "5,1", dd: "1", bmod: "0,1", al: "0", dl: "1"}
+          )
+        )
+
+      assert {:ok,
+              %{
+                event_type: "attacked",
+                attacker: "Hesh",
+                territory_to: "Charleston",
+                attacker_losses: 0,
+                defender_losses: 1
+              }} = result
+    end
+
+    test "attacked pre+post modifier with multi-word territory" do
+      assert {:ok, %{event_type: "attacked", attacker: "Hesh", territory_to: "Olustee"}} =
+               Parser.parse_row(
+                 row("Hesh attacked Tallness Union Fleet 5 > Olustee +0 (5,5) (7)+1")
+               )
+    end
   end
 
   describe "parse_row/1 — movement" do
@@ -121,18 +147,46 @@ defmodule Spitegear.GameLog.ParserTest do
     end
   end
 
+  describe "parse_row/1 — factory produced" do
+    test "factory_produced with trailing modifier" do
+      assert {:ok,
+              %{
+                event_type: "factory_produced",
+                attacker: "pants off vant hof",
+                units: 4,
+                territory_to: "The Eyrie"
+              }} =
+               Parser.parse_row(row("pants off vant hof factory produced 4 units on The Eyrie +1"))
+    end
+
+    test "factory_produced without trailing modifier" do
+      assert {:ok, %{event_type: "factory_produced", attacker: "Player", units: 3, territory_to: "Alaska"}} =
+               Parser.parse_row(row("Player factory produced 3 units on Alaska"))
+    end
+
+    test "factory_produced singular unit" do
+      assert {:ok, %{event_type: "factory_produced", units: 1}} =
+               Parser.parse_row(row("Player factory produced 1 unit on Alaska"))
+    end
+  end
+
   describe "parse_row/1 — cards" do
     test "awarded_card" do
       assert {:ok, %{event_type: "awarded_card", attacker: "dandodd"}} =
                Parser.parse_row(row("dandodd awarded card"))
     end
 
-    test "traded_cards" do
-      assert {:ok, %{event_type: "traded_cards", attacker: "dandodd"}} =
+    test "traded_cards with unit count" do
+      assert {:ok, %{event_type: "traded_cards", attacker: "dandodd", units: 4}} =
                Parser.parse_row(row("dandodd traded cards (ABC) for 4 units"))
     end
 
-    test "traded_card singular" do
+    test "traded_cards with plural unit count" do
+      assert {:ok, %{event_type: "traded_cards", attacker: "Player", units: 10}} =
+               Parser.parse_row(row("Player traded cards (XYZ) for 10 units"))
+    end
+
+    test "traded_card singular without unit count" do
       assert {:ok, %{event_type: "traded_cards", attacker: "Player"}} =
                Parser.parse_row(row("Player traded card"))
     end

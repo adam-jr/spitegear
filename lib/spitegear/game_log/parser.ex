@@ -45,7 +45,13 @@ defmodule Spitegear.GameLog.Parser do
   defp parse_setup("Initial board setup complete"), do: {:ok, %{event_type: "setup"}}
   defp parse_setup("Game started"), do: {:ok, %{event_type: "game_started"}}
   defp parse_setup("Fogged"), do: {:ok, %{event_type: "fogged"}}
-  defp parse_setup(_), do: nil
+
+  # "Turn order set to 5,6,3,4,7,2,1" — system event (seat=0); raw_action preserves the order
+  defp parse_setup(action) do
+    if Regex.match?(~r/^Turn order set to [\d,]+$/, action),
+      do: {:ok, %{event_type: "turn_order_set"}},
+      else: nil
+  end
 
   # Game setup events: factory/seat assignments and territory drafting
   defp parse_game_setup(action) do
@@ -152,6 +158,10 @@ defmodule Spitegear.GameLog.Parser do
       m = match(~r/^(?P<p>.+?) captured (?P<t>Capital .+)$/, action) ->
         {:ok, %{event_type: "captured_capital", attacker: m["p"], territory_to: m["t"]}}
 
+      # "Kyjygyfyf conquered Capital p1" — same concept, different verb used in some map types
+      m = match(~r/^(?P<p>.+?) conquered (?P<t>Capital .+)$/, action) ->
+        {:ok, %{event_type: "conquered_capital", attacker: m["p"], territory_to: m["t"]}}
+
       # "Neutralised D1 with 1 unit" — system event (seat=0), territory neutralized on capital capture
       m = match(~r/^Neutralised (?P<t>.+?) with (?P<n>\d+) units?$/, action) ->
         {:ok, %{event_type: "neutralised", territory_to: m["t"], units: to_int(m["n"])}}
@@ -206,6 +216,30 @@ defmodule Spitegear.GameLog.Parser do
         {:ok,
          %{event_type: "occupied", attacker: m["p"], territory_to: m["to"], units: to_int(m["n"])}}
 
+      # attacked: no territory_to — dice immediately follow ">"
+      # "pants off vant hof attacked Hesh Burkina Faso > (5,5,3) (6,2)"
+      m =
+          match(
+            ~r/^(?P<p>.+?) attacked .+ > (?:[+-]\d+ )?\([\d,]+\)(?:[+-]\d+)? \([\d,]+\)(?:[+-]\d+)?$/,
+            action
+          ) ->
+        {:ok,
+         %{
+           event_type: "attacked",
+           attacker: m["p"],
+           territory_to: nil,
+           attacker_dice: nil_blank(cols[:ad]),
+           defender_dice: nil_blank(cols[:dd]),
+           battle_mod: nil_blank(cols[:bmod]),
+           attacker_losses: to_int(cols[:al]),
+           defender_losses: to_int(cols[:dl])
+         }}
+
+      # occupied: no territory_to — "pants off vant hof occupied Hesh Burkina Faso > with 2 units"
+      m = match(~r/^(?P<p>.+?) occupied .+ > with (?P<n>\d+) units?$/, action) ->
+        {:ok,
+         %{event_type: "occupied", attacker: m["p"], territory_to: nil, units: to_int(m["n"])}}
+
       true ->
         nil
     end
@@ -241,6 +275,26 @@ defmodule Spitegear.GameLog.Parser do
            units: to_int(m["n"]),
            territory_from: m["from"],
            territory_to: m["to"]
+         }}
+
+      # "transferred N units > Guinea" — only destination, no source territory
+      m = match(~r/^(?P<p>.+?) transferred (?P<n>\d+) units? > (?P<to>.+)$/, action) ->
+        {:ok,
+         %{
+           event_type: "transferred",
+           attacker: m["p"],
+           units: to_int(m["n"]),
+           territory_to: m["to"]
+         }}
+
+      # "transferred N units Guinea >" — only source, no destination territory
+      m = match(~r/^(?P<p>.+?) transferred (?P<n>\d+) units? (?P<from>.+) >$/, action) ->
+        {:ok,
+         %{
+           event_type: "transferred",
+           attacker: m["p"],
+           units: to_int(m["n"]),
+           territory_from: m["from"]
          }}
 
       # "Hesh reinforced 10 units Chef > Dragonfruit" — same semantics as transferred/fortified

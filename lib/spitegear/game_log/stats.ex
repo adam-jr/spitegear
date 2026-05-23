@@ -1,0 +1,105 @@
+defmodule Spitegear.GameLog.Stats do
+  @moduledoc """
+  Aggregate stats computed over processed GameLogEvent records.
+
+  Functions here are pure reducers over event streams — no side effects.
+  Each stat function fetches events for a game and folds over them.
+  """
+
+  import Ecto.Query
+  alias Spitegear.GameLogEvent
+  alias Spitegear.Repo
+
+  # Event types where the player gained units equal to the `units` field.
+  @positive_unit_events ~w(
+    received_bonus
+    received_units
+    received_elimination_bonus
+    factory_produced
+    traded_cards
+    captured_reserve_units
+    assimilated
+  )
+
+  @doc """
+  Returns a per-player net unit series for a game, keyed by player name.
+
+  Each value is a list of `%{seq: integer, net_units: integer}` in ascending
+  seq order, containing one entry per log_seq where that player's net count
+  changed.
+
+  Positive events: #{Enum.join(@positive_unit_events, ", ")}.
+  Negative events: attacker_losses (when player attacked), defender_losses
+  (when player defended). Nil units/losses produce no delta.
+
+  ## Example
+
+      %{
+        "ZachClash"          => [%{seq: 3, net_units: 5}, %{seq: 9, net_units: 3}],
+        "pants off vant hof" => [%{seq: 5, net_units: 4}, ...]
+      }
+  """
+  def net_units_over_time(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+    |> Enum.flat_map(&event_to_deltas/1)
+    |> build_series()
+  end
+
+  # --- Private ---
+
+  defp build_series(deltas) do
+    deltas
+    |> Enum.group_by(& &1.player)
+    |> Map.new(fn {player, player_deltas} ->
+      series =
+        player_deltas
+        |> Enum.scan(0, fn %{delta: d}, acc -> acc + d end)
+        |> Enum.zip(player_deltas)
+        |> Enum.map(fn {net, %{seq: s}} -> %{seq: s, net_units: net} end)
+
+      {player, series}
+    end)
+  end
+
+  # Positive: player received/produced/captured units
+  defp event_to_deltas(%GameLogEvent{event_type: t, player: p, units: u, log_seq: s})
+       when t in @positive_unit_events and not is_nil(p) and not is_nil(u) do
+    [%{player: p, seq: s, delta: u}]
+  end
+
+  # Combat: attacker and/or defender lost units; both sides independent
+  defp event_to_deltas(%GameLogEvent{
+         event_type: "attacked",
+         player: p,
+         defender: d,
+         attacker_losses: al,
+         defender_losses: dl,
+         log_seq: s
+       }) do
+    attacker =
+      if not is_nil(p) and not is_nil(al), do: [%{player: p, seq: s, delta: -al}], else: []
+
+    defender =
+      if not is_nil(d) and not is_nil(dl), do: [%{player: d, seq: s, delta: -dl}], else: []
+
+    attacker ++ defender
+  end
+
+  # Discarded units are a genuine unit loss
+  defp event_to_deltas(%GameLogEvent{
+         event_type: "discarded_units",
+         player: p,
+         units: u,
+         log_seq: s
+       })
+       when not is_nil(p) and not is_nil(u) do
+    [%{player: p, seq: s, delta: -u}]
+  end
+
+  defp event_to_deltas(_), do: []
+end

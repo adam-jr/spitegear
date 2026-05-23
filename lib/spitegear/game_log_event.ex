@@ -2,7 +2,7 @@ defmodule Spitegear.GameLogEvent do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @fields ~w(game_id log_seq occurred_at seat player_name event_type raw_action
+  @fields ~w(game_id log_seq occurred_at seat event_type raw_action
              player defender territory_from territory_to units
              attacker_dice defender_dice battle_mod
              attacker_losses defender_losses turn_id)a
@@ -12,7 +12,6 @@ defmodule Spitegear.GameLogEvent do
     field(:log_seq, :integer)
     field(:occurred_at, :string)
     field(:seat, :integer)
-    field(:player_name, :string)
     field(:event_type, :string)
     field(:raw_action, :string)
     field(:player, :string)

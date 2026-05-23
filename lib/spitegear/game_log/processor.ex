@@ -353,7 +353,7 @@ defmodule Spitegear.GameLog.Processor do
   end
 
   defp mutable_fields do
-    ~w(occurred_at seat player_name event_type raw_action
+    ~w(occurred_at seat event_type raw_action
        player defender territory_from territory_to units
        attacker_dice defender_dice battle_mod
        attacker_losses defender_losses turn_id updated_at)a

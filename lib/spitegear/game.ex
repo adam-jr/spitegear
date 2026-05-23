@@ -9,6 +9,7 @@ defmodule Spitegear.Game do
     field(:created, :string)
     field(:finished, :string)
     field(:winners, {:array, :string}, default: [])
+    field(:discovered, :boolean, default: false)
 
     timestamps()
   end

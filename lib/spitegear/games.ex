@@ -13,7 +13,7 @@ defmodule Spitegear.Games do
   alias Spitegear.Worker.GamePoller
 
   def list_active_games do
-    Repo.all(from(g in Game, where: is_nil(g.finished)))
+    Repo.all(from(g in Game, where: is_nil(g.finished) and not g.discovered))
   end
 
   def list_finished_games do
@@ -21,7 +21,7 @@ defmodule Spitegear.Games do
   end
 
   def list_unfetched_games do
-    Repo.all(from(g in Game, where: is_nil(g.game_name), order_by: [desc: g.inserted_at]))
+    Repo.all(from(g in Game, where: g.discovered, order_by: [desc: g.inserted_at]))
   end
 
   def game_ids_with_snapshots do
@@ -39,10 +39,12 @@ defmodule Spitegear.Games do
         board_name: view_screen.board_name,
         created: view_screen.created,
         finished: view_screen.finished,
-        winners: Enum.map(view_screen.winners, & &1.name)
+        winners: Enum.map(view_screen.winners, & &1.name),
+        discovered: false
       },
       on_conflict:
-        {:replace, [:url, :game_name, :board_name, :created, :finished, :winners, :updated_at]},
+        {:replace,
+         [:url, :game_name, :board_name, :created, :finished, :winners, :discovered, :updated_at]},
       conflict_target: :game_id
     )
   end
@@ -202,6 +204,13 @@ defmodule Spitegear.Games do
 
   def add_game(game_id) do
     Repo.insert(%Game{game_id: game_id},
+      on_conflict: :nothing,
+      conflict_target: :game_id
+    )
+  end
+
+  def add_discovered_game(game_id) do
+    Repo.insert(%Game{game_id: game_id, discovered: true},
       on_conflict: :nothing,
       conflict_target: :game_id
     )

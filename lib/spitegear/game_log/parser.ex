@@ -76,8 +76,11 @@ defmodule Spitegear.GameLog.Parser do
 
   defp parse_combat(action, cols) do
     cond do
-      # attacked: dice notation "(A,B,C)[-N] (D,E)" at the end
-      m = match(~r/^(?P<p>.+?) attacked .+ > (?P<to>.+?) \([\d,]+\)(?:-\d+)? \([\d,]+\)$/, action) ->
+      # attacked: handles modifier variants:
+      #   classic:  > Foo (5,3,3) (2,2)
+      #   inter:    > Foo (4,2,1)-1 (4,2)
+      #   pre+post: > Foo +0 (5,1) (1)+1
+      m = match(~r/^(?P<p>.+?) attacked .+ > (?P<to>.+?) (?:[+-]\d+ )?\([\d,]+\)(?:[+-]\d+)? \([\d,]+\)(?:[+-]\d+)?$/, action) ->
         {:ok,
          %{
            event_type: "attacked",

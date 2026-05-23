@@ -93,6 +93,32 @@ defmodule Spitegear.GameLog.ParserTest do
       assert {:ok, %{event_type: "occupied", units: 1}} =
                Parser.parse_row(row("P occupied foo > Bar with 1 unit"))
     end
+
+    test "attacked with pre-modifier (+N before attacker dice) and post-modifier (+N after defender dice)" do
+      result =
+        Parser.parse_row(
+          row(
+            "Hesh attacked ZachClash Union Fleet 4 > Charleston +0 (5,1) (1)+1",
+            %{ad: "5,1", dd: "1", bmod: "0,1", al: "0", dl: "1"}
+          )
+        )
+
+      assert {:ok,
+              %{
+                event_type: "attacked",
+                attacker: "Hesh",
+                territory_to: "Charleston",
+                attacker_losses: 0,
+                defender_losses: 1
+              }} = result
+    end
+
+    test "attacked pre+post modifier with multi-word territory" do
+      assert {:ok, %{event_type: "attacked", attacker: "Hesh", territory_to: "Olustee"}} =
+               Parser.parse_row(
+                 row("Hesh attacked Tallness Union Fleet 5 > Olustee +0 (5,5) (7)+1")
+               )
+    end
   end
 
   describe "parse_row/1 — movement" do

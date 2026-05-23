@@ -159,7 +159,7 @@ defmodule Spitegear.GameLog.Processor do
   # Extracts {defender, territory_from} from an attacked/occupied action string
   # by trying each known player name as a prefix of the middle section.
   defp extract_defender(raw_action, player_names) do
-    case Regex.run(~r/(?:attacked|occupied) (.+?) >/, raw_action) do
+    case Regex.run(~r/(?:attacked|occupied)\s+(.+?) >/, raw_action) do
       [_, middle] -> Enum.find_value(player_names, &match_player_prefix(middle, &1))
       _ -> nil
     end

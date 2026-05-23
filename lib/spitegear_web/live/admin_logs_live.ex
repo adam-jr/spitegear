@@ -9,7 +9,8 @@ defmodule SpitegearWeb.AdminLogsLive do
        event_counts: Processor.event_type_counts(),
        unrecognized: Processor.list_unrecognized(),
        process_status: nil,
-       reprocess_status: nil
+       reprocess_status: nil,
+       fill_defenders_status: nil
      )}
   end
 
@@ -21,6 +22,11 @@ defmodule SpitegearWeb.AdminLogsLive do
   def handle_event("reprocess_unrecognized", _params, socket) do
     start_task(:reprocess_unrecognized, self())
     {:noreply, assign(socket, reprocess_status: :running)}
+  end
+
+  def handle_event("fill_defenders", _params, socket) do
+    start_task(:fill_defenders, self())
+    {:noreply, assign(socket, fill_defenders_status: :running)}
   end
 
   def handle_info({:task_result, :process_all, {:ok, counts}}, socket) do
@@ -51,12 +57,21 @@ defmodule SpitegearWeb.AdminLogsLive do
     {:noreply, assign(socket, reprocess_status: {:error, inspect(reason)})}
   end
 
+  def handle_info({:task_result, :fill_defenders, {:ok, counts}}, socket) do
+    {:noreply, assign(socket, fill_defenders_status: {:ok, counts})}
+  end
+
+  def handle_info({:task_result, :fill_defenders, {:error, reason}}, socket) do
+    {:noreply, assign(socket, fill_defenders_status: {:error, inspect(reason)})}
+  end
+
   defp start_task(action, lv) do
     Task.start(fn ->
       result =
         case action do
           :process_all -> Processor.process_all()
           :reprocess_unrecognized -> Processor.reprocess_unrecognized()
+          :fill_defenders -> Processor.fill_defenders()
         end
 
       send(lv, {:task_result, action, result})
@@ -122,6 +137,28 @@ defmodule SpitegearWeb.AdminLogsLive do
             <% {:ok, counts} -> %>
               <span class="text-green-600 text-sm">
                 ✓ <%= counts.resolved %> resolved, <%= counts.still_unrecognized %> remain
+              </span>
+            <% {:error, reason} -> %>
+              <span class="text-red-600 text-sm">Error: <%= reason %></span>
+            <% _ -> %>
+          <% end %>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button
+            phx-click="fill_defenders"
+            disabled={@fill_defenders_status == :running}
+            class="bg-emerald-600 text-white px-5 py-2 rounded hover:bg-emerald-700 disabled:opacity-50 text-sm"
+          >
+            <%= if @fill_defenders_status == :running, do: "Filling…", else: "Fill Defenders" %>
+          </button>
+          <p class="text-xs text-gray-400 max-w-xs">
+            Backfills defender + territory_from on attacked/occupied events using known player names.
+          </p>
+          <%= case @fill_defenders_status do %>
+            <% {:ok, counts} -> %>
+              <span class="text-green-600 text-sm">
+                ✓ <%= counts.filled %> filled, <%= counts.unfilled %> unfilled
               </span>
             <% {:error, reason} -> %>
               <span class="text-red-600 text-sm">Error: <%= reason %></span>

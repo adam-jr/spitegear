@@ -534,6 +534,122 @@ defmodule Spitegear.GameLog.ParserTest do
     end
   end
 
+  describe "parse_row/1 — turn_order_set" do
+    test "turn_order_set" do
+      assert {:ok, %{event_type: "turn_order_set"}} =
+               Parser.parse_row(row("Turn order set to 5,6,3,4,7,2,1"))
+    end
+
+    test "turn_order_set different order" do
+      assert {:ok, %{event_type: "turn_order_set"}} =
+               Parser.parse_row(row("Turn order set to 2,6,5,1,3,4,7"))
+    end
+  end
+
+  describe "parse_row/1 — conquered_capital" do
+    test "conquered_capital" do
+      assert {:ok,
+              %{
+                event_type: "conquered_capital",
+                attacker: "Kyjygyfyf",
+                territory_to: "Capital p1"
+              }} =
+               Parser.parse_row(row("Kyjygyfyf conquered Capital p1"))
+    end
+
+    test "conquered_capital multi-word player" do
+      assert {:ok,
+              %{
+                event_type: "conquered_capital",
+                attacker: "pants off vant hof",
+                territory_to: "Capital p3"
+              }} =
+               Parser.parse_row(row("pants off vant hof conquered Capital p3"))
+    end
+  end
+
+  describe "parse_row/1 — attacked with no territory_to" do
+    test "attacked no territory_to — dice immediately follow >" do
+      result =
+        Parser.parse_row(
+          row(
+            "pants off vant hof attacked Hesh Burkina Faso > (5,5,3) (6,2)",
+            %{ad: "5,5,3", dd: "6,2", bmod: "0", al: "0", dl: "1"}
+          )
+        )
+
+      assert {:ok,
+              %{
+                event_type: "attacked",
+                attacker: "pants off vant hof",
+                territory_to: nil,
+                attacker_dice: "5,5,3",
+                defender_dice: "6,2",
+                attacker_losses: 0,
+                defender_losses: 1
+              }} = result
+    end
+
+    test "attacked no territory_to — single dice each" do
+      assert {:ok, %{event_type: "attacked", attacker: "Hesh", territory_to: nil}} =
+               Parser.parse_row(row("Hesh attacked pants off vant hof Guinea > (4,1) (3,2)"))
+    end
+  end
+
+  describe "parse_row/1 — occupied with no territory_to" do
+    test "occupied no territory_to" do
+      assert {:ok,
+              %{
+                event_type: "occupied",
+                attacker: "pants off vant hof",
+                territory_to: nil,
+                units: 2
+              }} =
+               Parser.parse_row(
+                 row("pants off vant hof occupied Hesh Burkina Faso > with 2 units")
+               )
+    end
+
+    test "occupied no territory_to singular unit" do
+      assert {:ok, %{event_type: "occupied", territory_to: nil, units: 1}} =
+               Parser.parse_row(row("Player occupied Foo Bar > with 1 unit"))
+    end
+  end
+
+  describe "parse_row/1 — transferred edge cases" do
+    test "transferred only destination (no source)" do
+      assert {:ok,
+              %{
+                event_type: "transferred",
+                attacker: "adam jormp jomp",
+                units: 6,
+                territory_to: "Guinea"
+              }} =
+               Parser.parse_row(row("adam jormp jomp transferred 6 units > Guinea"))
+    end
+
+    test "transferred only destination multi-word territory" do
+      assert {:ok, %{event_type: "transferred", territory_to: "North Africa"}} =
+               Parser.parse_row(row("Player transferred 3 units > North Africa"))
+    end
+
+    test "transferred only source (no destination)" do
+      assert {:ok,
+              %{
+                event_type: "transferred",
+                attacker: "pants off vant hof",
+                units: 3,
+                territory_from: "Guinea"
+              }} =
+               Parser.parse_row(row("pants off vant hof transferred 3 units Guinea >"))
+    end
+
+    test "transferred only source multi-word territory" do
+      assert {:ok, %{event_type: "transferred", territory_from: "North Africa"}} =
+               Parser.parse_row(row("Player transferred 4 units North Africa >"))
+    end
+  end
+
   describe "parse_row/1 — unrecognized" do
     test "returns unrecognized for unknown action" do
       assert {:unrecognized, "some unknown action string"} =

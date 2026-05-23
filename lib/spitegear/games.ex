@@ -17,7 +17,32 @@ defmodule Spitegear.Games do
   end
 
   def list_finished_games do
-    Repo.all(from(g in Game, where: not is_nil(g.finished), order_by: [desc: g.finished]))
+    Repo.all(from(g in Game, where: not is_nil(g.finished)))
+    |> Enum.sort_by(&parse_finished_date(&1.finished), {:desc, NaiveDateTime})
+  end
+
+  @months ~w(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)
+          |> Enum.with_index(1)
+          |> Map.new()
+
+  # Parses "Wed Sep 09, 2020 10:31" → NaiveDateTime for sorting
+  defp parse_finished_date(nil), do: ~N[1970-01-01 00:00:00]
+
+  defp parse_finished_date(finished) do
+    case Regex.run(~r/\w+ (\w+) (\d+), (\d+) (\d+):(\d+)/, finished) do
+      [_, mon, day, year, hour, min] ->
+        NaiveDateTime.new!(
+          String.to_integer(year),
+          Map.get(@months, mon, 1),
+          String.to_integer(day),
+          String.to_integer(hour),
+          String.to_integer(min),
+          0
+        )
+
+      _ ->
+        ~N[1970-01-01 00:00:00]
+    end
   end
 
   def list_unfetched_games do

@@ -243,6 +243,56 @@ defmodule Spitegear.GameLog.ParserTest do
     end
   end
 
+  describe "parse_row/1 — capital / neutralised / assimilated" do
+    test "captured_capital" do
+      assert {:ok, %{event_type: "captured_capital", attacker: "Hesh", territory_to: "Capital D Capital"}} =
+               Parser.parse_row(row("Hesh captured Capital D Capital"))
+    end
+
+    test "neutralised (system event — no attacker)" do
+      assert {:ok, %{event_type: "neutralised", territory_to: "D1", units: 1}} =
+               Parser.parse_row(row("Neutralised D1 with 1 unit"))
+    end
+
+    test "neutralised with multi-word territory" do
+      assert {:ok, %{event_type: "neutralised", territory_to: "D Command Center", units: 1}} =
+               Parser.parse_row(row("Neutralised D Command Center with 1 unit"))
+    end
+
+    test "neutralised plural units" do
+      assert {:ok, %{event_type: "neutralised", territory_to: "C7", units: 3}} =
+               Parser.parse_row(row("Neutralised C7 with 3 units"))
+    end
+
+    test "assimilated" do
+      assert {:ok, %{event_type: "assimilated", attacker: "Hesh", units: 3, territory_from: "C4"}} =
+               Parser.parse_row(row("Hesh assimilated 3 units from C4"))
+    end
+
+    test "assimilated singular" do
+      assert {:ok, %{event_type: "assimilated", attacker: "Hesh", units: 1, territory_from: "D Factory"}} =
+               Parser.parse_row(row("Hesh assimilated 1 unit from D Factory"))
+    end
+  end
+
+  describe "parse_row/1 — captured_reserve_units" do
+    test "captured_reserve_units" do
+      assert {:ok,
+              %{
+                event_type: "captured_reserve_units",
+                attacker: "dandodd",
+                units: 3,
+                defender: "Kyjygyfyf"
+              }} =
+               Parser.parse_row(row("dandodd captured 3 reserve units from Kyjygyfyf"))
+    end
+
+    test "captured_reserve_units singular" do
+      assert {:ok, %{event_type: "captured_reserve_units", units: 1}} =
+               Parser.parse_row(row("Player captured 1 reserve unit from Other"))
+    end
+  end
+
   describe "parse_row/1 — game end events" do
     test "eliminated" do
       assert {:ok, %{event_type: "eliminated", attacker: "dandodd", defender: "pants off vant hof"}} =

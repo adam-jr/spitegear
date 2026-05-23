@@ -13,10 +13,11 @@ defmodule Spitegear.GameLog.Parser do
   Returns {:ok, attrs_map} or {:unrecognized, raw_action_string}.
 
   For attacks/occupied, `attacker` is always the acting player.
-  `defender` is extracted only where the action string unambiguously
-  separates it (eliminated). For attacks, the defender+from_territory
-  are concatenated in the action text; territory_to is extracted but
-  territory_from and defender are left nil for a future reprocess pass.
+  `defender` is extracted where the action string unambiguously names it
+  (eliminated, captured_cards, captured_reserve_units). For attacks, the
+  defender+from_territory are concatenated; territory_to is extracted but
+  defender and territory_from require a second-pass via
+  `Processor.fill_defenders/0` which uses known player names per game.
   """
 
   # --- Public API ---
@@ -82,6 +83,14 @@ defmodule Spitegear.GameLog.Parser do
       m = match(~r/^(?P<p>.+?) factory destroyed (?P<n>\d+) units? on (?P<t>.+?)(?:\s+[+-]\d+)?$/, action) ->
         {:ok, %{event_type: "factory_destroyed", attacker: m["p"], units: to_int(m["n"]), territory_to: m["t"]}}
 
+      # "Hesh captured Capital D Capital" — capital territory capture (no unit count)
+      m = match(~r/^(?P<p>.+?) captured (?P<t>Capital .+)$/, action) ->
+        {:ok, %{event_type: "captured_capital", attacker: m["p"], territory_to: m["t"]}}
+
+      # "Neutralised D1 with 1 unit" — system event (seat=0), territory neutralized on capital capture
+      m = match(~r/^Neutralised (?P<t>.+?) with (?P<n>\d+) units?$/, action) ->
+        {:ok, %{event_type: "neutralised", territory_to: m["t"], units: to_int(m["n"])}}
+
       true ->
         nil
     end
@@ -136,6 +145,10 @@ defmodule Spitegear.GameLog.Parser do
            territory_to: m["to"]
          }}
 
+      # "Hesh assimilated 3 units from C4" — absorbs units from a captured territory
+      m = match(~r/^(?P<p>.+?) assimilated (?P<n>\d+) units? from (?P<t>.+)$/, action) ->
+        {:ok, %{event_type: "assimilated", attacker: m["p"], units: to_int(m["n"]), territory_from: m["t"]}}
+
       true ->
         nil
     end
@@ -156,6 +169,10 @@ defmodule Spitegear.GameLog.Parser do
 
       m = match(~r/^(?P<p>.+?) captured (?P<n>\d+) cards? from (?P<d>.+)$/, action) ->
         {:ok, %{event_type: "captured_cards", attacker: m["p"], units: to_int(m["n"]), defender: m["d"]}}
+
+      # "dandodd captured 3 reserve units from Kyjygyfyf"
+      m = match(~r/^(?P<p>.+?) captured (?P<n>\d+) reserve units? from (?P<d>.+)$/, action) ->
+        {:ok, %{event_type: "captured_reserve_units", attacker: m["p"], units: to_int(m["n"]), defender: m["d"]}}
 
       true ->
         nil

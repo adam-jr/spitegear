@@ -82,6 +82,102 @@ defmodule Spitegear.GameLog.Processor do
   end
 
   @doc """
+  Second-pass: fills in `defender` and `territory_from` for `attacked` and
+  `occupied` events where those fields are currently nil.
+
+  Uses each game's own attacker names as candidate player names (longest first),
+  then tries each as a prefix of the "defender+from_territory" middle section.
+  Safe to re-run — only updates rows where defender is still nil.
+
+  Returns `{:ok, %{attempted: n, filled: n, unfilled: n}}`.
+  """
+  def fill_defenders do
+    game_ids =
+      Repo.all(
+        from(e in GameLogEvent,
+          where: e.event_type in ["attacked", "occupied"] and is_nil(e.defender),
+          select: e.game_id,
+          distinct: true
+        )
+      )
+
+    results = Enum.map(game_ids, &fill_game_defenders/1)
+
+    totals =
+      Enum.reduce(results, %{attempted: 0, filled: 0, unfilled: 0}, fn
+        {:ok, counts}, acc ->
+          %{
+            attempted: acc.attempted + counts.attempted,
+            filled: acc.filled + counts.filled,
+            unfilled: acc.unfilled + counts.unfilled
+          }
+      end)
+
+    {:ok, totals}
+  end
+
+  defp fill_game_defenders(game_id) do
+    player_names =
+      Repo.all(
+        from(e in GameLogEvent,
+          where: e.game_id == ^game_id and not is_nil(e.attacker),
+          select: e.attacker,
+          distinct: true
+        )
+      )
+      |> Enum.sort_by(&String.length/1, :desc)
+
+    events =
+      Repo.all(
+        from(e in GameLogEvent,
+          where:
+            e.game_id == ^game_id and
+              e.event_type in ["attacked", "occupied"] and
+              is_nil(e.defender)
+        )
+      )
+
+    results =
+      Enum.map(events, fn event ->
+        case extract_defender(event.raw_action, player_names) do
+          {defender, territory_from} ->
+            event
+            |> GameLogEvent.changeset(%{defender: defender, territory_from: territory_from})
+            |> Repo.update()
+
+          nil ->
+            :unfilled
+        end
+      end)
+
+    filled = Enum.count(results, &match?({:ok, _}, &1))
+    unfilled = Enum.count(results, &(&1 == :unfilled))
+
+    {:ok, %{attempted: length(events), filled: filled, unfilled: unfilled}}
+  end
+
+  # Extracts {defender, territory_from} from an attacked/occupied action string
+  # by trying each known player name as a prefix of the middle section.
+  defp extract_defender(raw_action, player_names) do
+    case Regex.run(~r/(?:attacked|occupied) (.+?) >/, raw_action) do
+      [_, middle] -> Enum.find_value(player_names, &match_player_prefix(middle, &1))
+      _ -> nil
+    end
+  end
+
+  defp match_player_prefix(middle, name) do
+    if String.starts_with?(middle, name) do
+      territory_from =
+        middle
+        |> String.slice(String.length(name)..-1//1)
+        |> String.trim()
+        |> nilify()
+
+      {name, territory_from}
+    end
+  end
+
+  @doc """
   Returns counts of events grouped by event_type, sorted by count desc.
   """
   def event_type_counts do

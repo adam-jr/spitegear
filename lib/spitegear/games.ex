@@ -3,6 +3,7 @@ defmodule Spitegear.Games do
   import Ecto.Query
   alias Spitegear.Game
   alias Spitegear.GameDeath
+  alias Spitegear.GameLogSnapshot
   alias Spitegear.HTML.Player
   alias Spitegear.HTML.ViewScreen
   alias Spitegear.Repo
@@ -13,6 +14,16 @@ defmodule Spitegear.Games do
 
   def list_active_games do
     Repo.all(from(g in Game, where: is_nil(g.finished)))
+  end
+
+  def list_finished_games do
+    Repo.all(from(g in Game, where: not is_nil(g.finished), order_by: [desc: g.inserted_at]))
+  end
+
+  def game_ids_with_snapshots do
+    Repo.all(from(s in GameLogSnapshot, select: s.game_id))
+    |> Enum.map(&Integer.to_string/1)
+    |> MapSet.new()
   end
 
   def upsert_game(view_screen) do

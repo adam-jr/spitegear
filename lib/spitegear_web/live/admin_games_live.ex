@@ -6,6 +6,8 @@ defmodule SpitegearWeb.AdminGamesLive do
     {:ok,
      assign(socket,
        games: load_games(),
+       finished_games: Games.list_finished_games(),
+       snapshot_ids: Games.game_ids_with_snapshots(),
        new_game_id: "",
        error: nil,
        hist_game_id: "",
@@ -27,8 +29,7 @@ defmodule SpitegearWeb.AdminGamesLive do
 
   def handle_event("fetch_historical", %{"game_id" => game_id}, socket) do
     game_id = String.trim(game_id)
-    lv = self()
-    Task.start(fn -> send(lv, {:historical_result, game_id, Games.fetch_historical_game(game_id)}) end)
+    start_fetch(game_id, self())
     {:noreply, assign(socket, hist_game_id: game_id, hist_status: :fetching)}
   end
 
@@ -43,11 +44,21 @@ defmodule SpitegearWeb.AdminGamesLive do
   end
 
   def handle_info({:historical_result, _game_id, {:ok, view_screen}}, socket) do
-    {:noreply, assign(socket, hist_status: {:ok, view_screen.game_name}, hist_game_id: "")}
+    {:noreply,
+     assign(socket,
+       hist_status: {:ok, view_screen.game_name},
+       hist_game_id: "",
+       finished_games: Games.list_finished_games(),
+       snapshot_ids: Games.game_ids_with_snapshots()
+     )}
   end
 
   def handle_info({:historical_result, game_id, {:error, reason}}, socket) do
     {:noreply, assign(socket, hist_status: {:error, game_id, inspect(reason)})}
+  end
+
+  defp start_fetch(game_id, lv) do
+    Task.start(fn -> send(lv, {:historical_result, game_id, Games.fetch_historical_game(game_id)}) end)
   end
 
   defp load_games do
@@ -119,6 +130,57 @@ defmodule SpitegearWeb.AdminGamesLive do
             <% _ -> %>
           <% end %>
         </form>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold mb-4">Finished Games</h2>
+        <%= if Enum.empty?(@finished_games) do %>
+          <p class="text-gray-500 text-sm">No finished games on record.</p>
+        <% else %>
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="text-left border-b border-gray-200">
+                <th class="pb-2 pr-4">Game ID</th>
+                <th class="pb-2 pr-4">Name</th>
+                <th class="pb-2 pr-4">Winners</th>
+                <th class="pb-2 pr-4">Finished</th>
+                <th class="pb-2">Log</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for game <- @finished_games do %>
+                <tr class="border-b border-gray-100 align-middle">
+                  <td class="py-2 pr-4 font-mono">
+                    <a href={"/admin/games/#{game.game_id}"} class="text-blue-600 hover:underline">
+                      <%= game.game_id %>
+                    </a>
+                  </td>
+                  <td class="py-2 pr-4"><%= game.game_name || "—" %></td>
+                  <td class="py-2 pr-4 text-gray-600">
+                    <%= if Enum.any?(game.winners),
+                      do: Enum.join(game.winners, ", "),
+                      else: "—" %>
+                  </td>
+                  <td class="py-2 pr-4 text-gray-500"><%= game.finished || "—" %></td>
+                  <td class="py-2">
+                    <%= if MapSet.member?(@snapshot_ids, game.game_id) do %>
+                      <span class="text-green-600">✓</span>
+                    <% else %>
+                      <button
+                        phx-click="fetch_historical"
+                        phx-value-game_id={game.game_id}
+                        disabled={@hist_status == :fetching}
+                        class="text-indigo-600 hover:underline disabled:opacity-40 text-xs"
+                      >
+                        Fetch
+                      </button>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% end %>
       </section>
 
       <section>

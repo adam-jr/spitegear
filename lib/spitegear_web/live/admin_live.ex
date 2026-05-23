@@ -52,6 +52,7 @@ defmodule SpitegearWeb.AdminLive do
         <h1 class="text-2xl font-bold">Admin</h1>
         <div class="flex items-center gap-4">
           <a href="/admin/templates" class="text-sm text-blue-600 hover:underline">Templates →</a>
+          <a href="/admin/logs" class="text-sm text-blue-600 hover:underline">Logs →</a>
           <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
         </div>
       </div>

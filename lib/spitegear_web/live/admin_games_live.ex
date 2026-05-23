@@ -1,17 +1,20 @@
 defmodule SpitegearWeb.AdminGamesLive do
   use SpitegearWeb, :live_view
   alias Spitegear.Games
+  alias Spitegear.Wargear.GameList
 
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
        games: load_games(),
        finished_games: Games.list_finished_games(),
+       unfetched_games: Games.list_unfetched_games(),
        snapshot_ids: Games.game_ids_with_snapshots(),
        new_game_id: "",
        error: nil,
        hist_game_id: "",
-       hist_status: nil
+       hist_status: nil,
+       seed_status: nil
      )}
   end
 
@@ -25,6 +28,15 @@ defmodule SpitegearWeb.AdminGamesLive do
       {:error, _} ->
         {:noreply, assign(socket, error: "Failed to add game #{game_id}")}
     end
+  end
+
+  def handle_event("seed_game_list", _params, socket) do
+    lv = self()
+    Task.start(fn ->
+      GameList.seed()
+      send(lv, :seed_complete)
+    end)
+    {:noreply, assign(socket, seed_status: :seeding)}
   end
 
   def handle_event("fetch_historical", %{"game_id" => game_id}, socket) do
@@ -43,12 +55,21 @@ defmodule SpitegearWeb.AdminGamesLive do
     {:noreply, assign(socket, games: load_games())}
   end
 
+  def handle_info(:seed_complete, socket) do
+    {:noreply,
+     assign(socket,
+       seed_status: :done,
+       unfetched_games: Games.list_unfetched_games()
+     )}
+  end
+
   def handle_info({:historical_result, _game_id, {:ok, view_screen}}, socket) do
     {:noreply,
      assign(socket,
        hist_status: {:ok, view_screen.game_name},
        hist_game_id: "",
        finished_games: Games.list_finished_games(),
+       unfetched_games: Games.list_unfetched_games(),
        snapshot_ids: Games.game_ids_with_snapshots()
      )}
   end
@@ -130,6 +151,68 @@ defmodule SpitegearWeb.AdminGamesLive do
             <% _ -> %>
           <% end %>
         </form>
+      </section>
+
+      <section>
+        <div class="flex items-baseline gap-4 mb-1">
+          <h2 class="text-lg font-semibold">Unfetched Games</h2>
+          <span class="text-sm text-gray-400"><%= length(@unfetched_games) %> games</span>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">
+          Games added to the DB but not yet fetched from wargear.net.
+          Seed loads all 166 discovered game IDs at once.
+        </p>
+        <div class="flex items-center gap-4 mb-4">
+          <button
+            phx-click="seed_game_list"
+            disabled={@seed_status == :seeding}
+            class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm disabled:opacity-50"
+          >
+            <%= if @seed_status == :seeding, do: "Seeding…", else: "Seed All 166 Discovered Games" %>
+          </button>
+          <%= if @seed_status == :done do %>
+            <span class="text-green-600 text-sm">✓ Seeded</span>
+          <% end %>
+        </div>
+        <%= if Enum.empty?(@unfetched_games) do %>
+          <p class="text-gray-500 text-sm">No unfetched games.</p>
+        <% else %>
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="text-left border-b border-gray-200">
+                <th class="pb-2 pr-4">Game ID</th>
+                <th class="pb-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for game <- @unfetched_games do %>
+                <tr class="border-b border-gray-100 align-middle">
+                  <td class="py-2 pr-4 font-mono text-gray-700">
+                    <a
+                      href={"https://www.wargear.net/games/view/#{game.game_id}"}
+                      target="_blank"
+                      class="hover:underline"
+                    >
+                      <%= game.game_id %>
+                    </a>
+                  </td>
+                  <td class="py-2">
+                    <button
+                      phx-click="fetch_historical"
+                      phx-value-game_id={game.game_id}
+                      disabled={@hist_status == :fetching}
+                      class="text-indigo-600 hover:underline disabled:opacity-40 text-xs"
+                    >
+                      <%= if @hist_status == :fetching && @hist_game_id == game.game_id,
+                        do: "Fetching…",
+                        else: "Fetch" %>
+                    </button>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% end %>
       </section>
 
       <section>

@@ -20,6 +20,10 @@ defmodule Spitegear.Games do
     Repo.all(from(g in Game, where: not is_nil(g.finished), order_by: [desc: g.inserted_at]))
   end
 
+  def list_unfetched_games do
+    Repo.all(from(g in Game, where: is_nil(g.game_name), order_by: [desc: g.inserted_at]))
+  end
+
   def game_ids_with_snapshots do
     Repo.all(from(s in GameLogSnapshot, select: s.game_id))
     |> Enum.map(&Integer.to_string/1)

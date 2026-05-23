@@ -41,12 +41,19 @@ defmodule Spitegear.GameLog.ParserTest do
     end
 
     test "placed_units" do
-      assert {:ok, %{event_type: "placed_units", attacker: "dandodd", units: 2, territory_to: "North Africa"}} =
+      assert {:ok,
+              %{
+                event_type: "placed_units",
+                attacker: "dandodd",
+                units: 2,
+                territory_to: "North Africa"
+              }} =
                Parser.parse_row(row("dandodd placed 2 units on North Africa"))
     end
 
     test "placed_units singular" do
-      assert {:ok, %{event_type: "placed_units", attacker: "Player", units: 1, territory_to: "Alaska"}} =
+      assert {:ok,
+              %{event_type: "placed_units", attacker: "Player", units: 1, territory_to: "Alaska"}} =
                Parser.parse_row(row("Player placed 1 unit on Alaska"))
     end
   end
@@ -77,15 +84,33 @@ defmodule Spitegear.GameLog.ParserTest do
     test "attacked with battle modifier in action string" do
       result =
         Parser.parse_row(
-          row("dandodd attacked foo > Brazil (4,2,1)-1 (4,2)", %{ad: "4,2,1", dd: "4,2", bmod: "-1,0", al: "1", dl: "0"})
+          row("dandodd attacked foo > Brazil (4,2,1)-1 (4,2)", %{
+            ad: "4,2,1",
+            dd: "4,2",
+            bmod: "-1,0",
+            al: "1",
+            dl: "0"
+          })
         )
 
-      assert {:ok, %{event_type: "attacked", territory_to: "Brazil", attacker_losses: 1, defender_losses: 0}} =
+      assert {:ok,
+              %{
+                event_type: "attacked",
+                territory_to: "Brazil",
+                attacker_losses: 1,
+                defender_losses: 0
+              }} =
                result
     end
 
     test "occupied" do
-      assert {:ok, %{event_type: "occupied", attacker: "dandodd", territory_to: "The Flatlands", units: 3}} =
+      assert {:ok,
+              %{
+                event_type: "occupied",
+                attacker: "dandodd",
+                territory_to: "The Flatlands",
+                units: 3
+              }} =
                Parser.parse_row(row("dandodd occupied foo > The Flatlands with 3 units"))
     end
 
@@ -156,11 +181,19 @@ defmodule Spitegear.GameLog.ParserTest do
                 units: 4,
                 territory_to: "The Eyrie"
               }} =
-               Parser.parse_row(row("pants off vant hof factory produced 4 units on The Eyrie +1"))
+               Parser.parse_row(
+                 row("pants off vant hof factory produced 4 units on The Eyrie +1")
+               )
     end
 
     test "factory_produced without trailing modifier" do
-      assert {:ok, %{event_type: "factory_produced", attacker: "Player", units: 3, territory_to: "Alaska"}} =
+      assert {:ok,
+              %{
+                event_type: "factory_produced",
+                attacker: "Player",
+                units: 3,
+                territory_to: "Alaska"
+              }} =
                Parser.parse_row(row("Player factory produced 3 units on Alaska"))
     end
 
@@ -215,7 +248,13 @@ defmodule Spitegear.GameLog.ParserTest do
     end
 
     test "captured_cards with multi-word defender" do
-      assert {:ok, %{event_type: "captured_cards", attacker: "dandodd", units: 3, defender: "pants off vant hof"}} =
+      assert {:ok,
+              %{
+                event_type: "captured_cards",
+                attacker: "dandodd",
+                units: 3,
+                defender: "pants off vant hof"
+              }} =
                Parser.parse_row(row("dandodd captured 3 cards from pants off vant hof"))
     end
 
@@ -238,14 +277,25 @@ defmodule Spitegear.GameLog.ParserTest do
     end
 
     test "factory_destroyed singular unit" do
-      assert {:ok, %{event_type: "factory_destroyed", attacker: "dandodd", units: 1, territory_to: "Bay of Seals"}} =
+      assert {:ok,
+              %{
+                event_type: "factory_destroyed",
+                attacker: "dandodd",
+                units: 1,
+                territory_to: "Bay of Seals"
+              }} =
                Parser.parse_row(row("dandodd factory destroyed 1 unit on Bay of Seals"))
     end
   end
 
   describe "parse_row/1 — capital / neutralised / assimilated" do
     test "captured_capital" do
-      assert {:ok, %{event_type: "captured_capital", attacker: "Hesh", territory_to: "Capital D Capital"}} =
+      assert {:ok,
+              %{
+                event_type: "captured_capital",
+                attacker: "Hesh",
+                territory_to: "Capital D Capital"
+              }} =
                Parser.parse_row(row("Hesh captured Capital D Capital"))
     end
 
@@ -270,7 +320,13 @@ defmodule Spitegear.GameLog.ParserTest do
     end
 
     test "assimilated singular" do
-      assert {:ok, %{event_type: "assimilated", attacker: "Hesh", units: 1, territory_from: "D Factory"}} =
+      assert {:ok,
+              %{
+                event_type: "assimilated",
+                attacker: "Hesh",
+                units: 1,
+                territory_from: "D Factory"
+              }} =
                Parser.parse_row(row("Hesh assimilated 1 unit from D Factory"))
     end
   end
@@ -295,7 +351,8 @@ defmodule Spitegear.GameLog.ParserTest do
 
   describe "parse_row/1 — game end events" do
     test "eliminated" do
-      assert {:ok, %{event_type: "eliminated", attacker: "dandodd", defender: "pants off vant hof"}} =
+      assert {:ok,
+              %{event_type: "eliminated", attacker: "dandodd", defender: "pants off vant hof"}} =
                Parser.parse_row(row("dandodd eliminated pants off vant hof"))
     end
 
@@ -317,6 +374,163 @@ defmodule Spitegear.GameLog.ParserTest do
     test "timed_out" do
       assert {:ok, %{event_type: "timed_out", attacker: "Lazy Player"}} =
                Parser.parse_row(row("Lazy Player timed out"))
+    end
+  end
+
+  describe "parse_row/1 — setup events" do
+    test "game_started" do
+      assert {:ok, %{event_type: "game_started"}} = Parser.parse_row(row("Game started"))
+    end
+
+    test "fogged" do
+      assert {:ok, %{event_type: "fogged"}} = Parser.parse_row(row("Fogged"))
+    end
+  end
+
+  describe "parse_row/1 — game setup (factory/seat/territory drafting)" do
+    test "assigned_factory" do
+      assert {:ok,
+              %{
+                event_type: "assigned_factory",
+                territory_to: "Nothgierc",
+                attacker: "pants off vant hof"
+              }} =
+               Parser.parse_row(row("Assigned factory Nothgierc to pants off vant hof"))
+    end
+
+    test "assigned_factory with multi-word territory" do
+      assert {:ok, %{event_type: "assigned_factory", territory_to: "The Eyrie", attacker: "Hesh"}} =
+               Parser.parse_row(row("Assigned factory The Eyrie to Hesh"))
+    end
+
+    test "assigned_seat" do
+      assert {:ok, %{event_type: "assigned_seat", seat: 1, attacker: "Kyjygyfyf"}} =
+               Parser.parse_row(row("Assigned seat 1 to Kyjygyfyf"))
+    end
+
+    test "assigned_seat multi-word player" do
+      assert {:ok, %{event_type: "assigned_seat", seat: 3, attacker: "pants off vant hof"}} =
+               Parser.parse_row(row("Assigned seat 3 to pants off vant hof"))
+    end
+
+    test "selected_territory" do
+      assert {:ok,
+              %{event_type: "selected_territory", attacker: "Hesh", territory_to: "Brindlewood"}} =
+               Parser.parse_row(row("Hesh selected Brindlewood"))
+    end
+
+    test "selected_territory multi-word" do
+      assert {:ok,
+              %{
+                event_type: "selected_territory",
+                attacker: "dandodd",
+                territory_to: "North Africa"
+              }} =
+               Parser.parse_row(row("dandodd selected North Africa"))
+    end
+
+    test "selected_territory empty pick" do
+      assert {:ok, %{event_type: "selected_territory", attacker: "Hesh"}} =
+               Parser.parse_row(row("Hesh selected"))
+    end
+  end
+
+  describe "parse_row/1 — skipped_turn" do
+    test "skipped_turn" do
+      assert {:ok, %{event_type: "skipped_turn", attacker: "Player One"}} =
+               Parser.parse_row(row("Player One skipped turn"))
+    end
+  end
+
+  describe "parse_row/1 — bonus unit singular" do
+    test "received_bonus singular" do
+      assert {:ok, %{event_type: "received_bonus", attacker: "Hesh", units: 1}} =
+               Parser.parse_row(row("Hesh received 1 bonus unit"))
+    end
+  end
+
+  describe "parse_row/1 — placed units with empty territory" do
+    test "placed_units with no territory" do
+      assert {:ok, %{event_type: "placed_units", attacker: "Player", units: 2, territory_to: nil}} =
+               Parser.parse_row(row("Player placed 2 units on"))
+    end
+  end
+
+  describe "parse_row/1 — attacked with units/percentage format" do
+    test "attacked with unit count and percentages (no dice columns)" do
+      result =
+        Parser.parse_row(
+          row("Hesh attacked Kyjygyfyf Crumb > Easter Bunny with 8 units (65% vs 70%) AL1 / DL1")
+        )
+
+      assert {:ok,
+              %{
+                event_type: "attacked",
+                attacker: "Hesh",
+                territory_to: "Easter Bunny",
+                units: 8,
+                attacker_losses: 1,
+                defender_losses: 1
+              }} = result
+    end
+
+    test "attacked with unit count and percentages — zero losses" do
+      result =
+        Parser.parse_row(row("dandodd attacked foo > Brazil with 5 units (50% vs 60%) AL0 / DL2"))
+
+      assert {:ok,
+              %{
+                event_type: "attacked",
+                attacker: "dandodd",
+                territory_to: "Brazil",
+                units: 5,
+                attacker_losses: 0,
+                defender_losses: 2
+              }} = result
+    end
+  end
+
+  describe "parse_row/1 — reinforced" do
+    test "reinforced" do
+      assert {:ok,
+              %{
+                event_type: "reinforced",
+                attacker: "Hesh",
+                units: 10,
+                territory_from: "Chef",
+                territory_to: "Dragonfruit"
+              }} =
+               Parser.parse_row(row("Hesh reinforced 10 units Chef > Dragonfruit"))
+    end
+
+    test "reinforced singular unit" do
+      assert {:ok, %{event_type: "reinforced", units: 1}} =
+               Parser.parse_row(row("Player reinforced 1 unit A > B"))
+    end
+  end
+
+  describe "parse_row/1 — fortified with no destination" do
+    test "fortified with empty destination" do
+      assert {:ok,
+              %{
+                event_type: "fortified",
+                attacker: "Player",
+                units: 3,
+                territory_from: "Ukraine"
+              }} =
+               Parser.parse_row(row("Player fortified 3 units Ukraine >"))
+    end
+  end
+
+  describe "parse_row/1 — discarded_units" do
+    test "discarded_units" do
+      assert {:ok, %{event_type: "discarded_units", attacker: "Hesh", units: 7}} =
+               Parser.parse_row(row("Hesh discarded 7 units"))
+    end
+
+    test "discarded_units singular" do
+      assert {:ok, %{event_type: "discarded_units", attacker: "Player", units: 1}} =
+               Parser.parse_row(row("Player discarded 1 unit"))
     end
   end
 

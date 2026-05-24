@@ -1,0 +1,216 @@
+defmodule SpitegearWeb.PublicGameShowLive do
+  use SpitegearWeb, :live_view
+  alias Spitegear.GameLog.Stats
+  alias Spitegear.Games
+
+  def mount(%{"game_id" => game_id}, _session, socket) do
+    case Games.get_game(game_id) do
+      nil ->
+        {:ok, push_navigate(socket, to: "/")}
+
+      game ->
+        log_summary = Stats.game_log_summary(game_id)
+        net_units_series = Stats.net_units_over_time(game_id)
+        placement_scores = Stats.placement_scores(game_id)
+        player_statuses = Games.list_player_statuses(game_id)
+        days = game_duration_days(game)
+
+        {:ok,
+         assign(socket,
+           game_id: game_id,
+           game: game,
+           log_summary: log_summary,
+           net_units_series: net_units_series,
+           placement_scores: placement_scores,
+           player_statuses: player_statuses,
+           days: days
+         )}
+    end
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div class="min-h-screen bg-gray-50 text-gray-900">
+      <header class="bg-white border-b border-gray-200">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3 min-w-0">
+            <a href="/" class="text-sm text-gray-400 hover:text-gray-600 shrink-0 transition-colors">
+              ← Games
+            </a>
+            <span class="text-gray-200 shrink-0">|</span>
+            <div class="min-w-0">
+              <p class="font-semibold text-gray-900 truncate">
+                <%= @game.game_name || "Game #{@game_id}" %>
+              </p>
+              <%= if @game.board_name do %>
+                <p class="text-xs text-gray-400 truncate"><%= @game.board_name %></p>
+              <% end %>
+            </div>
+          </div>
+          <a
+            href={"https://www.wargear.net/games/view/#{@game_id}"}
+            target="_blank"
+            class="text-xs text-gray-400 hover:text-gray-600 shrink-0 transition-colors"
+          >
+            wargear.net ↗
+          </a>
+        </div>
+      </header>
+
+      <main class="max-w-4xl mx-auto px-6 py-8 flex flex-col gap-8">
+        <%!-- Winner banner --%>
+        <%= if @game.finished && Enum.any?(@game.winners) do %>
+          <div class="bg-amber-50 border border-amber-200 rounded-xl px-6 py-5 flex items-center gap-4">
+            <span class="text-3xl">🏆</span>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-0.5">
+                Winner
+              </p>
+              <p class="text-xl font-bold text-amber-700">
+                <%= Enum.join(@game.winners, " & ") %>
+              </p>
+            </div>
+          </div>
+        <% end %>
+
+        <%!-- Game stats row --%>
+        <section class="bg-white border border-gray-200 rounded-xl shadow-sm px-6 py-5">
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
+            Game Summary
+          </h2>
+          <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+            <div>
+              <dt class="text-xs text-gray-400 mb-0.5">Turns (log)</dt>
+              <dd class="font-semibold text-gray-900 tabular-nums">
+                <%= @log_summary.turn_count %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400 mb-0.5">Log Events</dt>
+              <dd class="font-semibold text-gray-900 tabular-nums"><%= @log_summary.max_seq %></dd>
+            </div>
+            <%= if @days do %>
+              <div>
+                <dt class="text-xs text-gray-400 mb-0.5">Duration</dt>
+                <dd class="font-semibold text-gray-900 tabular-nums"><%= @days %> days</dd>
+              </div>
+            <% end %>
+            <%= if @game.created do %>
+              <div>
+                <dt class="text-xs text-gray-400 mb-0.5">Started</dt>
+                <dd class="text-gray-700"><%= @game.created %></dd>
+              </div>
+            <% end %>
+            <%= if @game.finished do %>
+              <div>
+                <dt class="text-xs text-gray-400 mb-0.5">Finished</dt>
+                <dd class="text-gray-700"><%= @game.finished %></dd>
+              </div>
+            <% end %>
+          </dl>
+        </section>
+
+        <%!-- Players --%>
+        <%= if Enum.any?(@player_statuses) do %>
+          <section>
+            <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+              Players
+            </h2>
+            <div class="flex flex-wrap gap-2">
+              <%= for p <- @player_statuses do %>
+                <span class={[
+                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium",
+                  if(p.alive,
+                    do: "bg-green-50 border border-green-200 text-green-800",
+                    else: "bg-gray-100 border border-gray-200 text-gray-400 line-through"
+                  )
+                ]}>
+                  <%= p.player_name %>
+                </span>
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <%!-- Net Units Chart --%>
+        <%= if map_size(@net_units_series) > 0 do %>
+          <section>
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                Net Units Over Time
+              </h2>
+              <button
+                phx-click={JS.dispatch("reset-zoom", to: "#net-units-chart")}
+                class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Reset Zoom
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mb-3">
+              Each player's unit count after gains and losses — drag to zoom, double-click to reset.
+            </p>
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <canvas
+                id="net-units-chart"
+                phx-hook="NetUnitsChart"
+                data-series={Jason.encode!(@net_units_series)}
+              >
+              </canvas>
+            </div>
+
+            <%!-- Placement scores --%>
+            <%= if map_size(@placement_scores) > 0 do %>
+              <div class="mt-4 bg-white border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-100">
+                <div class="px-5 py-3">
+                  <h3 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Placement
+                  </h3>
+                  <p class="text-xs text-gray-400 mt-0.5">Area under the units curve — higher = more units held longer.</p>
+                </div>
+                <%= for {{player, score}, rank} <-
+                      @placement_scores
+                      |> Enum.sort_by(&elem(&1, 1), :desc)
+                      |> Enum.with_index(1) do %>
+                  <div class="flex items-center gap-3 px-5 py-2.5">
+                    <span class="text-xs text-gray-300 w-6 tabular-nums shrink-0">#<%= rank %></span>
+                    <span class="flex-1 text-sm font-medium text-gray-800"><%= player %></span>
+                    <span class="text-sm font-mono tabular-nums text-gray-500">
+                      <%= format_score(score) %>
+                    </span>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </section>
+        <% end %>
+      </main>
+    </div>
+    """
+  end
+
+  # --- Private ---
+
+  defp game_duration_days(%{created: nil}), do: nil
+  defp game_duration_days(%{finished: nil}), do: nil
+
+  defp game_duration_days(%{created: created, finished: finished}) do
+    with %NaiveDateTime{} = start_dt <- Games.parse_game_date(created),
+         %NaiveDateTime{} = end_dt <- Games.parse_game_date(finished) do
+      NaiveDateTime.diff(end_dt, start_dt, :day)
+    else
+      _ -> nil
+    end
+  end
+
+  defp format_score(n) when n < 0, do: "-" <> format_score(-n)
+
+  defp format_score(n) do
+    n
+    |> Integer.to_string()
+    |> String.graphemes()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.map_join(",", &Enum.join/1)
+    |> String.reverse()
+  end
+end

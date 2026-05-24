@@ -23,7 +23,8 @@ defmodule SpitegearWeb.Router do
   scope "/", SpitegearWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", PublicLandingLive
+    live "/games/:game_id", PublicGameShowLive
     get "/ping", PingController, :ping
   end
 

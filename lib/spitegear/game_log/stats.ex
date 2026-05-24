@@ -75,6 +75,26 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   @doc """
+  Returns log-derived summary stats for a game:
+    - `max_seq`    — highest log_seq in the game
+    - `turn_count` — number of started_turn events
+  """
+  def game_log_summary(game_id) do
+    max_seq =
+      Repo.one(from(e in GameLogEvent, where: e.game_id == ^game_id, select: max(e.log_seq))) || 0
+
+    turn_count =
+      Repo.one(
+        from(e in GameLogEvent,
+          where: e.game_id == ^game_id and e.event_type == "started_turn",
+          select: count(e.id)
+        )
+      ) || 0
+
+    %{max_seq: max_seq, turn_count: turn_count}
+  end
+
+  @doc """
   Returns a per-player placement score for a game, keyed by player name.
 
   The score is the area under each player's net-units curve — net_units

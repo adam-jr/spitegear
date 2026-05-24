@@ -55,6 +55,40 @@ defmodule Spitegear.GameLog.StatsTest do
       assert %{"Alice" => [%{seq: 6, net_units: 4}]} == Stats.net_units_over_time(@game_id)
     end
 
+    test "captured_reserve_units adds to capturer and deducts from eliminated player" do
+      event(%{log_seq: 1, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{log_seq: 2, event_type: "received_units", player: "Bob", units: 6, raw_action: "x"})
+
+      event(%{
+        log_seq: 5,
+        event_type: "captured_reserve_units",
+        player: "Alice",
+        defender: "Bob",
+        units: 6,
+        raw_action: "x"
+      })
+
+      result = Stats.net_units_over_time(@game_id)
+      assert [%{seq: 1, net_units: 10}, %{seq: 5, net_units: 16}] == result["Alice"]
+      assert [%{seq: 2, net_units: 6}, %{seq: 5, net_units: 0}] == result["Bob"]
+    end
+
+    test "captured_reserve_units with nil defender only adds to capturer" do
+      event(%{log_seq: 1, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+
+      event(%{
+        log_seq: 5,
+        event_type: "captured_reserve_units",
+        player: "Alice",
+        defender: nil,
+        units: 6,
+        raw_action: "x"
+      })
+
+      result = Stats.net_units_over_time(@game_id)
+      assert [%{seq: 1, net_units: 10}, %{seq: 5, net_units: 16}] == result["Alice"]
+    end
+
     test "cumulates multiple positive events for the same player" do
       event(%{
         log_seq: 1,

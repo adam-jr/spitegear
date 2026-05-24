@@ -13,6 +13,7 @@ mix test test/path/to/test.exs        # run a single test file
 mix test test/path/to/test.exs:42     # run a single test by line number
 mix credo              # lint (must pass before pushing — CI enforces it)
 mix format             # format code
+mix spitegear.create_user <username> <password>  # create an admin user (hashed, stored in DB)
 ```
 
 Local secrets go in `config/dev.secret.exs` (gitignored). Slack posting is disabled in dev via `config :spitegear, :post_to_slack, false`.

@@ -62,3 +62,6 @@ jobs:
 
       - name: Credo
         run: mix credo --strict
+
+      - name: Security audit
+        run: mix deps.audit

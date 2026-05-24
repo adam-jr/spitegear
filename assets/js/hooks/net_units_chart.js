@@ -4,7 +4,7 @@ const COLORS = [
   "rgb(59,130,246)",   // blue
   "rgb(239,68,68)",    // red
   "rgb(34,197,94)",    // green
-  "rgb(245,158,11)",   // amber
+  "rgb(161,84,26)",    // brown
   "rgb(168,85,247)",   // purple
   "rgb(236,72,153)",   // pink
   "rgb(249,115,22)",   // orange

@@ -1,7 +1,4 @@
 import Chart from "../../vendor/chart.umd.min.js"
-import zoomPlugin from "../../vendor/chartjs-plugin-zoom.min.js"
-
-Chart.register(zoomPlugin)
 
 const COLORS = [
   "rgb(59,130,246)",   // blue
@@ -15,17 +12,16 @@ const COLORS = [
 const NetUnitsChart = {
   mounted() {
     this.renderChart()
-    this.el.addEventListener("reset-zoom", () => {
-      if (this.chart) this.chart.resetZoom()
-    })
+    this.el.addEventListener("reset-zoom", () => this._resetZoom())
   },
   updated() {
-    if (this.chart) this.chart.destroy()
+    this._destroyChart()
     this.renderChart()
   },
   destroyed() {
-    if (this.chart) this.chart.destroy()
+    this._destroyChart()
   },
+
   renderChart() {
     const series = JSON.parse(this.el.dataset.series)
     const datasets = Object.entries(series)
@@ -54,20 +50,96 @@ const NetUnitsChart = {
         },
         plugins: {
           legend: { position: "top" },
-          zoom: {
-            zoom: {
-              wheel: { enabled: true },
-              pinch: { enabled: true },
-              mode: "x",
-            },
-            pan: {
-              enabled: true,
-              mode: "x",
-            },
-          },
         },
       },
     })
+
+    this._setupZoom()
+  },
+
+  _destroyChart() {
+    this._teardownZoom()
+    if (this.chart) {
+      this.chart.destroy()
+      this.chart = null
+    }
+  },
+
+  _resetZoom() {
+    if (!this.chart) return
+    const xOpts = this.chart.scales.x.options
+    delete xOpts.min
+    delete xOpts.max
+    this.chart.update("none")
+  },
+
+  _setupZoom() {
+    const canvas = this.el
+    let isDragging = false
+    let dragStartX = 0
+    let dragStartMin = null
+    let dragStartMax = null
+
+    const onWheel = (e) => {
+      e.preventDefault()
+      if (!this.chart) return
+      const xScale = this.chart.scales.x
+      const rect = canvas.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left
+      const pct = (mouseX - xScale.left) / xScale.width
+      const range = xScale.max - xScale.min
+      const factor = e.deltaY < 0 ? 0.8 : 1 / 0.8
+      const newRange = range * factor
+      const newMin = xScale.min + pct * (range - newRange)
+      xScale.options.min = newMin
+      xScale.options.max = newMin + newRange
+      this.chart.update("none")
+    }
+
+    const onMousedown = (e) => {
+      if (!this.chart) return
+      isDragging = true
+      dragStartX = e.clientX
+      dragStartMin = this.chart.scales.x.min
+      dragStartMax = this.chart.scales.x.max
+      canvas.style.cursor = "grabbing"
+    }
+
+    const onMousemove = (e) => {
+      if (!isDragging || !this.chart) return
+      const xScale = this.chart.scales.x
+      const range = dragStartMax - dragStartMin
+      const deltaUnits = ((e.clientX - dragStartX) / xScale.width) * range
+      xScale.options.min = dragStartMin - deltaUnits
+      xScale.options.max = dragStartMax - deltaUnits
+      this.chart.update("none")
+    }
+
+    const stopDrag = () => {
+      isDragging = false
+      canvas.style.cursor = ""
+    }
+
+    canvas.addEventListener("wheel", onWheel, { passive: false })
+    canvas.addEventListener("mousedown", onMousedown)
+    canvas.addEventListener("mousemove", onMousemove)
+    canvas.addEventListener("mouseup", stopDrag)
+    canvas.addEventListener("mouseleave", stopDrag)
+
+    this._zoomCleanup = () => {
+      canvas.removeEventListener("wheel", onWheel)
+      canvas.removeEventListener("mousedown", onMousedown)
+      canvas.removeEventListener("mousemove", onMousemove)
+      canvas.removeEventListener("mouseup", stopDrag)
+      canvas.removeEventListener("mouseleave", stopDrag)
+    }
+  },
+
+  _teardownZoom() {
+    if (this._zoomCleanup) {
+      this._zoomCleanup()
+      this._zoomCleanup = null
+    }
   },
 }
 

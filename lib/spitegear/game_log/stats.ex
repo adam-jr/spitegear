@@ -17,7 +17,6 @@ defmodule Spitegear.GameLog.Stats do
     received_elimination_bonus
     factory_produced
     traded_cards
-    captured_reserve_units
     assimilated
   )
 
@@ -176,6 +175,23 @@ defmodule Spitegear.GameLog.Stats do
       if not is_nil(d) and not is_nil(dl), do: [%{player: d, seq: s, delta: -dl}], else: []
 
     attacker ++ defender
+  end
+
+  # Reserve units captured on elimination: gain for capturer, loss for eliminated player
+  defp event_to_deltas(%GameLogEvent{
+         event_type: "captured_reserve_units",
+         player: p,
+         defender: d,
+         units: u,
+         log_seq: s
+       }) do
+    capturer =
+      if not is_nil(p) and not is_nil(u), do: [%{player: p, seq: s, delta: u}], else: []
+
+    eliminated =
+      if not is_nil(d) and not is_nil(u), do: [%{player: d, seq: s, delta: -u}], else: []
+
+    capturer ++ eliminated
   end
 
   # Factory destroyed: units on that territory are lost

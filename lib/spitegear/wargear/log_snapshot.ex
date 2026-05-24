@@ -42,8 +42,33 @@ defmodule Spitegear.Wargear.LogSnapshot do
     end
   end
 
+  @doc """
+  Re-fetches the game log HTML and updates the stored snapshot.
+  Unlike `capture/1`, this always overwrites an existing snapshot.
+  Returns `{:ok, snapshot}` or `{:error, reason}`.
+  """
+  def refetch(game_id) do
+    Logger.info("#{__MODULE__} re-fetching log snapshot for game #{game_id}")
+
+    with {:ok, html} <- fetch_log(game_id, false),
+         {:ok, snapshot} <- replace_snapshot(game_id, html) do
+      Logger.info(
+        "#{__MODULE__} log snapshot updated for game #{game_id} (#{byte_size(html)} bytes)"
+      )
+
+      {:ok, snapshot}
+    else
+      {:error, reason} ->
+        Logger.error(
+          "#{__MODULE__} failed to refetch log for game #{game_id}: #{inspect(reason)}"
+        )
+
+        {:error, reason}
+    end
+  end
+
   defp fetch_log(game_id, retried) do
-    url = @base_url <> "/games/log/#{game_id}"
+    url = @base_url <> "/games/log/#{game_id}?showsetup=1&showips="
 
     case HTTPoison.get(url, [{"Cookie", wargear_cookie()}], timeout: 30_000, recv_timeout: 30_000) do
       {:ok, %{body: body}} -> check_session(body, game_id, retried)
@@ -77,6 +102,22 @@ defmodule Spitegear.Wargear.LogSnapshot do
 
     Repo.insert(changeset,
       on_conflict: :nothing,
+      conflict_target: :game_id,
+      returning: true
+    )
+  end
+
+  defp replace_snapshot(game_id, html) do
+    attrs = %{
+      game_id: game_id,
+      html: html,
+      fetched_at: DateTime.utc_now()
+    }
+
+    changeset = GameLogSnapshot.changeset(%GameLogSnapshot{}, attrs)
+
+    Repo.insert(changeset,
+      on_conflict: {:replace, [:html, :fetched_at, :updated_at]},
       conflict_target: :game_id,
       returning: true
     )

@@ -247,6 +247,12 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <h2 class="text-lg font-semibold">Net Units Over Time</h2>
             <div class="flex items-center gap-3">
               <button
+                phx-click={JS.dispatch("reset-zoom", to: "#net-units-chart")}
+                class="text-sm text-gray-500 hover:text-gray-800"
+              >
+                Reset Zoom
+              </button>
+              <button
                 phx-click="send_chart_to_slack"
                 disabled={@chart_status == :sending}
                 class="text-sm text-blue-600 hover:underline disabled:opacity-50"
@@ -262,7 +268,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
               <% end %>
             </div>
           </div>
-          <div class="relative h-72 border border-gray-200 rounded p-2">
+          <p class="text-xs text-gray-400 mb-2">Scroll to zoom · drag to pan · Reset Zoom to fit all</p>
+          <div class="relative h-[500px] border border-gray-200 rounded p-2">
             <canvas
               id="net-units-chart"
               phx-hook="NetUnitsChart"

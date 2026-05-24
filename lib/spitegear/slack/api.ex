@@ -40,37 +40,74 @@ defmodule Spitegear.Slack.API do
   end
 
   @doc """
-  Uploads a binary file to a Slack channel.
+  Uploads a binary file to a Slack channel using the v2 upload API
+  (files.getUploadURLExternal → PUT → files.completeUploadExternal).
   `png_bytes` is the raw file content; `filename` is the display name.
-  Returns `{:ok, response}` or `{:error, reason}`.
+  Returns `:ok` or `{:error, reason}`.
   """
   def upload_file(png_bytes, filename, channel) do
     config = Application.get_env(:spitegear, __MODULE__)
-    url = %{config[:url] | path: "/api/files.upload"}
+    base_url = config[:url]
+    auth = [{"Authorization", "Bearer #{auth_token()}"}]
 
-    body = {
-      :multipart,
-      [
-        {"channels", channel_id(channel)},
-        {"filename", filename},
-        {"filetype", "png"},
-        {"file", png_bytes, {"form-data", [{"name", "file"}, {"filename", filename}]},
-         [{"Content-Type", "image/png"}]}
-      ]
-    }
+    with {:ok, %{"upload_url" => upload_url, "file_id" => file_id}} <-
+           get_upload_url(base_url, filename, byte_size(png_bytes), auth),
+         :ok <- put_file(upload_url, png_bytes) do
+      complete_upload(base_url, file_id, filename, channel_id(channel), auth)
+    end
+  end
 
-    case HTTPoison.post(url, body, [{"Authorization", "Bearer #{auth_token()}"}],
-           recv_timeout: 20_000
-         ) do
+  defp get_upload_url(base_url, filename, length, auth) do
+    url = %{base_url | path: "/api/files.getUploadURLExternal"}
+    params = [filename: filename, length: length]
+
+    case HTTPoison.get(url, auth, params: params, recv_timeout: 15_000) do
       {:ok, %{status_code: 200, body: body}} ->
         case Jason.decode(body) do
-          {:ok, %{"ok" => true}} -> :ok
+          {:ok, %{"ok" => true} = resp} -> {:ok, resp}
           {:ok, %{"ok" => false, "error" => err}} -> {:error, err}
-          _ -> {:error, "unexpected response"}
+          _ -> {:error, "unexpected response from getUploadURLExternal"}
         end
 
       {:ok, %{status_code: code}} ->
-        {:error, "Slack returned HTTP #{code}"}
+        {:error, "Slack returned HTTP #{code} on getUploadURLExternal"}
+
+      {:error, reason} ->
+        {:error, inspect(reason)}
+    end
+  end
+
+  defp put_file(upload_url, png_bytes) do
+    case HTTPoison.put(upload_url, png_bytes, [{"Content-Type", "image/png"}],
+           recv_timeout: 20_000
+         ) do
+      {:ok, %{status_code: code}} when code in 200..299 -> :ok
+      {:ok, %{status_code: code}} -> {:error, "upload PUT returned HTTP #{code}"}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  defp complete_upload(base_url, file_id, title, channel_id, auth) do
+    url = %{base_url | path: "/api/files.completeUploadExternal"}
+
+    body =
+      Jason.encode!(%{
+        files: [%{id: file_id, title: title}],
+        channel_id: channel_id
+      })
+
+    case HTTPoison.post(url, body, [{"Content-Type", "application/json"} | auth],
+           recv_timeout: 15_000
+         ) do
+      {:ok, %{status_code: 200, body: resp_body}} ->
+        case Jason.decode(resp_body) do
+          {:ok, %{"ok" => true}} -> :ok
+          {:ok, %{"ok" => false, "error" => err}} -> {:error, err}
+          _ -> {:error, "unexpected response from completeUploadExternal"}
+        end
+
+      {:ok, %{status_code: code}} ->
+        {:error, "Slack returned HTTP #{code} on completeUploadExternal"}
 
       {:error, reason} ->
         {:error, inspect(reason)}

@@ -32,10 +32,10 @@ defmodule Spitegear.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.7.11"},
+      {:phoenix, "~> 1.7"},
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.10"},
-      {:postgrex, ">= 0.0.0"},
+      {:postgrex, "~> 0.22"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.20.2"},
@@ -60,9 +60,10 @@ defmodule Spitegear.MixProject do
       {:jason, "~> 1.2"},
       {:jose, "~> 1.11"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.2"},
+      {:bandit, "~> 1.11"},
       {:quantum, "~> 3.0"},
       {:bcrypt_elixir, "~> 3.0"},
+      {:mix_audit, "~> 2.0", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end

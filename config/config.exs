@@ -38,7 +38,7 @@ config :esbuild,
   version: "0.17.11",
   spitegear: [
     args:
-      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --alias:chart.js=./vendor/chart.umd.min.js --alias:chart.js/helpers=./vendor/chart.umd.min.js --alias:hammerjs=./vendor/hammer.min.js),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]

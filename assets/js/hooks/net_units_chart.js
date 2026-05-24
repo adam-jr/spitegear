@@ -1,4 +1,7 @@
 import Chart from "../../vendor/chart.umd.min.js"
+import zoomPlugin from "../../vendor/chartjs-plugin-zoom.min.js"
+
+Chart.register(zoomPlugin)
 
 const COLORS = [
   "rgb(59,130,246)",   // blue
@@ -10,7 +13,12 @@ const COLORS = [
 ]
 
 const NetUnitsChart = {
-  mounted() { this.renderChart() },
+  mounted() {
+    this.renderChart()
+    this.el.addEventListener("reset-zoom", () => {
+      if (this.chart) this.chart.resetZoom()
+    })
+  },
   updated() {
     if (this.chart) this.chart.destroy()
     this.renderChart()
@@ -46,6 +54,17 @@ const NetUnitsChart = {
         },
         plugins: {
           legend: { position: "top" },
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: "x",
+            },
+            pan: {
+              enabled: true,
+              mode: "x",
+            },
+          },
         },
       },
     })

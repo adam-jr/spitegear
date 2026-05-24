@@ -139,16 +139,20 @@ const NetUnitsChart = {
       if (selectionEl) { selectionEl.remove(); selectionEl = null }
     }
 
+    const onDblclick = () => this._resetZoom()
+
     canvas.addEventListener("mousedown", onMousedown)
     canvas.addEventListener("mousemove", onMousemove)
     canvas.addEventListener("mouseup", onMouseup)
     canvas.addEventListener("mouseleave", onMouseleave)
+    canvas.addEventListener("dblclick", onDblclick)
 
     this._zoomCleanup = () => {
       canvas.removeEventListener("mousedown", onMousedown)
       canvas.removeEventListener("mousemove", onMousemove)
       canvas.removeEventListener("mouseup", onMouseup)
       canvas.removeEventListener("mouseleave", onMouseleave)
+      canvas.removeEventListener("dblclick", onDblclick)
       if (selectionEl) { selectionEl.remove() }
     }
   },

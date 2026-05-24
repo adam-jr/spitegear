@@ -214,10 +214,10 @@ defmodule Spitegear.GameLog.StatsTest do
   end
 
   describe "net_units_over_time/1 — setup phase initialization" do
-    test "placed_units before game_started count as starting net units" do
+    test "placed_units before setup event count as starting net units" do
       event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 5, raw_action: "x"})
       event(%{log_seq: 5, event_type: "placed_units", player: "Alice", units: 3, raw_action: "x"})
-      event(%{log_seq: 8, event_type: "game_started", raw_action: "Game started"})
+      event(%{log_seq: 8, event_type: "setup", raw_action: "Initial board setup complete"})
       event(%{log_seq: 12, event_type: "received_units", player: "Alice", units: 2, raw_action: "x"})
 
       assert %{
@@ -229,7 +229,7 @@ defmodule Spitegear.GameLog.StatsTest do
              } == Stats.net_units_over_time(@game_id)
     end
 
-    test "placed_units before first started_turn count as starting net when no game_started" do
+    test "placed_units before first started_turn count as starting net when no setup event" do
       event(%{log_seq: 2, event_type: "placed_units", player: "Bob", units: 4, raw_action: "x"})
 
       event(%{
@@ -246,19 +246,36 @@ defmodule Spitegear.GameLog.StatsTest do
              } == Stats.net_units_over_time(@game_id)
     end
 
-    test "placed_units after game_started are ignored (in-game bonus placements)" do
-      event(%{log_seq: 2, event_type: "game_started", raw_action: "Game started"})
+    test "placed_units after setup event are ignored (in-game bonus placements)" do
+      event(%{log_seq: 2, event_type: "setup", raw_action: "Initial board setup complete"})
       event(%{log_seq: 5, event_type: "placed_units", player: "Alice", units: 3, raw_action: "x"})
       event(%{log_seq: 8, event_type: "received_units", player: "Alice", units: 3, raw_action: "x"})
 
       assert %{"Alice" => [%{seq: 8, net_units: 3}]} == Stats.net_units_over_time(@game_id)
     end
 
+    test "Neutral player placements are excluded from setup deltas" do
+      event(%{
+        log_seq: 2,
+        event_type: "placed_units",
+        player: "Neutral",
+        units: 5,
+        raw_action: "x"
+      })
+
+      event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 6, raw_action: "x"})
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+
+      result = Stats.net_units_over_time(@game_id)
+      assert [%{seq: 3, net_units: 6}] == result["Alice"]
+      refute Map.has_key?(result, "Neutral")
+    end
+
     test "multiple players initialized independently from setup placed_units" do
       event(%{log_seq: 1, event_type: "placed_units", player: "Alice", units: 6, raw_action: "x"})
       event(%{log_seq: 2, event_type: "placed_units", player: "Bob", units: 4, raw_action: "x"})
       event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 2, raw_action: "x"})
-      event(%{log_seq: 5, event_type: "game_started", raw_action: "Game started"})
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
 
       result = Stats.net_units_over_time(@game_id)
       assert [%{seq: 1, net_units: 6}, %{seq: 3, net_units: 8}] == result["Alice"]
@@ -268,7 +285,7 @@ defmodule Spitegear.GameLog.StatsTest do
     test "setup placed_units with nil player or units produce no delta" do
       event(%{log_seq: 1, event_type: "placed_units", player: nil, units: 5, raw_action: "x"})
       event(%{log_seq: 2, event_type: "placed_units", player: "Alice", units: nil, raw_action: "x"})
-      event(%{log_seq: 5, event_type: "game_started", raw_action: "Game started"})
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
 
       assert %{} == Stats.net_units_over_time(@game_id)
     end
@@ -276,7 +293,7 @@ defmodule Spitegear.GameLog.StatsTest do
     test "combat losses after setup are applied from the setup baseline" do
       event(%{log_seq: 2, event_type: "placed_units", player: "Alice", units: 10, raw_action: "x"})
       event(%{log_seq: 3, event_type: "placed_units", player: "Bob", units: 8, raw_action: "x"})
-      event(%{log_seq: 5, event_type: "game_started", raw_action: "Game started"})
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
 
       event(%{
         log_seq: 10,

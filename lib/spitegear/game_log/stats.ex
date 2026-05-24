@@ -66,12 +66,15 @@ defmodule Spitegear.GameLog.Stats do
 
   # --- Private ---
 
-  # The first game_started seq marks the end of setup. Fall back to the first
-  # started_turn if game_started is missing (older snapshots). Returns 0 if
-  # neither is found — no setup phase detected, treat all events as game events.
+  # The "setup" event ("Initial board setup complete") marks the end of the setup
+  # phase. Falls back to the first started_turn if the setup event is absent.
+  # Returns 0 if neither is found — no setup phase detected.
+  #
+  # Note: game_started fires before setup begins (players joining the lobby),
+  # so it is NOT used as a cutoff.
   defp setup_cutoff(events) do
     Enum.find_value(events, fn e ->
-      if e.event_type == "game_started", do: e.log_seq, else: nil
+      if e.event_type == "setup", do: e.log_seq, else: nil
     end) ||
       Enum.find_value(events, fn e ->
         if e.event_type == "started_turn", do: e.log_seq, else: nil
@@ -80,7 +83,8 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   # Setup phase only: placed_units count as the player's starting units.
-  # In-game placed_units (after game_started) are excluded — those units
+  # "Neutral" player placements are skipped (neutral territories are not owned).
+  # In-game placed_units (after setup is complete) are excluded — those units
   # were already counted via received_units/received_bonus.
   defp setup_placed_delta(%GameLogEvent{
          event_type: "placed_units",
@@ -88,7 +92,7 @@ defmodule Spitegear.GameLog.Stats do
          units: u,
          log_seq: s
        })
-       when not is_nil(p) and not is_nil(u) do
+       when not is_nil(p) and p != "Neutral" and not is_nil(u) do
     [%{player: p, seq: s, delta: u}]
   end
 

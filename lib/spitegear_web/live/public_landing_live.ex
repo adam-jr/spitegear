@@ -55,10 +55,7 @@ defmodule SpitegearWeb.PublicLandingLive do
     <div class="min-h-screen bg-gray-50 text-gray-900">
       <header class="bg-white border-b border-gray-200">
         <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 class="text-lg font-bold tracking-tight">⚔️ Spitegear</h1>
-            <p class="text-xs text-gray-400 mt-0.5">Wargear.net game tracker</p>
-          </div>
+          <h1 class="text-lg font-bold tracking-tight">⚔️ Spitegear</h1>
           <a
             href="https://www.wargear.net"
             target="_blank"

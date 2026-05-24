@@ -13,6 +13,7 @@ defmodule Spitegear.GameLog.Processor do
   alias Spitegear.GameLogEvent
   alias Spitegear.GameLogSnapshot
   alias Spitegear.Repo
+  alias Spitegear.Wargear.LogSnapshot
 
   @doc """
   Processes every stored snapshot. Idempotent — existing events are updated
@@ -191,6 +192,49 @@ defmodule Spitegear.GameLog.Processor do
   end
 
   @doc """
+  Re-fetches the game log from wargear.net (with setup events) and inserts
+  only new log entries — existing seqs in the DB are left untouched.
+
+  Returns `{:ok, %{new_events: n, skipped: n, unrecognized: n}}` or `{:error, reason}`.
+  """
+  def refetch_and_process(game_id) do
+    game_id = to_string(game_id)
+
+    with {:ok, snapshot} <- LogSnapshot.refetch(game_id) do
+      process_snapshot_new_only(game_id, snapshot.html)
+    end
+  end
+
+  @doc """
+  Re-fetches the game log for every game that has a stored snapshot.
+  Inserts only new log entries per game — existing seqs are left untouched.
+
+  Returns `{:ok, %{new_events: n, skipped: n, unrecognized: n}}`.
+  """
+  def refetch_all do
+    game_ids =
+      Repo.all(from(s in GameLogSnapshot, select: s.game_id))
+      |> Enum.map(&to_string/1)
+
+    results = Enum.map(game_ids, &refetch_and_process/1)
+
+    totals =
+      Enum.reduce(results, %{new_events: 0, skipped: 0, unrecognized: 0}, fn
+        {:ok, counts}, acc ->
+          %{
+            new_events: acc.new_events + counts.new_events,
+            skipped: acc.skipped + counts.skipped,
+            unrecognized: acc.unrecognized + counts.unrecognized
+          }
+
+        {:error, _}, acc ->
+          acc
+      end)
+
+    {:ok, totals}
+  end
+
+  @doc """
   Returns counts of events grouped by event_type, sorted by count desc.
   """
   def event_type_counts do
@@ -259,6 +303,33 @@ defmodule Spitegear.GameLog.Processor do
   end
 
   # --- Private ---
+
+  # Like process_snapshot/2 but skips any log_seq already present in the DB.
+  # Used by refetch_and_process so existing parsed events are never overwritten.
+  defp process_snapshot_new_only(game_id, html) do
+    rows = parse_html(html)
+
+    existing_seqs =
+      Repo.all(from(e in GameLogEvent, where: e.game_id == ^game_id, select: e.log_seq))
+      |> MapSet.new()
+
+    results =
+      Enum.map(rows, fn row ->
+        if is_nil(row.log_seq) or MapSet.member?(existing_seqs, row.log_seq) do
+          :skipped
+        else
+          upsert_event(game_id, row)
+        end
+      end)
+
+    fill_game_defenders(game_id)
+
+    new_events = Enum.count(results, &match?({:ok, _}, &1))
+    skipped = Enum.count(results, &(&1 == :skipped))
+    unrecognized = Enum.count(results, &match?({:unrecognized, _}, &1))
+
+    {:ok, %{new_events: new_events, skipped: skipped, unrecognized: unrecognized}}
+  end
 
   defp process_snapshot(game_id, html) do
     rows = parse_html(html)

@@ -8,8 +8,33 @@ defmodule SpitegearWeb.AdminGameLogLive do
      assign(socket,
        game_id: game_id,
        game: Games.get_game(game_id),
-       events: Processor.list_events(game_id)
+       events: Processor.list_events(game_id),
+       refetch_status: nil
      )}
+  end
+
+  def handle_event("refetch_and_process", _params, socket) do
+    game_id = socket.assigns.game_id
+    lv = self()
+
+    Task.start(fn ->
+      result = Processor.refetch_and_process(game_id)
+      send(lv, {:refetch_result, result})
+    end)
+
+    {:noreply, assign(socket, refetch_status: :running)}
+  end
+
+  def handle_info({:refetch_result, {:ok, counts}}, socket) do
+    {:noreply,
+     assign(socket,
+       refetch_status: {:ok, counts},
+       events: Processor.list_events(socket.assigns.game_id)
+     )}
+  end
+
+  def handle_info({:refetch_result, {:error, reason}}, socket) do
+    {:noreply, assign(socket, refetch_status: {:error, inspect(reason)})}
   end
 
   def render(assigns) do
@@ -23,11 +48,29 @@ defmodule SpitegearWeb.AdminGameLogLive do
           <h1 class="text-xl font-bold mt-1">Log Events — Game <%= @game_id %></h1>
           <p class="text-sm text-gray-500"><%= length(@events) %> events</p>
         </div>
+        <div class="flex items-center gap-4">
+          <button
+            phx-click="refetch_and_process"
+            disabled={@refetch_status == :running}
+            class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+          >
+            <%= if @refetch_status == :running, do: "Fetching…", else: "Refetch & Process" %>
+          </button>
+          <%= case @refetch_status do %>
+            <% {:ok, counts} -> %>
+              <span class="text-sm text-green-600">
+                ✓ <%= counts.new_events %> new, <%= counts.skipped %> skipped
+              </span>
+            <% {:error, reason} -> %>
+              <span class="text-sm text-red-600">Error: <%= reason %></span>
+            <% _ -> %>
+          <% end %>
+        </div>
       </div>
 
       <%= if Enum.empty?(@events) do %>
         <p class="text-gray-500 text-sm">
-          No events processed yet. Go to
+          No events processed yet. Click "Refetch & Process" or go to
           <a href="/admin/logs" class="text-blue-600 hover:underline">Admin → Logs</a>
           and run "Process All Snapshots".
         </p>

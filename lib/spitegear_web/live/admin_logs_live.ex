@@ -10,7 +10,8 @@ defmodule SpitegearWeb.AdminLogsLive do
        unrecognized: Processor.list_unrecognized(),
        process_status: nil,
        reprocess_status: nil,
-       fill_defenders_status: nil
+       fill_defenders_status: nil,
+       refetch_all_status: nil
      )}
   end
 
@@ -27,6 +28,11 @@ defmodule SpitegearWeb.AdminLogsLive do
   def handle_event("fill_defenders", _params, socket) do
     start_task(:fill_defenders, self())
     {:noreply, assign(socket, fill_defenders_status: :running)}
+  end
+
+  def handle_event("refetch_all", _params, socket) do
+    start_task(:refetch_all, self())
+    {:noreply, assign(socket, refetch_all_status: :running)}
   end
 
   def handle_info({:task_result, :process_all, {:ok, counts}}, socket) do
@@ -69,6 +75,20 @@ defmodule SpitegearWeb.AdminLogsLive do
     {:noreply, assign(socket, fill_defenders_status: {:error, inspect(reason)})}
   end
 
+  def handle_info({:task_result, :refetch_all, {:ok, counts}}, socket) do
+    {:noreply,
+     assign(socket,
+       refetch_all_status: {:ok, counts},
+       summary: Processor.summary(),
+       event_counts: Processor.event_type_counts(),
+       unrecognized: Processor.list_unrecognized()
+     )}
+  end
+
+  def handle_info({:task_result, :refetch_all, {:error, reason}}, socket) do
+    {:noreply, assign(socket, refetch_all_status: {:error, inspect(reason)})}
+  end
+
   defp start_task(action, lv) do
     Task.start(fn ->
       result =
@@ -76,6 +96,7 @@ defmodule SpitegearWeb.AdminLogsLive do
           :process_all -> Processor.process_all()
           :reprocess_unrecognized -> Processor.reprocess_unrecognized()
           :fill_defenders -> Processor.fill_defenders()
+          :refetch_all -> Processor.refetch_all()
         end
 
       send(lv, {:task_result, action, result})
@@ -147,6 +168,28 @@ defmodule SpitegearWeb.AdminLogsLive do
             <% {:ok, counts} -> %>
               <span class="text-green-600 text-sm">
                 ✓ <%= counts.resolved %> resolved, <%= counts.still_unrecognized %> remain
+              </span>
+            <% {:error, reason} -> %>
+              <span class="text-red-600 text-sm">Error: <%= reason %></span>
+            <% _ -> %>
+          <% end %>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button
+            phx-click="refetch_all"
+            disabled={@refetch_all_status == :running}
+            class="bg-indigo-600 text-white px-5 py-2 rounded hover:bg-indigo-700 disabled:opacity-50 text-sm"
+          >
+            <%= if @refetch_all_status == :running, do: "Refetching…", else: "Refetch All Logs" %>
+          </button>
+          <p class="text-xs text-gray-400 max-w-xs">
+            Re-downloads each game log with setup events (?showsetup=1) and inserts new seqs only.
+          </p>
+          <%= case @refetch_all_status do %>
+            <% {:ok, counts} -> %>
+              <span class="text-green-600 text-sm">
+                ✓ <%= counts.new_events %> new, <%= counts.skipped %> skipped
               </span>
             <% {:error, reason} -> %>
               <span class="text-red-600 text-sm">Error: <%= reason %></span>

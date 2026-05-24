@@ -23,14 +23,19 @@ defmodule SpitegearWeb.PublicGameShowLive do
            net_units_series: net_units_series,
            placement_scores: placement_scores,
            player_statuses: player_statuses,
-           days: days
+           days: days,
+           timezone: "America/New_York"
          ), layout: false}
     end
   end
 
+  def handle_event("client_timezone", %{"timezone" => tz}, socket) do
+    {:noreply, assign(socket, timezone: tz)}
+  end
+
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-50 text-gray-900">
+    <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-gray-50 text-gray-900">
       <header class="bg-white border-b border-gray-200">
         <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-3 min-w-0">
@@ -98,13 +103,13 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if @game.created do %>
               <div>
                 <dt class="text-xs text-gray-400 mb-0.5">Started</dt>
-                <dd class="text-gray-700"><%= @game.created %></dd>
+                <dd class="text-gray-700"><%= format_wargear_date(@game.created, @timezone) %></dd>
               </div>
             <% end %>
             <%= if @game.finished do %>
               <div>
                 <dt class="text-xs text-gray-400 mb-0.5">Finished</dt>
-                <dd class="text-gray-700"><%= @game.finished %></dd>
+                <dd class="text-gray-700"><%= format_wargear_date(@game.finished, @timezone) %></dd>
               </div>
             <% end %>
           </dl>
@@ -165,7 +170,9 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   <h3 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Placement
                   </h3>
-                  <p class="text-xs text-gray-400 mt-0.5">Area under the units curve — higher = more units held longer.</p>
+                  <p class="text-xs text-gray-400 mt-0.5">
+                    Area under the units curve — higher = more units held longer.
+                  </p>
                 </div>
                 <%= for {{player, score}, rank} <-
                       @placement_scores
@@ -199,6 +206,18 @@ defmodule SpitegearWeb.PublicGameShowLive do
       NaiveDateTime.diff(end_dt, start_dt, :day)
     else
       _ -> nil
+    end
+  end
+
+  defp format_wargear_date(nil, _tz), do: nil
+
+  defp format_wargear_date(date_str, tz) do
+    with %NaiveDateTime{} = ndt <- Games.parse_game_date(date_str),
+         {:ok, et_dt} <- DateTime.from_naive(ndt, "America/New_York"),
+         {:ok, local} <- DateTime.shift_zone(et_dt, tz) do
+      Calendar.strftime(local, "%b %d, %Y %I:%M %p") <> " #{local.zone_abbr}"
+    else
+      _ -> date_str
     end
   end
 

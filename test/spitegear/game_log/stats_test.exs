@@ -192,6 +192,22 @@ defmodule Spitegear.GameLog.StatsTest do
       assert [%{seq: 2, net_units: 3}] == result["Bob"]
     end
 
+    test "factory_destroyed units are negative" do
+      event(%{log_seq: 1, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+
+      event(%{
+        log_seq: 4,
+        event_type: "factory_destroyed",
+        player: "Alice",
+        units: 3,
+        raw_action: "x"
+      })
+
+      assert %{
+               "Alice" => [%{seq: 1, net_units: 10}, %{seq: 4, net_units: 7}]
+             } == Stats.net_units_over_time(@game_id)
+    end
+
     test "returns empty map for unknown game" do
       assert %{} == Stats.net_units_over_time("nonexistent_game_id")
     end

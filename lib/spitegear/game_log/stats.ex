@@ -132,6 +132,17 @@ defmodule Spitegear.GameLog.Stats do
     attacker ++ defender
   end
 
+  # Factory destroyed: units on that territory are lost
+  defp event_to_deltas(%GameLogEvent{
+         event_type: "factory_destroyed",
+         player: p,
+         units: u,
+         log_seq: s
+       })
+       when not is_nil(p) and not is_nil(u) do
+    [%{player: p, seq: s, delta: -u}]
+  end
+
   # Discarded units are a genuine unit loss
   defp event_to_deltas(%GameLogEvent{
          event_type: "discarded_units",

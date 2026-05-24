@@ -40,17 +40,59 @@ defmodule Spitegear.GameLog.Stats do
       }
   """
   def net_units_over_time(game_id) do
-    Repo.all(
-      from(e in GameLogEvent,
-        where: e.game_id == ^game_id,
-        order_by: [asc: e.log_seq]
+    events =
+      Repo.all(
+        from(e in GameLogEvent,
+          where: e.game_id == ^game_id,
+          order_by: [asc: e.log_seq]
+        )
       )
-    )
-    |> Enum.flat_map(&event_to_deltas/1)
+
+    cutoff = setup_cutoff(events)
+
+    setup_deltas =
+      events
+      |> Enum.take_while(&(&1.log_seq < cutoff))
+      |> Enum.flat_map(&setup_placed_delta/1)
+
+    game_deltas =
+      events
+      |> Enum.drop_while(&(&1.log_seq < cutoff))
+      |> Enum.flat_map(&event_to_deltas/1)
+
+    (setup_deltas ++ game_deltas)
     |> build_series()
   end
 
   # --- Private ---
+
+  # The first game_started seq marks the end of setup. Fall back to the first
+  # started_turn if game_started is missing (older snapshots). Returns 0 if
+  # neither is found — no setup phase detected, treat all events as game events.
+  defp setup_cutoff(events) do
+    Enum.find_value(events, fn e ->
+      if e.event_type == "game_started", do: e.log_seq, else: nil
+    end) ||
+      Enum.find_value(events, fn e ->
+        if e.event_type == "started_turn", do: e.log_seq, else: nil
+      end) ||
+      0
+  end
+
+  # Setup phase only: placed_units count as the player's starting units.
+  # In-game placed_units (after game_started) are excluded — those units
+  # were already counted via received_units/received_bonus.
+  defp setup_placed_delta(%GameLogEvent{
+         event_type: "placed_units",
+         player: p,
+         units: u,
+         log_seq: s
+       })
+       when not is_nil(p) and not is_nil(u) do
+    [%{player: p, seq: s, delta: u}]
+  end
+
+  defp setup_placed_delta(_), do: []
 
   defp build_series(deltas) do
     deltas

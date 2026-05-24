@@ -196,4 +196,85 @@ defmodule Spitegear.GameLog.StatsTest do
       assert %{} == Stats.net_units_over_time("nonexistent_game_id")
     end
   end
+
+  describe "net_units_over_time/1 — setup phase initialization" do
+    test "placed_units before game_started count as starting net units" do
+      event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 5, raw_action: "x"})
+      event(%{log_seq: 5, event_type: "placed_units", player: "Alice", units: 3, raw_action: "x"})
+      event(%{log_seq: 8, event_type: "game_started", raw_action: "Game started"})
+      event(%{log_seq: 12, event_type: "received_units", player: "Alice", units: 2, raw_action: "x"})
+
+      assert %{
+               "Alice" => [
+                 %{seq: 3, net_units: 5},
+                 %{seq: 5, net_units: 8},
+                 %{seq: 12, net_units: 10}
+               ]
+             } == Stats.net_units_over_time(@game_id)
+    end
+
+    test "placed_units before first started_turn count as starting net when no game_started" do
+      event(%{log_seq: 2, event_type: "placed_units", player: "Bob", units: 4, raw_action: "x"})
+
+      event(%{
+        log_seq: 6,
+        event_type: "started_turn",
+        player: "Bob",
+        raw_action: "Bob started turn"
+      })
+
+      event(%{log_seq: 10, event_type: "received_units", player: "Bob", units: 3, raw_action: "x"})
+
+      assert %{
+               "Bob" => [%{seq: 2, net_units: 4}, %{seq: 10, net_units: 7}]
+             } == Stats.net_units_over_time(@game_id)
+    end
+
+    test "placed_units after game_started are ignored (in-game bonus placements)" do
+      event(%{log_seq: 2, event_type: "game_started", raw_action: "Game started"})
+      event(%{log_seq: 5, event_type: "placed_units", player: "Alice", units: 3, raw_action: "x"})
+      event(%{log_seq: 8, event_type: "received_units", player: "Alice", units: 3, raw_action: "x"})
+
+      assert %{"Alice" => [%{seq: 8, net_units: 3}]} == Stats.net_units_over_time(@game_id)
+    end
+
+    test "multiple players initialized independently from setup placed_units" do
+      event(%{log_seq: 1, event_type: "placed_units", player: "Alice", units: 6, raw_action: "x"})
+      event(%{log_seq: 2, event_type: "placed_units", player: "Bob", units: 4, raw_action: "x"})
+      event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 2, raw_action: "x"})
+      event(%{log_seq: 5, event_type: "game_started", raw_action: "Game started"})
+
+      result = Stats.net_units_over_time(@game_id)
+      assert [%{seq: 1, net_units: 6}, %{seq: 3, net_units: 8}] == result["Alice"]
+      assert [%{seq: 2, net_units: 4}] == result["Bob"]
+    end
+
+    test "setup placed_units with nil player or units produce no delta" do
+      event(%{log_seq: 1, event_type: "placed_units", player: nil, units: 5, raw_action: "x"})
+      event(%{log_seq: 2, event_type: "placed_units", player: "Alice", units: nil, raw_action: "x"})
+      event(%{log_seq: 5, event_type: "game_started", raw_action: "Game started"})
+
+      assert %{} == Stats.net_units_over_time(@game_id)
+    end
+
+    test "combat losses after setup are applied from the setup baseline" do
+      event(%{log_seq: 2, event_type: "placed_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{log_seq: 3, event_type: "placed_units", player: "Bob", units: 8, raw_action: "x"})
+      event(%{log_seq: 5, event_type: "game_started", raw_action: "Game started"})
+
+      event(%{
+        log_seq: 10,
+        event_type: "attacked",
+        player: "Alice",
+        defender: "Bob",
+        attacker_losses: 1,
+        defender_losses: 3,
+        raw_action: "x"
+      })
+
+      result = Stats.net_units_over_time(@game_id)
+      assert [%{seq: 2, net_units: 10}, %{seq: 10, net_units: 9}] == result["Alice"]
+      assert [%{seq: 3, net_units: 8}, %{seq: 10, net_units: 5}] == result["Bob"]
+    end
+  end
 end

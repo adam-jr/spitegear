@@ -50,10 +50,21 @@ defmodule Spitegear.GameLog.Stats do
 
     cutoff = setup_cutoff(events)
 
+    # Aggregate all setup placed_units into a single starting point per player
+    # at the cutoff seq, so the chart begins cleanly after setup completes.
     setup_deltas =
-      events
-      |> Enum.take_while(&(&1.log_seq < cutoff))
-      |> Enum.flat_map(&setup_placed_delta/1)
+      if cutoff > 0 do
+        events
+        |> Enum.take_while(&(&1.log_seq < cutoff))
+        |> Enum.flat_map(&setup_placed_delta/1)
+        |> Enum.group_by(& &1.player)
+        |> Enum.map(fn {player, deltas} ->
+          total = Enum.sum(Enum.map(deltas, & &1.delta))
+          %{player: player, seq: cutoff, delta: total}
+        end)
+      else
+        []
+      end
 
     game_deltas =
       events

@@ -268,7 +268,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
               <% end %>
             </div>
           </div>
-          <p class="text-xs text-gray-400 mb-2">Scroll to zoom · drag to pan · Reset Zoom to fit all</p>
+          <p class="text-xs text-gray-400 mb-2">Drag to zoom · Reset Zoom to fit all</p>
           <div class="relative h-[500px] border border-gray-200 rounded p-2">
             <canvas
               id="net-units-chart"

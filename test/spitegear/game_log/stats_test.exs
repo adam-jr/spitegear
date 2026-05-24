@@ -220,10 +220,10 @@ defmodule Spitegear.GameLog.StatsTest do
       event(%{log_seq: 8, event_type: "setup", raw_action: "Initial board setup complete"})
       event(%{log_seq: 12, event_type: "received_units", player: "Alice", units: 2, raw_action: "x"})
 
+      # Setup placements are aggregated into one starting point at the setup seq
       assert %{
                "Alice" => [
-                 %{seq: 3, net_units: 5},
-                 %{seq: 5, net_units: 8},
+                 %{seq: 8, net_units: 8},
                  %{seq: 12, net_units: 10}
                ]
              } == Stats.net_units_over_time(@game_id)
@@ -241,8 +241,9 @@ defmodule Spitegear.GameLog.StatsTest do
 
       event(%{log_seq: 10, event_type: "received_units", player: "Bob", units: 3, raw_action: "x"})
 
+      # Aggregated into one starting point at the started_turn cutoff seq
       assert %{
-               "Bob" => [%{seq: 2, net_units: 4}, %{seq: 10, net_units: 7}]
+               "Bob" => [%{seq: 6, net_units: 4}, %{seq: 10, net_units: 7}]
              } == Stats.net_units_over_time(@game_id)
     end
 
@@ -267,7 +268,7 @@ defmodule Spitegear.GameLog.StatsTest do
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
 
       result = Stats.net_units_over_time(@game_id)
-      assert [%{seq: 3, net_units: 6}] == result["Alice"]
+      assert [%{seq: 5, net_units: 6}] == result["Alice"]
       refute Map.has_key?(result, "Neutral")
     end
 
@@ -277,9 +278,10 @@ defmodule Spitegear.GameLog.StatsTest do
       event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 2, raw_action: "x"})
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
 
+      # Each player gets one aggregated starting point at the setup seq
       result = Stats.net_units_over_time(@game_id)
-      assert [%{seq: 1, net_units: 6}, %{seq: 3, net_units: 8}] == result["Alice"]
-      assert [%{seq: 2, net_units: 4}] == result["Bob"]
+      assert [%{seq: 5, net_units: 8}] == result["Alice"]
+      assert [%{seq: 5, net_units: 4}] == result["Bob"]
     end
 
     test "setup placed_units with nil player or units produce no delta" do
@@ -305,9 +307,10 @@ defmodule Spitegear.GameLog.StatsTest do
         raw_action: "x"
       })
 
+      # Starting point aggregated at setup seq, then combat loss applied after
       result = Stats.net_units_over_time(@game_id)
-      assert [%{seq: 2, net_units: 10}, %{seq: 10, net_units: 9}] == result["Alice"]
-      assert [%{seq: 3, net_units: 8}, %{seq: 10, net_units: 5}] == result["Bob"]
+      assert [%{seq: 5, net_units: 10}, %{seq: 10, net_units: 9}] == result["Alice"]
+      assert [%{seq: 5, net_units: 8}, %{seq: 10, net_units: 5}] == result["Bob"]
     end
   end
 end

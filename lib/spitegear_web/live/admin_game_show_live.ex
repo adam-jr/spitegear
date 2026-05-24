@@ -1,19 +1,30 @@
 defmodule SpitegearWeb.AdminGameShowLive do
   use SpitegearWeb, :live_view
+  alias Spitegear.GameLog.Stats
   alias Spitegear.Games
   alias Spitegear.PubSub
+  alias Spitegear.QuickChart
+  alias Spitegear.Slack.API, as: SlackAPI
   alias Spitegear.Slack.Message
 
   @refresh_interval 10_000
 
   def mount(%{"game_id" => game_id}, _session, socket) do
     if connected?(socket), do: Process.send_after(self(), :refresh, @refresh_interval)
-    {:ok, assign(socket, load(game_id))}
+    {:ok, assign(socket, load(game_id)) |> assign(chart_status: nil)}
   end
 
   def handle_info(:refresh, socket) do
     Process.send_after(self(), :refresh, @refresh_interval)
     {:noreply, assign(socket, load(socket.assigns.game_id))}
+  end
+
+  def handle_info({:chart_result, :ok}, socket) do
+    {:noreply, assign(socket, chart_status: :sent)}
+  end
+
+  def handle_info({:chart_result, {:error, reason}}, socket) do
+    {:noreply, assign(socket, chart_status: {:error, reason})}
   end
 
   def handle_event("start_poller", _params, socket) do
@@ -47,6 +58,24 @@ defmodule SpitegearWeb.AdminGameShowLive do
     {:noreply, socket}
   end
 
+  def handle_event("send_chart_to_slack", _params, socket) do
+    series = socket.assigns.net_units_series
+    game_id = socket.assigns.game_id
+    lv = self()
+
+    Task.start(fn ->
+      result =
+        case QuickChart.render_net_units(series) do
+          {:ok, png} -> SlackAPI.upload_file(png, "net-units-#{game_id}.png", :spitegear_test)
+          err -> err
+        end
+
+      send(lv, {:chart_result, result})
+    end)
+
+    {:noreply, assign(socket, chart_status: :sending)}
+  end
+
   defp load(game_id) do
     game = Games.get_game(game_id)
     turn = Games.get_current_turn(game_id)
@@ -57,6 +86,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
     poller_alive = Games.poller_alive?(game_id)
     poller_turn_id = Games.poller_turn_id(game_id)
     player_statuses = Games.list_player_statuses(game_id)
+    net_units_series = Stats.net_units_over_time(game_id)
 
     %{
       game_id: game_id,
@@ -68,7 +98,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
       completed_rounds: completed_rounds,
       poller_alive: poller_alive,
       poller_turn_id: poller_turn_id,
-      player_statuses: player_statuses
+      player_statuses: player_statuses,
+      net_units_series: net_units_series
     }
   end
 
@@ -206,6 +237,39 @@ defmodule SpitegearWeb.AdminGameShowLive do
               <% end %>
             </tbody>
           </table>
+        </section>
+      <% end %>
+
+      <%!-- Net Units Chart --%>
+      <%= if map_size(@net_units_series) > 0 do %>
+        <section>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Net Units Over Time</h2>
+            <div class="flex items-center gap-3">
+              <button
+                phx-click="send_chart_to_slack"
+                disabled={@chart_status == :sending}
+                class="text-sm text-blue-600 hover:underline disabled:opacity-50"
+              >
+                <%= if @chart_status == :sending, do: "Sending…", else: "Send to #spitegear-test" %>
+              </button>
+              <%= case @chart_status do %>
+                <% :sent -> %>
+                  <span class="text-sm text-green-600">✓ Sent</span>
+                <% {:error, reason} -> %>
+                  <span class="text-sm text-red-600">Error: <%= reason %></span>
+                <% _ -> %>
+              <% end %>
+            </div>
+          </div>
+          <div class="relative h-72 border border-gray-200 rounded p-2">
+            <canvas
+              id="net-units-chart"
+              phx-hook="NetUnitsChart"
+              data-series={Jason.encode!(@net_units_series)}
+            >
+            </canvas>
+          </div>
         </section>
       <% end %>
 

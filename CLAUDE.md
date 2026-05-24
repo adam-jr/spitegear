@@ -71,6 +71,8 @@ Secondary feature: a cron job that pulls crypto market breadth data from Trading
 | `PHX_HOST` / `PORT` | Phoenix endpoint (prod only) |
 | `WARGEAR_USERNAME` | wargear.net login for cookie refresh job |
 | `WARGEAR_PASSWORD` | wargear.net login for cookie refresh job |
+| `ADMIN_USERNAME` | Basic auth username for `/admin` routes (prod only) |
+| `ADMIN_PASSWORD` | Basic auth password for `/admin` routes (prod only) |
 
 `wargear_api_key` is stored in the `settings` DB table (not an env var) and must be set manually.
 

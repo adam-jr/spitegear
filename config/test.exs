@@ -26,3 +26,6 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+config :spitegear, :admin_username, "admin"
+config :spitegear, :admin_password, "admin"

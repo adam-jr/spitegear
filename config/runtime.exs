@@ -52,6 +52,14 @@ if config_env() == :prod do
 
   config :spitegear, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  config :spitegear, :admin_username,
+    System.get_env("ADMIN_USERNAME") ||
+      raise("environment variable ADMIN_USERNAME is missing.")
+
+  config :spitegear, :admin_password,
+    System.get_env("ADMIN_PASSWORD") ||
+      raise("environment variable ADMIN_PASSWORD is missing.")
+
   config :spitegear, SpitegearWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

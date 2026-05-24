@@ -14,18 +14,27 @@ defmodule SpitegearWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :admin_auth do
+    plug :require_admin_auth
+  end
+
   scope "/", SpitegearWeb do
     pipe_through :browser
 
     get "/", PageController, :home
     get "/ping", PingController, :ping
-    live "/admin", AdminLive
-    live "/admin/games", AdminGamesLive
-    live "/admin/games/:game_id", AdminGameShowLive
-    live "/admin/games/:game_id/log", AdminGameLogLive
-    live "/admin/logs", AdminLogsLive
-    live "/admin/templates", AdminTemplatesLive
-    live "/admin/games/:game_id/templates", AdminTemplatesLive
+  end
+
+  scope "/admin", SpitegearWeb do
+    pipe_through [:browser, :admin_auth]
+
+    live "/", AdminLive
+    live "/games", AdminGamesLive
+    live "/games/:game_id", AdminGameShowLive
+    live "/games/:game_id/log", AdminGameLogLive
+    live "/logs", AdminLogsLive
+    live "/templates", AdminTemplatesLive
+    live "/games/:game_id/templates", AdminTemplatesLive
   end
 
   # Other scopes may use custom stacks.
@@ -37,6 +46,12 @@ defmodule SpitegearWeb.Router do
     pipe_through :api
     post "/slack/events", SlackController, :handle_events
     post "/sleeper/draftpick", SleeperController, :handle_draft_pick
+  end
+
+  defp require_admin_auth(conn, _opts) do
+    username = Application.get_env(:spitegear, :admin_username, "admin")
+    password = Application.get_env(:spitegear, :admin_password, "admin")
+    Plug.BasicAuth.basic_auth(conn, username: username, password: password)
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

@@ -25,11 +25,14 @@ defmodule Spitegear.Games do
           |> Enum.with_index(1)
           |> Map.new()
 
-  # Parses "Wed Sep 09, 2020 10:31" → NaiveDateTime for sorting
-  defp parse_finished_date(nil), do: ~N[1970-01-01 00:00:00]
+  @doc """
+  Parses a wargear date string like "Wed Sep 09, 2020 10:31" into a NaiveDateTime.
+  Returns nil on failure.
+  """
+  def parse_game_date(nil), do: nil
 
-  defp parse_finished_date(finished) do
-    case Regex.run(~r/\w+ (\w+) (\d+), (\d+) (\d+):(\d+)/, finished) do
+  def parse_game_date(date_str) do
+    case Regex.run(~r/\w+ (\w+) (\d+), (\d+) (\d+):(\d+)/, date_str) do
       [_, mon, day, year, hour, min] ->
         NaiveDateTime.new!(
           String.to_integer(year),
@@ -41,9 +44,13 @@ defmodule Spitegear.Games do
         )
 
       _ ->
-        ~N[1970-01-01 00:00:00]
+        nil
     end
   end
+
+  # Parses "Wed Sep 09, 2020 10:31" → NaiveDateTime for sorting
+  defp parse_finished_date(nil), do: ~N[1970-01-01 00:00:00]
+  defp parse_finished_date(s), do: parse_game_date(s) || ~N[1970-01-01 00:00:00]
 
   def list_unfetched_games do
     Repo.all(from(g in Game, where: g.discovered, order_by: [desc: g.inserted_at]))

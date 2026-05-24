@@ -13,6 +13,66 @@ defmodule Spitegear.GameLog.ParserTest do
       assert {:ok, %{event_type: "setup"}} = Parser.parse_row(row("Initial board setup complete"))
     end
 
+    test "game_created" do
+      assert {:ok, %{event_type: "game_created"}} = Parser.parse_row(row("Game created"))
+    end
+
+    test "game_joined" do
+      assert {:ok, %{event_type: "game_joined"}} = Parser.parse_row(row("Game joined"))
+    end
+
+    test "game_declined" do
+      assert {:ok, %{event_type: "game_declined"}} = Parser.parse_row(row("Game declined"))
+    end
+
+    test "assigned_capital to a player" do
+      assert {:ok,
+              %{
+                event_type: "assigned_capital",
+                territory_to: "Castle Black +2",
+                player: "dandodd"
+              }} = Parser.parse_row(row("Assigned Capital Castle Black +2 to dandodd"))
+    end
+
+    test "assigned_capital to Neutral stores nil player" do
+      assert {:ok,
+              %{
+                event_type: "assigned_capital",
+                territory_to: "Land 1.9",
+                player: nil
+              }} = Parser.parse_row(row("Assigned Capital Land 1.9 to Neutral"))
+    end
+
+    test "assigned_capital to player with spaces in name" do
+      assert {:ok,
+              %{
+                event_type: "assigned_capital",
+                territory_to: "p2",
+                player: "pants off vant hof"
+              }} = Parser.parse_row(row("Assigned Capital p2 to pants off vant hof"))
+    end
+
+    test "assigned_capital with bracket territory name" do
+      assert {:ok,
+              %{
+                event_type: "assigned_capital",
+                territory_to: "[G] [C] Arena236",
+                player: "Tallness"
+              }} = Parser.parse_row(row("Assigned Capital [G] [C] Arena236 to Tallness"))
+    end
+
+    test "assigned_capital with double-space before 'to' (trailing space in territory)" do
+      assert {:ok,
+              %{
+                event_type: "assigned_capital",
+                territory_to: "San Diego-Tijuana (Baja-Cali)",
+                player: nil
+              }} =
+               Parser.parse_row(
+                 row("Assigned Capital San Diego-Tijuana (Baja-Cali)  to Neutral")
+               )
+    end
+
     test "started_turn" do
       assert {:ok, %{event_type: "started_turn", player: "adam jormp jomp"}} =
                Parser.parse_row(row("adam jormp jomp started turn"))

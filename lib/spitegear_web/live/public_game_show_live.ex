@@ -40,10 +40,10 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <span class="text-gray-200 shrink-0">|</span>
             <div class="min-w-0">
               <p class="font-semibold text-gray-900 truncate">
-                <%= @game.game_name || "Game #{@game_id}" %>
+                <%= @game.board_name || "Game #{@game_id}" %>
               </p>
-              <%= if @game.board_name do %>
-                <p class="text-xs text-gray-400 truncate"><%= @game.board_name %></p>
+              <%= if @game.game_name do %>
+                <p class="text-xs text-gray-400 truncate"><%= @game.game_name %></p>
               <% end %>
             </div>
           </div>

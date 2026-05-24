@@ -82,7 +82,4 @@ config :swoosh, :api_client, false
 
 config :spitegear, :post_to_slack, false
 
-config :spitegear, :admin_username, "admin"
-config :spitegear, :admin_password, "admin"
-
 if File.exists?("config/dev.secret.exs"), do: import_config("dev.secret.exs")

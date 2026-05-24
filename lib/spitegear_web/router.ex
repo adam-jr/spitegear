@@ -1,6 +1,8 @@
 defmodule SpitegearWeb.Router do
   use SpitegearWeb, :router
 
+  alias Spitegear.Accounts
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -49,9 +51,19 @@ defmodule SpitegearWeb.Router do
   end
 
   defp require_admin_auth(conn, _opts) do
-    username = Application.get_env(:spitegear, :admin_username, "admin")
-    password = Application.get_env(:spitegear, :admin_password, "admin")
-    Plug.BasicAuth.basic_auth(conn, username: username, password: password)
+    with ["Basic " <> encoded] <- Plug.Conn.get_req_header(conn, "authorization"),
+         {:ok, decoded} <- Base.decode64(encoded),
+         [username, password] <- String.split(decoded, ":", parts: 2),
+         user <- Accounts.get_user_by_username(username),
+         true <- Accounts.verify_password(user, password) do
+      conn
+    else
+      _ ->
+        conn
+        |> Plug.Conn.put_resp_header("www-authenticate", ~s(Basic realm="Spitegear Admin"))
+        |> Plug.Conn.send_resp(401, "Unauthorized")
+        |> Plug.Conn.halt()
+    end
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

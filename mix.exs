@@ -62,6 +62,7 @@ defmodule Spitegear.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.2"},
       {:quantum, "~> 3.0"},
+      {:bcrypt_elixir, "~> 3.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end

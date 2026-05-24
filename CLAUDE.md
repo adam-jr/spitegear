@@ -13,6 +13,7 @@ mix test test/path/to/test.exs        # run a single test file
 mix test test/path/to/test.exs:42     # run a single test by line number
 mix credo              # lint (must pass before pushing — CI enforces it)
 mix format             # format code
+mix spitegear.create_user <username> <password>  # create an admin user (hashed, stored in DB)
 ```
 
 Local secrets go in `config/dev.secret.exs` (gitignored). Slack posting is disabled in dev via `config :spitegear, :post_to_slack, false`.
@@ -71,8 +72,6 @@ Secondary feature: a cron job that pulls crypto market breadth data from Trading
 | `PHX_HOST` / `PORT` | Phoenix endpoint (prod only) |
 | `WARGEAR_USERNAME` | wargear.net login for cookie refresh job |
 | `WARGEAR_PASSWORD` | wargear.net login for cookie refresh job |
-| `ADMIN_USERNAME` | Basic auth username for `/admin` routes (prod only) |
-| `ADMIN_PASSWORD` | Basic auth password for `/admin` routes (prod only) |
 
 `wargear_api_key` is stored in the `settings` DB table (not an env var) and must be set manually.
 

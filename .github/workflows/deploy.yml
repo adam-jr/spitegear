@@ -23,6 +23,8 @@ jobs:
           PHX_SERVER=true
           WARGEAR_USERNAME=${{ secrets.WARGEAR_USERNAME }}
           WARGEAR_PASSWORD=${{ secrets.WARGEAR_PASSWORD }}
+          ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
           EOF
 
       - name: Pull latest code

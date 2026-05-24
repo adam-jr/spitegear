@@ -213,6 +213,74 @@ defmodule Spitegear.GameLog.StatsTest do
     end
   end
 
+  describe "placement_scores/1" do
+    test "returns empty map when no unit events" do
+      event(%{log_seq: 1, event_type: "started_turn", raw_action: "Alice started turn"})
+      assert %{} == Stats.placement_scores(@game_id)
+    end
+
+    test "returns empty map for unknown game" do
+      assert %{} == Stats.placement_scores("nonexistent")
+    end
+
+    test "score is net_units times duration from setup to last event" do
+      event(%{log_seq: 1, event_type: "placed_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+      event(%{log_seq: 15, event_type: "started_turn", raw_action: "started_turn"})
+      # Alice: net 10 aggregated at setup seq 5, last_seq = 15
+      # score = 10 * (15 - 5) = 100
+      assert %{"Alice" => 100} == Stats.placement_scores(@game_id)
+    end
+
+    test "score accumulates over multiple post-setup intervals" do
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+      event(%{log_seq: 10, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{log_seq: 20, event_type: "received_units", player: "Alice", units: 5, raw_action: "x"})
+      event(%{log_seq: 30, event_type: "started_turn", raw_action: "started_turn"})
+      # score = 10 * (20 - 10) + 15 * (30 - 20) = 100 + 150 = 250
+      assert %{"Alice" => 250} == Stats.placement_scores(@game_id)
+    end
+
+    test "setup units count from the setup seq onward, not before" do
+      event(%{log_seq: 1, event_type: "placed_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+      event(%{log_seq: 15, event_type: "received_units", player: "Alice", units: 3, raw_action: "x"})
+      event(%{log_seq: 25, event_type: "started_turn", raw_action: "started_turn"})
+      # Alice: net 10 at seq 5, net 13 at seq 15, last_seq = 25
+      # score = 10 * (15 - 5) + 13 * (25 - 15) = 100 + 130 = 230
+      assert %{"Alice" => 230} == Stats.placement_scores(@game_id)
+    end
+
+    test "multiple players scored independently" do
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+      event(%{log_seq: 10, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{log_seq: 11, event_type: "received_units", player: "Bob", units: 6, raw_action: "x"})
+      event(%{log_seq: 20, event_type: "started_turn", raw_action: "started_turn"})
+      # last_seq = 20; Alice: 10 * (20 - 10) = 100; Bob: 6 * (20 - 11) = 54
+      result = Stats.placement_scores(@game_id)
+      assert result["Alice"] == 100
+      assert result["Bob"] == 54
+    end
+
+    test "unit losses reduce score" do
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+      event(%{log_seq: 10, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{
+        log_seq: 15,
+        event_type: "attacked",
+        player: "Bob",
+        defender: "Alice",
+        attacker_losses: 0,
+        defender_losses: 4,
+        raw_action: "x"
+      })
+      event(%{log_seq: 20, event_type: "started_turn", raw_action: "started_turn"})
+      # Alice: net 10 at seq 10, net 6 at seq 15, last_seq = 20
+      # score = 10 * (15 - 10) + 6 * (20 - 15) = 50 + 30 = 80
+      assert Stats.placement_scores(@game_id)["Alice"] == 80
+    end
+  end
+
   describe "net_units_over_time/1 — setup phase initialization" do
     test "placed_units before setup event count as starting net units" do
       event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 5, raw_action: "x"})

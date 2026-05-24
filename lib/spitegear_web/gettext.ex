@@ -20,5 +20,5 @@ defmodule SpitegearWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :spitegear
+  use Gettext.Backend, otp_app: :spitegear
 end

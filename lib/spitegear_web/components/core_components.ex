@@ -18,7 +18,7 @@ defmodule SpitegearWeb.CoreComponents do
 
   alias Phoenix.HTML.Form
   alias Phoenix.LiveView.JS
-  import SpitegearWeb.Gettext
+  use Gettext, backend: SpitegearWeb.Gettext
 
   @doc """
   Renders a modal.

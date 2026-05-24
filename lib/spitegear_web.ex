@@ -43,7 +43,7 @@ defmodule SpitegearWeb do
         layouts: [html: SpitegearWeb.Layouts]
 
       import Plug.Conn
-      import SpitegearWeb.Gettext
+      use Gettext, backend: SpitegearWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -85,7 +85,7 @@ defmodule SpitegearWeb do
       import Phoenix.HTML
       # Core UI components and translation
       import SpitegearWeb.CoreComponents
-      import SpitegearWeb.Gettext
+      use Gettext, backend: SpitegearWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

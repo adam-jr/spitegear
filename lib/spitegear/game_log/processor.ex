@@ -268,6 +268,10 @@ defmodule Spitegear.GameLog.Processor do
         upsert_event(game_id, row)
       end)
 
+    # Second pass: fill defender + territory_from for newly added attacked/occupied events.
+    # Runs per-game so player names are always up-to-date after each snapshot.
+    fill_game_defenders(game_id)
+
     upserted = Enum.count(results, &match?({:ok, _}, &1))
     unrecognized = Enum.count(results, &match?({:unrecognized, _}, &1))
 

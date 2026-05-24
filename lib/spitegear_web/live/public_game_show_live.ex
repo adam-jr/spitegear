@@ -24,7 +24,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
            placement_scores: placement_scores,
            player_statuses: player_statuses,
            days: days
-         )}
+         ), layout: false}
     end
   end
 

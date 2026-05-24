@@ -21,7 +21,7 @@ defmodule SpitegearWeb.PublicLandingLive do
        active_games: active_games,
        finished_games: Enum.take(finished_games, 10),
        query: ""
-     )}
+     ), layout: false}
   end
 
   def handle_event("search", %{"query" => q}, socket) do

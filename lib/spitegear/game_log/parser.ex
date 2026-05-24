@@ -44,6 +44,9 @@ defmodule Spitegear.GameLog.Parser do
 
   defp parse_setup("Initial board setup complete"), do: {:ok, %{event_type: "setup"}}
   defp parse_setup("Game started"), do: {:ok, %{event_type: "game_started"}}
+  defp parse_setup("Game created"), do: {:ok, %{event_type: "game_created"}}
+  defp parse_setup("Game joined"), do: {:ok, %{event_type: "game_joined"}}
+  defp parse_setup("Game declined"), do: {:ok, %{event_type: "game_declined"}}
   defp parse_setup("Fogged"), do: {:ok, %{event_type: "fogged"}}
 
   # "Turn order set to 5,6,3,4,7,2,1" — system event (seat=0); raw_action preserves the order
@@ -56,6 +59,13 @@ defmodule Spitegear.GameLog.Parser do
   # Game setup events: factory/seat assignments and territory drafting
   defp parse_game_setup(action) do
     cond do
+      # "Assigned Capital Castle Black +2 to dandodd"
+      # "Assigned Capital Land 1.9 to Neutral"
+      # Player may be "Neutral" for unowned capitals; \s+ handles occasional double-space
+      m = match(~r/^Assigned Capital (?P<t>.+?)\s+to\s+(?P<p>.+)$/, action) ->
+        player = if m["p"] == "Neutral", do: nil, else: m["p"]
+        {:ok, %{event_type: "assigned_capital", territory_to: String.trim(m["t"]), player: player}}
+
       # "Assigned factory Nothgierc to pants off vant hof"
       m = match(~r/^Assigned factory (?P<t>.+?) to (?P<p>.+)$/, action) ->
         {:ok, %{event_type: "assigned_factory", territory_to: m["t"], player: m["p"]}}

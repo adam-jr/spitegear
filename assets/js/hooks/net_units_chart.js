@@ -6,7 +6,9 @@ const COLORS = [
   "rgb(34,197,94)",    // green
   "rgb(245,158,11)",   // amber
   "rgb(168,85,247)",   // purple
-  "rgb(20,184,166)",   // teal
+  "rgb(236,72,153)",   // pink
+  "rgb(249,115,22)",   // orange
+  "rgb(14,165,233)",   // sky
 ]
 
 const NetUnitsChart = {

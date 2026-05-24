@@ -75,6 +75,37 @@ defmodule Spitegear.GameLog.Stats do
     |> build_series()
   end
 
+  @doc """
+  Returns a per-player placement score for a game, keyed by player name.
+
+  The score is the area under each player's net-units curve — net_units
+  integrated over log_seq from the end of the setup phase to the last event
+  in the game. Higher means the player held more units for more of the game.
+
+  ## Example
+
+      %{
+        "ZachClash"          => 42180,
+        "pants off vant hof" => 31450
+      }
+  """
+  def placement_scores(game_id) do
+    series = net_units_over_time(game_id)
+
+    if map_size(series) == 0 do
+      %{}
+    else
+      last_seq =
+        Repo.one(
+          from(e in GameLogEvent, where: e.game_id == ^game_id, select: max(e.log_seq))
+        ) || 0
+
+      Map.new(series, fn {player, points} ->
+        {player, integrate(points, last_seq)}
+      end)
+    end
+  end
+
   # --- Private ---
 
   # The "setup" event ("Initial board setup complete") marks the end of the setup
@@ -170,4 +201,18 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp event_to_deltas(_), do: []
+
+  # Compute the area under a step-function series.
+  # Each point holds net_units from its seq until the next point's seq;
+  # the last point holds until last_seq.
+  defp integrate([], _last_seq), do: 0
+
+  defp integrate(points, last_seq) do
+    next_seqs = points |> Enum.map(& &1.seq) |> tl() |> Kernel.++([last_seq])
+
+    points
+    |> Enum.zip(next_seqs)
+    |> Enum.map(fn {%{net_units: n, seq: s}, next_s} -> n * (next_s - s) end)
+    |> Enum.sum()
+  end
 end

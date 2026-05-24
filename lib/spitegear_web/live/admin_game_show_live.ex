@@ -87,6 +87,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
     poller_turn_id = Games.poller_turn_id(game_id)
     player_statuses = Games.list_player_statuses(game_id)
     net_units_series = Stats.net_units_over_time(game_id)
+    placement_scores = Stats.placement_scores(game_id)
 
     %{
       game_id: game_id,
@@ -99,7 +100,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
       poller_alive: poller_alive,
       poller_turn_id: poller_turn_id,
       player_statuses: player_statuses,
-      net_units_series: net_units_series
+      net_units_series: net_units_series,
+      placement_scores: placement_scores
     }
   end
 
@@ -277,6 +279,29 @@ defmodule SpitegearWeb.AdminGameShowLive do
             >
             </canvas>
           </div>
+          <%= if map_size(@placement_scores) > 0 do %>
+            <div class="mt-4">
+              <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Placement
+              </h3>
+              <table class="w-full text-sm">
+                <tbody>
+                  <%= for {{player, score}, rank} <-
+                        @placement_scores
+                        |> Enum.sort_by(&elem(&1, 1), :desc)
+                        |> Enum.with_index(1) do %>
+                    <tr class="border-b border-gray-100">
+                      <td class="py-1.5 pr-3 text-gray-400 w-8 tabular-nums">#<%= rank %></td>
+                      <td class="py-1.5 pr-4 font-medium"><%= player %></td>
+                      <td class="py-1.5 text-right text-gray-600 font-mono tabular-nums">
+                        <%= format_score(score) %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
         </section>
       <% end %>
 
@@ -305,6 +330,18 @@ defmodule SpitegearWeb.AdminGameShowLive do
       <% end %>
     </div>
     """
+  end
+
+  defp format_score(n) when n < 0, do: "-" <> format_score(-n)
+
+  defp format_score(n) do
+    n
+    |> Integer.to_string()
+    |> String.graphemes()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.map_join(",", &Enum.join/1)
+    |> String.reverse()
   end
 
   defp format_datetime(nil), do: "—"

@@ -21,6 +21,17 @@ defmodule Spitegear.Games do
     |> Enum.sort_by(&parse_finished_date(&1.finished), {:desc, NaiveDateTime})
   end
 
+  @doc """
+  Returns all-time win counts per player, sorted descending by wins.
+  Each entry is `{player_name, win_count}`.
+  """
+  def leaderboard do
+    Repo.all(from(g in Game, where: not is_nil(g.finished), select: g.winners))
+    |> List.flatten()
+    |> Enum.frequencies()
+    |> Enum.sort_by(&elem(&1, 1), :desc)
+  end
+
   @months ~w(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)
           |> Enum.with_index(1)
           |> Map.new()

@@ -4,7 +4,7 @@ const COLORS = [
   "rgb(59,130,246)",   // blue
   "rgb(239,68,68)",    // red
   "rgb(34,197,94)",    // green
-  "rgb(245,158,11)",   // amber
+  "rgb(161,84,26)",    // brown
   "rgb(168,85,247)",   // purple
   "rgb(236,72,153)",   // pink
   "rgb(249,115,22)",   // orange
@@ -77,63 +77,79 @@ const NetUnitsChart = {
 
   _setupZoom() {
     const canvas = this.el
+    const container = canvas.parentElement
     let isDragging = false
     let dragStartX = 0
-    let dragStartMin = null
-    let dragStartMax = null
+    let selectionEl = null
 
-    const onWheel = (e) => {
-      e.preventDefault()
-      if (!this.chart) return
+    // Convert a clientX position into a data-space seq value
+    const pxToSeq = (clientX) => {
       const xScale = this.chart.scales.x
       const rect = canvas.getBoundingClientRect()
-      const mouseX = e.clientX - rect.left
-      const pct = (mouseX - xScale.left) / xScale.width
-      const range = xScale.max - xScale.min
-      const factor = e.deltaY < 0 ? 0.8 : 1 / 0.8
-      const newRange = range * factor
-      const newMin = xScale.min + pct * (range - newRange)
-      xScale.options.min = newMin
-      xScale.options.max = newMin + newRange
-      this.chart.update("none")
+      const pct = (clientX - rect.left - xScale.left) / xScale.width
+      return xScale.min + pct * (xScale.max - xScale.min)
     }
 
     const onMousedown = (e) => {
       if (!this.chart) return
       isDragging = true
       dragStartX = e.clientX
-      dragStartMin = this.chart.scales.x.min
-      dragStartMax = this.chart.scales.x.max
-      canvas.style.cursor = "grabbing"
+      canvas.style.cursor = "col-resize"
+
+      selectionEl = document.createElement("div")
+      selectionEl.style.cssText =
+        "position:absolute;top:0;bottom:0;pointer-events:none;" +
+        "background:rgba(59,130,246,0.12);border-left:1px solid rgba(59,130,246,0.5);border-right:1px solid rgba(59,130,246,0.5);"
+      const cRect = container.getBoundingClientRect()
+      selectionEl.style.left = (e.clientX - cRect.left) + "px"
+      selectionEl.style.width = "0"
+      container.appendChild(selectionEl)
     }
 
     const onMousemove = (e) => {
-      if (!isDragging || !this.chart) return
-      const xScale = this.chart.scales.x
-      const range = dragStartMax - dragStartMin
-      const deltaUnits = ((e.clientX - dragStartX) / xScale.width) * range
-      xScale.options.min = dragStartMin - deltaUnits
-      xScale.options.max = dragStartMax - deltaUnits
+      if (!isDragging || !selectionEl) return
+      const cRect = container.getBoundingClientRect()
+      const startRel = dragStartX - cRect.left
+      const nowRel = e.clientX - cRect.left
+      selectionEl.style.left = Math.min(startRel, nowRel) + "px"
+      selectionEl.style.width = Math.abs(nowRel - startRel) + "px"
+    }
+
+    const onMouseup = (e) => {
+      if (!isDragging) return
+      isDragging = false
+      canvas.style.cursor = ""
+      if (selectionEl) { selectionEl.remove(); selectionEl = null }
+
+      const dragEndX = e.clientX
+      if (Math.abs(dragEndX - dragStartX) < 5) return  // ignore tiny clicks
+
+      const newMin = pxToSeq(Math.min(dragStartX, dragEndX))
+      const newMax = pxToSeq(Math.max(dragStartX, dragEndX))
+
+      this.chart.scales.x.options.min = newMin
+      this.chart.scales.x.options.max = newMax
       this.chart.update("none")
     }
 
-    const stopDrag = () => {
+    const onMouseleave = () => {
+      if (!isDragging) return
       isDragging = false
       canvas.style.cursor = ""
+      if (selectionEl) { selectionEl.remove(); selectionEl = null }
     }
 
-    canvas.addEventListener("wheel", onWheel, { passive: false })
     canvas.addEventListener("mousedown", onMousedown)
     canvas.addEventListener("mousemove", onMousemove)
-    canvas.addEventListener("mouseup", stopDrag)
-    canvas.addEventListener("mouseleave", stopDrag)
+    canvas.addEventListener("mouseup", onMouseup)
+    canvas.addEventListener("mouseleave", onMouseleave)
 
     this._zoomCleanup = () => {
-      canvas.removeEventListener("wheel", onWheel)
       canvas.removeEventListener("mousedown", onMousedown)
       canvas.removeEventListener("mousemove", onMousemove)
-      canvas.removeEventListener("mouseup", stopDrag)
-      canvas.removeEventListener("mouseleave", stopDrag)
+      canvas.removeEventListener("mouseup", onMouseup)
+      canvas.removeEventListener("mouseleave", onMouseleave)
+      if (selectionEl) { selectionEl.remove() }
     }
   },
 

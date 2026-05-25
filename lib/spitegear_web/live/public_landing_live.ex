@@ -47,7 +47,7 @@ defmodule SpitegearWeb.PublicLandingLive do
     ~H"""
     <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-gray-50 text-gray-900">
       <header class="bg-white border-b border-gray-200">
-        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <h1 class="text-lg font-bold tracking-tight">⚙️ Spitegear</h1>
           <a
             href="https://www.wargear.net"
@@ -59,16 +59,16 @@ defmodule SpitegearWeb.PublicLandingLive do
         </div>
       </header>
 
-      <div class="max-w-6xl mx-auto px-6 py-8 flex gap-8 items-start">
+      <div class="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8 flex flex-col gap-6 md:flex-row md:gap-8 md:items-start">
         <%!-- Sidebar --%>
-        <aside class="w-64 shrink-0 flex flex-col gap-6">
+        <aside class="w-full md:w-64 md:shrink-0 flex flex-col gap-6">
           <%!-- Active games --%>
           <%= if Enum.any?(@active_games) do %>
             <section>
               <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
                 Active
               </h2>
-              <div class="flex flex-col gap-2">
+              <div class="grid grid-cols-2 md:grid-cols-1 gap-2">
                 <%= for %{game: game, current_turn: turn} <- @active_games do %>
                   <a
                     href={"/games/#{game.game_id}"}
@@ -144,11 +144,11 @@ defmodule SpitegearWeb.PublicLandingLive do
                 Most Recent Result
               </h2>
               <a href={"/games/#{@most_recent.game_id}"} class="block group">
-                <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 hover:border-gray-300 hover:shadow transition-all">
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-6 hover:border-gray-300 hover:shadow transition-all">
                   <%!-- Game title --%>
                   <div class="flex items-start justify-between gap-4 mb-5">
                     <div class="min-w-0">
-                      <p class="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                      <p class="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
                         <%= @most_recent.board_name || "Game #{@most_recent.game_id}" %>
                       </p>
                       <%= if @most_recent.game_name do %>
@@ -164,7 +164,7 @@ defmodule SpitegearWeb.PublicLandingLive do
                   <%= if Enum.any?(@most_recent.winners) do %>
                     <div class="flex items-center gap-3 mb-4">
                       <span class="text-3xl">🏆</span>
-                      <span class="text-2xl font-bold text-amber-600">
+                      <span class="text-xl sm:text-2xl font-bold text-amber-600">
                         <%= Enum.join(@most_recent.winners, " & ") %>
                       </span>
                     </div>

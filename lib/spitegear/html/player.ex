@@ -113,22 +113,40 @@ defmodule Spitegear.HTML.Player do
     end
   end
 
-  # Wargear marks each player's color as a bgcolor attribute on one of the
-  # row's td cells (typically the territory-count cell). We scan all tds and
-  # return the first bgcolor we find, normalising to lowercase.
+  # Wargear marks each player's color on one of the row's td cells.
+  # Older pages used a `bgcolor` HTML attribute; newer pages use an inline
+  # `style="background-color:#rrggbb"` rule on the player-name td.
+  # We check both forms and return the first color found, normalised to lowercase.
   defp player_color(tr) do
     {"tr", _attrs, tds} = tr
 
     Enum.find_value(tds, fn
       {"td", attrs, _} ->
-        case List.keyfind(attrs, "bgcolor", 0) do
-          {_, color} when is_binary(color) and color != "" -> String.downcase(color)
+        color_from_bgcolor(attrs) || color_from_style(attrs)
+
+      _ ->
+        nil
+    end)
+  end
+
+  defp color_from_bgcolor(attrs) do
+    case List.keyfind(attrs, "bgcolor", 0) do
+      {_, color} when is_binary(color) and color != "" -> String.downcase(color)
+      _ -> nil
+    end
+  end
+
+  defp color_from_style(attrs) do
+    case List.keyfind(attrs, "style", 0) do
+      {_, style} when is_binary(style) ->
+        case Regex.run(~r/background-color\s*:\s*(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)/, style) do
+          [_, color] -> String.downcase(color)
           _ -> nil
         end
 
       _ ->
         nil
-    end)
+    end
   end
 
   defp player_name(tr) do

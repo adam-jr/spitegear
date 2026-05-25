@@ -12,7 +12,6 @@ defmodule SpitegearWeb.PublicGameShowLive do
         log_summary = Stats.game_log_summary(game_id)
         net_units_series = Stats.net_units_over_time(game_id)
         placement_scores = Stats.placement_scores(game_id)
-        player_statuses = Games.list_player_statuses(game_id)
         days = game_duration_days(game)
 
         {:ok,
@@ -22,7 +21,6 @@ defmodule SpitegearWeb.PublicGameShowLive do
            log_summary: log_summary,
            net_units_series: net_units_series,
            placement_scores: placement_scores,
-           player_statuses: player_statuses,
            days: days,
            timezone: "America/New_York"
          ), layout: false}
@@ -115,29 +113,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
           </dl>
         </section>
 
-        <%!-- Players --%>
-        <%= if Enum.any?(@player_statuses) do %>
-          <section>
-            <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-              Players
-            </h2>
-            <div class="flex flex-wrap gap-2">
-              <%= for p <- @player_statuses do %>
-                <span class={[
-                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium",
-                  if(p.alive,
-                    do: "bg-green-50 border border-green-200 text-green-800",
-                    else: "bg-gray-100 border border-gray-200 text-gray-400 line-through"
-                  )
-                ]}>
-                  <%= p.player_name %>
-                </span>
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
-        <%!-- Net Units Chart --%>
+<%!-- Net Units Chart --%>
         <%= if map_size(@net_units_series) > 0 do %>
           <section>
             <div class="flex items-center justify-between mb-1">

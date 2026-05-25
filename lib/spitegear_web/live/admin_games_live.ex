@@ -11,7 +11,11 @@ defmodule SpitegearWeb.AdminGamesLive do
        new_game_id: "",
        error: nil,
        hist_game_id: "",
-       hist_status: nil
+       hist_status: nil,
+       refresh_status: nil,
+       refresh_done: 0,
+       refresh_total: 0,
+       refresh_errors: []
      )}
   end
 
@@ -41,6 +45,54 @@ defmodule SpitegearWeb.AdminGamesLive do
   def handle_event("stop_poller", %{"game_id" => game_id}, socket) do
     Games.stop_poller(game_id)
     {:noreply, assign(socket, games: load_games())}
+  end
+
+  def handle_event("refresh_all_viewscreens", _params, socket) do
+    all_games = Games.list_all_games()
+    total = length(all_games)
+    lv = self()
+
+    Task.start(fn ->
+      Enum.each(all_games, fn game ->
+        result = Games.refresh_viewscreen(game.game_id)
+        send(lv, {:refresh_progress, game.game_id, result})
+        Process.sleep(500)
+      end)
+
+      send(lv, :refresh_done)
+    end)
+
+    {:noreply,
+     assign(socket,
+       refresh_status: :running,
+       refresh_done: 0,
+       refresh_total: total,
+       refresh_errors: []
+     )}
+  end
+
+  def handle_info({:refresh_progress, game_id, result}, socket) do
+    errors =
+      case result do
+        {:ok, _} -> socket.assigns.refresh_errors
+        _ -> [game_id | socket.assigns.refresh_errors]
+      end
+
+    {:noreply,
+     assign(socket,
+       refresh_done: socket.assigns.refresh_done + 1,
+       refresh_errors: errors
+     )}
+  end
+
+  def handle_info(:refresh_done, socket) do
+    ok_count = socket.assigns.refresh_total - length(socket.assigns.refresh_errors)
+
+    {:noreply,
+     assign(socket,
+       refresh_status: {:done, ok_count, length(socket.assigns.refresh_errors)},
+       finished_games: Games.list_finished_games()
+     )}
   end
 
   def handle_info({:historical_result, _game_id, {:ok, view_screen}}, socket) do
@@ -132,6 +184,39 @@ defmodule SpitegearWeb.AdminGamesLive do
             <% _ -> %>
           <% end %>
         </form>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold mb-1">Refresh All Viewscreens</h2>
+        <p class="text-sm text-gray-500 mb-4">
+          Re-fetches the ViewScreen for every tracked game and upserts metadata (names, colors, winners). No log snapshots are touched. Runs one game at a time with a short delay between each.
+        </p>
+        <div class="flex items-center gap-4">
+          <button
+            phx-click="refresh_all_viewscreens"
+            disabled={@refresh_status == :running}
+            class="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 text-sm disabled:opacity-50"
+          >
+            <%= if @refresh_status == :running, do: "Running…", else: "Refresh All" %>
+          </button>
+          <%= case @refresh_status do %>
+            <% :running -> %>
+              <span class="text-sm text-gray-500">
+                <%= @refresh_done %> / <%= @refresh_total %>
+                <%= if Enum.any?(@refresh_errors) do %>
+                  · <span class="text-red-500"><%= length(@refresh_errors) %> failed</span>
+                <% end %>
+              </span>
+            <% {:done, ok, 0} -> %>
+              <span class="text-green-600 text-sm">✓ Done — <%= ok %> updated</span>
+            <% {:done, ok, err} -> %>
+              <span class="text-sm">
+                <span class="text-green-600">✓ <%= ok %> ok</span>
+                · <span class="text-red-600"><%= err %> failed: <%= Enum.join(@refresh_errors, ", ") %></span>
+              </span>
+            <% _ -> %>
+          <% end %>
+        </div>
       </section>
 
       <section>

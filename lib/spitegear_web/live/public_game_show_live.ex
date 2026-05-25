@@ -159,6 +159,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 id="net-units-chart"
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@net_units_series)}
+                data-colors={Jason.encode!(@game.player_colors || %{})}
               >
               </canvas>
             </div>

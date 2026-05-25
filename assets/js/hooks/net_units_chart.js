@@ -26,18 +26,22 @@ const NetUnitsChart = {
 
   renderChart() {
     const series = JSON.parse(this.el.dataset.series)
+    const gameColors = this.el.dataset.colors ? JSON.parse(this.el.dataset.colors) : {}
     const datasets = Object.entries(series)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([player, points], i) => ({
-        label: player,
-        data: points.map(p => ({ x: p.seq, y: p.net_units })),
-        borderColor: COLORS[i % COLORS.length],
-        backgroundColor: COLORS[i % COLORS.length],
-        fill: false,
-        stepped: true,
-        pointRadius: 2,
-        borderWidth: 2,
-      }))
+      .map(([player, points], i) => {
+        const color = gameColors[player] || COLORS[i % COLORS.length]
+        return {
+          label: player,
+          data: points.map(p => ({ x: p.seq, y: p.net_units })),
+          borderColor: color,
+          backgroundColor: color,
+          fill: false,
+          stepped: true,
+          pointRadius: 2,
+          borderWidth: 2,
+        }
+      })
 
     this.chart = new Chart(this.el, {
       type: "line",

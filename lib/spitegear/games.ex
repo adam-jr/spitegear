@@ -16,6 +16,13 @@ defmodule Spitegear.Games do
     Repo.all(from(g in Game, where: is_nil(g.finished) and not g.discovered))
   end
 
+  @doc """
+  All tracked games (active + finished, excludes undiscovered stubs).
+  """
+  def list_all_games do
+    Repo.all(from(g in Game, where: not g.discovered))
+  end
+
   def list_finished_games do
     Repo.all(from(g in Game, where: not is_nil(g.finished)))
     |> Enum.sort_by(&parse_finished_date(&1.finished), {:desc, NaiveDateTime})
@@ -74,6 +81,11 @@ defmodule Spitegear.Games do
   end
 
   def upsert_game(view_screen) do
+    player_colors =
+      view_screen.players
+      |> Enum.filter(& &1.color)
+      |> Map.new(&{&1.name, &1.color})
+
     Repo.insert(
       %Game{
         game_id: view_screen.game_id,
@@ -83,11 +95,22 @@ defmodule Spitegear.Games do
         created: view_screen.created,
         finished: view_screen.finished,
         winners: Enum.map(view_screen.winners, & &1.name),
+        player_colors: player_colors,
         discovered: false
       },
       on_conflict:
         {:replace,
-         [:url, :game_name, :board_name, :created, :finished, :winners, :discovered, :updated_at]},
+         [
+           :url,
+           :game_name,
+           :board_name,
+           :created,
+           :finished,
+           :winners,
+           :player_colors,
+           :discovered,
+           :updated_at
+         ]},
       conflict_target: :game_id
     )
   end
@@ -241,6 +264,17 @@ defmodule Spitegear.Games do
     with {:ok, view_screen} <- ViewScreen.get_game(game_id),
          {:ok, _game} <- upsert_game(view_screen),
          {:ok, _snapshot} <- LogSnapshot.capture(game_id) do
+      {:ok, view_screen}
+    end
+  end
+
+  @doc """
+  Refreshes a game's viewscreen metadata (name, board, winners, player colors)
+  without re-fetching the log snapshot. Safe to re-run.
+  """
+  def refresh_viewscreen(game_id) do
+    with {:ok, view_screen} <- ViewScreen.get_game(game_id),
+         {:ok, _game} <- upsert_game(view_screen) do
       {:ok, view_screen}
     end
   end

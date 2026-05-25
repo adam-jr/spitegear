@@ -11,6 +11,7 @@ defmodule Spitegear.HTML.Player do
     field(:name, :string)
     field(:slack_name, :string)
 
+    field(:color, :string, virtual: true)
     field(:current_turn?, :boolean, virtual: true)
     field(:eliminated?, :boolean, virtual: true)
     field(:winner?, :boolean, virtual: true)
@@ -45,7 +46,8 @@ defmodule Spitegear.HTML.Player do
 
     %{
       player
-      | current_turn?: current_turn?(tr),
+      | color: player_color(tr),
+        current_turn?: current_turn?(tr),
         eliminated?: eliminated?(tr),
         winner?: winner?(tr),
         fogged?: fogged?(tr)
@@ -109,6 +111,24 @@ defmodule Spitegear.HTML.Player do
       {"td", [], ["?"]} -> true
       _ -> false
     end
+  end
+
+  # Wargear marks each player's color as a bgcolor attribute on one of the
+  # row's td cells (typically the territory-count cell). We scan all tds and
+  # return the first bgcolor we find, normalising to lowercase.
+  defp player_color(tr) do
+    {"tr", _attrs, tds} = tr
+
+    Enum.find_value(tds, fn
+      {"td", attrs, _} ->
+        case List.keyfind(attrs, "bgcolor", 0) do
+          {_, color} when is_binary(color) and color != "" -> String.downcase(color)
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end)
   end
 
   defp player_name(tr) do

@@ -74,6 +74,11 @@ defmodule Spitegear.Games do
   end
 
   def upsert_game(view_screen) do
+    player_colors =
+      view_screen.players
+      |> Enum.filter(& &1.color)
+      |> Map.new(&{&1.name, &1.color})
+
     Repo.insert(
       %Game{
         game_id: view_screen.game_id,
@@ -83,11 +88,22 @@ defmodule Spitegear.Games do
         created: view_screen.created,
         finished: view_screen.finished,
         winners: Enum.map(view_screen.winners, & &1.name),
+        player_colors: player_colors,
         discovered: false
       },
       on_conflict:
         {:replace,
-         [:url, :game_name, :board_name, :created, :finished, :winners, :discovered, :updated_at]},
+         [
+           :url,
+           :game_name,
+           :board_name,
+           :created,
+           :finished,
+           :winners,
+           :player_colors,
+           :discovered,
+           :updated_at
+         ]},
       conflict_target: :game_id
     )
   end

@@ -113,7 +113,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
           </dl>
         </section>
 
-<%!-- Net Units Chart --%>
+        <%!-- Net Units Chart --%>
         <%= if map_size(@net_units_series) > 0 do %>
           <section>
             <div class="flex items-center justify-between mb-1">

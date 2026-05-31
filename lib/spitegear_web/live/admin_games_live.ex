@@ -149,7 +149,7 @@ defmodule SpitegearWeb.AdminGamesLive do
             Add
           </button>
           <%= if @error do %>
-            <span class="text-red-600 text-sm"><%= @error %></span>
+            <span class="text-red-600 text-sm">{@error}</span>
           <% end %>
         </form>
       </section>
@@ -174,13 +174,13 @@ defmodule SpitegearWeb.AdminGamesLive do
             class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm disabled:opacity-50"
             disabled={@hist_status == :fetching}
           >
-            <%= if @hist_status == :fetching, do: "Fetching…", else: "Fetch" %>
+            {if @hist_status == :fetching, do: "Fetching…", else: "Fetch"}
           </button>
           <%= case @hist_status do %>
             <% {:ok, game_name} -> %>
-              <span class="text-green-600 text-sm">✓ Saved — <%= game_name %></span>
+              <span class="text-green-600 text-sm">✓ Saved — {game_name}</span>
             <% {:error, gid, reason} -> %>
-              <span class="text-red-600 text-sm">Failed for <%= gid %>: <%= reason %></span>
+              <span class="text-red-600 text-sm">Failed for {gid}: {reason}</span>
             <% _ -> %>
           <% end %>
         </form>
@@ -197,22 +197,22 @@ defmodule SpitegearWeb.AdminGamesLive do
             disabled={@refresh_status == :running}
             class="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 text-sm disabled:opacity-50"
           >
-            <%= if @refresh_status == :running, do: "Running…", else: "Refresh All" %>
+            {if @refresh_status == :running, do: "Running…", else: "Refresh All"}
           </button>
           <%= case @refresh_status do %>
             <% :running -> %>
               <span class="text-sm text-gray-500">
-                <%= @refresh_done %> / <%= @refresh_total %>
+                {@refresh_done} / {@refresh_total}
                 <%= if Enum.any?(@refresh_errors) do %>
-                  · <span class="text-red-500"><%= length(@refresh_errors) %> failed</span>
+                  · <span class="text-red-500">{length(@refresh_errors)} failed</span>
                 <% end %>
               </span>
             <% {:done, ok, 0} -> %>
-              <span class="text-green-600 text-sm">✓ Done — <%= ok %> updated</span>
+              <span class="text-green-600 text-sm">✓ Done — {ok} updated</span>
             <% {:done, ok, err} -> %>
               <span class="text-sm">
-                <span class="text-green-600">✓ <%= ok %> ok</span>
-                · <span class="text-red-600"><%= err %> failed: <%= Enum.join(@refresh_errors, ", ") %></span>
+                <span class="text-green-600">✓ {ok} ok</span>
+                · <span class="text-red-600">{err} failed: {Enum.join(@refresh_errors, ", ")}</span>
               </span>
             <% _ -> %>
           <% end %>
@@ -239,14 +239,14 @@ defmodule SpitegearWeb.AdminGamesLive do
                 <tr class="border-b border-gray-100 align-middle">
                   <td class="py-2 pr-4 font-mono">
                     <a href={"/admin/games/#{game.game_id}"} class="text-blue-600 hover:underline">
-                      <%= game.game_id %>
+                      {game.game_id}
                     </a>
                   </td>
-                  <td class="py-2 pr-4"><%= game.game_name || "—" %></td>
-                  <td class="py-2 pr-4"><%= if turn, do: turn.player.name, else: "—" %></td>
+                  <td class="py-2 pr-4">{game.game_name || "—"}</td>
+                  <td class="py-2 pr-4">{if turn, do: turn.player.name, else: "—"}</td>
                   <td class="py-2 pr-4">
                     <span class={if alive, do: "text-green-600", else: "text-gray-400"}>
-                      <%= if alive, do: "running", else: "stopped" %>
+                      {if alive, do: "running", else: "stopped"}
                     </span>
                   </td>
                   <td class="py-2 flex gap-3">
@@ -296,17 +296,17 @@ defmodule SpitegearWeb.AdminGamesLive do
                 <tr class="border-b border-gray-100 align-middle">
                   <td class="py-2 pr-4 font-mono">
                     <a href={"/admin/games/#{game.game_id}"} class="text-blue-600 hover:underline">
-                      <%= game.game_id %>
+                      {game.game_id}
                     </a>
                   </td>
-                  <td class="py-2 pr-4"><%= game.game_name || "—" %></td>
-                  <td class="py-2 pr-4 text-gray-500"><%= game.board_name || "—" %></td>
+                  <td class="py-2 pr-4">{game.game_name || "—"}</td>
+                  <td class="py-2 pr-4 text-gray-500">{game.board_name || "—"}</td>
                   <td class="py-2 pr-4 text-gray-600">
-                    <%= if Enum.any?(game.winners),
+                    {if Enum.any?(game.winners),
                       do: Enum.join(game.winners, ", "),
-                      else: "—" %>
+                      else: "—"}
                   </td>
-                  <td class="py-2 pr-4 text-gray-500"><%= game.finished || "—" %></td>
+                  <td class="py-2 pr-4 text-gray-500">{game.finished || "—"}</td>
                   <td class="py-2">
                     <%= if MapSet.member?(@snapshot_ids, game.game_id) do %>
                       <span class="text-green-600">✓</span>

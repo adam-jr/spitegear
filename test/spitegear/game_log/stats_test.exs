@@ -56,7 +56,14 @@ defmodule Spitegear.GameLog.StatsTest do
     end
 
     test "captured_reserve_units adds to capturer and deducts from eliminated player" do
-      event(%{log_seq: 1, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{
+        log_seq: 1,
+        event_type: "received_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 2, event_type: "received_units", player: "Bob", units: 6, raw_action: "x"})
 
       event(%{
@@ -74,7 +81,13 @@ defmodule Spitegear.GameLog.StatsTest do
     end
 
     test "captured_reserve_units with nil defender only adds to capturer" do
-      event(%{log_seq: 1, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{
+        log_seq: 1,
+        event_type: "received_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
 
       event(%{
         log_seq: 5,
@@ -227,7 +240,13 @@ defmodule Spitegear.GameLog.StatsTest do
     end
 
     test "factory_destroyed units are negative" do
-      event(%{log_seq: 1, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{
+        log_seq: 1,
+        event_type: "received_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
 
       event(%{
         log_seq: 4,
@@ -258,7 +277,14 @@ defmodule Spitegear.GameLog.StatsTest do
     end
 
     test "score is net_units times duration from setup to last event" do
-      event(%{log_seq: 1, event_type: "placed_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{
+        log_seq: 1,
+        event_type: "placed_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
       event(%{log_seq: 15, event_type: "started_turn", raw_action: "started_turn"})
       # Alice: net 10 aggregated at setup seq 5, last_seq = 15
@@ -268,17 +294,47 @@ defmodule Spitegear.GameLog.StatsTest do
 
     test "score accumulates over multiple post-setup intervals" do
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
-      event(%{log_seq: 10, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
-      event(%{log_seq: 20, event_type: "received_units", player: "Alice", units: 5, raw_action: "x"})
+
+      event(%{
+        log_seq: 10,
+        event_type: "received_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
+
+      event(%{
+        log_seq: 20,
+        event_type: "received_units",
+        player: "Alice",
+        units: 5,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 30, event_type: "started_turn", raw_action: "started_turn"})
       # score = 10 * (20 - 10) + 15 * (30 - 20) = 100 + 150 = 250
       assert %{"Alice" => 250} == Stats.placement_scores(@game_id)
     end
 
     test "setup units count from the setup seq onward, not before" do
-      event(%{log_seq: 1, event_type: "placed_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{
+        log_seq: 1,
+        event_type: "placed_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
-      event(%{log_seq: 15, event_type: "received_units", player: "Alice", units: 3, raw_action: "x"})
+
+      event(%{
+        log_seq: 15,
+        event_type: "received_units",
+        player: "Alice",
+        units: 3,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 25, event_type: "started_turn", raw_action: "started_turn"})
       # Alice: net 10 at seq 5, net 13 at seq 15, last_seq = 25
       # score = 10 * (15 - 5) + 13 * (25 - 15) = 100 + 130 = 230
@@ -287,8 +343,23 @@ defmodule Spitegear.GameLog.StatsTest do
 
     test "multiple players scored independently" do
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
-      event(%{log_seq: 10, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
-      event(%{log_seq: 11, event_type: "received_units", player: "Bob", units: 6, raw_action: "x"})
+
+      event(%{
+        log_seq: 10,
+        event_type: "received_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
+
+      event(%{
+        log_seq: 11,
+        event_type: "received_units",
+        player: "Bob",
+        units: 6,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 20, event_type: "started_turn", raw_action: "started_turn"})
       # last_seq = 20; Alice: 10 * (20 - 10) = 100; Bob: 6 * (20 - 11) = 54
       result = Stats.placement_scores(@game_id)
@@ -298,7 +369,15 @@ defmodule Spitegear.GameLog.StatsTest do
 
     test "unit losses reduce score" do
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
-      event(%{log_seq: 10, event_type: "received_units", player: "Alice", units: 10, raw_action: "x"})
+
+      event(%{
+        log_seq: 10,
+        event_type: "received_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
+
       event(%{
         log_seq: 15,
         event_type: "attacked",
@@ -308,6 +387,7 @@ defmodule Spitegear.GameLog.StatsTest do
         defender_losses: 4,
         raw_action: "x"
       })
+
       event(%{log_seq: 20, event_type: "started_turn", raw_action: "started_turn"})
       # Alice: net 10 at seq 10, net 6 at seq 15, last_seq = 20
       # score = 10 * (15 - 10) + 6 * (20 - 15) = 50 + 30 = 80
@@ -320,7 +400,14 @@ defmodule Spitegear.GameLog.StatsTest do
       event(%{log_seq: 3, event_type: "placed_units", player: "Alice", units: 5, raw_action: "x"})
       event(%{log_seq: 5, event_type: "placed_units", player: "Alice", units: 3, raw_action: "x"})
       event(%{log_seq: 8, event_type: "setup", raw_action: "Initial board setup complete"})
-      event(%{log_seq: 12, event_type: "received_units", player: "Alice", units: 2, raw_action: "x"})
+
+      event(%{
+        log_seq: 12,
+        event_type: "received_units",
+        player: "Alice",
+        units: 2,
+        raw_action: "x"
+      })
 
       # Setup placements are aggregated into one starting point at the setup seq
       assert %{
@@ -341,7 +428,13 @@ defmodule Spitegear.GameLog.StatsTest do
         raw_action: "Bob started turn"
       })
 
-      event(%{log_seq: 10, event_type: "received_units", player: "Bob", units: 3, raw_action: "x"})
+      event(%{
+        log_seq: 10,
+        event_type: "received_units",
+        player: "Bob",
+        units: 3,
+        raw_action: "x"
+      })
 
       # Aggregated into one starting point at the started_turn cutoff seq
       assert %{
@@ -352,7 +445,14 @@ defmodule Spitegear.GameLog.StatsTest do
     test "placed_units after setup event are ignored (in-game bonus placements)" do
       event(%{log_seq: 2, event_type: "setup", raw_action: "Initial board setup complete"})
       event(%{log_seq: 5, event_type: "placed_units", player: "Alice", units: 3, raw_action: "x"})
-      event(%{log_seq: 8, event_type: "received_units", player: "Alice", units: 3, raw_action: "x"})
+
+      event(%{
+        log_seq: 8,
+        event_type: "received_units",
+        player: "Alice",
+        units: 3,
+        raw_action: "x"
+      })
 
       assert %{"Alice" => [%{seq: 8, net_units: 3}]} == Stats.net_units_over_time(@game_id)
     end
@@ -388,14 +488,29 @@ defmodule Spitegear.GameLog.StatsTest do
 
     test "setup placed_units with nil player or units produce no delta" do
       event(%{log_seq: 1, event_type: "placed_units", player: nil, units: 5, raw_action: "x"})
-      event(%{log_seq: 2, event_type: "placed_units", player: "Alice", units: nil, raw_action: "x"})
+
+      event(%{
+        log_seq: 2,
+        event_type: "placed_units",
+        player: "Alice",
+        units: nil,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
 
       assert %{} == Stats.net_units_over_time(@game_id)
     end
 
     test "combat losses after setup are applied from the setup baseline" do
-      event(%{log_seq: 2, event_type: "placed_units", player: "Alice", units: 10, raw_action: "x"})
+      event(%{
+        log_seq: 2,
+        event_type: "placed_units",
+        player: "Alice",
+        units: 10,
+        raw_action: "x"
+      })
+
       event(%{log_seq: 3, event_type: "placed_units", player: "Bob", units: 8, raw_action: "x"})
       event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
 

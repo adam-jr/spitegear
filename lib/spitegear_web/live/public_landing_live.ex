@@ -75,15 +75,15 @@ defmodule SpitegearWeb.PublicLandingLive do
                     class="bg-white border border-gray-200 rounded-lg px-3 py-2.5 hover:border-gray-300 hover:shadow-sm transition-all group"
                   >
                     <p class="text-sm font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                      <%= game.board_name || "Game #{game.game_id}" %>
+                      {game.board_name || "Game #{game.game_id}"}
                     </p>
                     <%= if game.game_name do %>
-                      <p class="text-xs text-gray-400 truncate mt-0.5"><%= game.game_name %></p>
+                      <p class="text-xs text-gray-400 truncate mt-0.5">{game.game_name}</p>
                     <% end %>
                     <%= if turn do %>
                       <div class="flex items-center gap-1.5 mt-1.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"></span>
-                        <span class="text-xs text-gray-500 truncate"><%= turn.player_name %></span>
+                        <span class="text-xs text-gray-500 truncate">{turn.player_name}</span>
                       </div>
                     <% end %>
                   </a>
@@ -106,20 +106,20 @@ defmodule SpitegearWeb.PublicLandingLive do
                   >
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-medium text-gray-700 truncate group-hover:text-blue-600 transition-colors">
-                        <%= game.board_name || "Game #{game.game_id}" %>
+                        {game.board_name || "Game #{game.game_id}"}
                       </p>
                       <%= if game.game_name do %>
-                        <p class="text-xs text-gray-400 truncate"><%= game.game_name %></p>
+                        <p class="text-xs text-gray-400 truncate">{game.game_name}</p>
                       <% end %>
                       <%= if Enum.any?(game.winners) do %>
                         <p class="text-xs text-amber-600 mt-0.5 truncate">
-                          🏆 <%= Enum.join(game.winners, ", ") %>
+                          🏆 {Enum.join(game.winners, ", ")}
                         </p>
                       <% end %>
                     </div>
                     <%= if game.finished do %>
                       <p class="text-xs text-gray-300 shrink-0 mt-0.5">
-                        <%= format_date_only(game.finished) %>
+                        {format_date_only(game.finished)}
                       </p>
                     <% end %>
                   </a>
@@ -149,10 +149,10 @@ defmodule SpitegearWeb.PublicLandingLive do
                   <div class="flex items-start justify-between gap-4 mb-5">
                     <div class="min-w-0">
                       <p class="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-                        <%= @most_recent.board_name || "Game #{@most_recent.game_id}" %>
+                        {@most_recent.board_name || "Game #{@most_recent.game_id}"}
                       </p>
                       <%= if @most_recent.game_name do %>
-                        <p class="text-sm text-gray-400 mt-0.5 truncate"><%= @most_recent.game_name %></p>
+                        <p class="text-sm text-gray-400 mt-0.5 truncate">{@most_recent.game_name}</p>
                       <% end %>
                     </div>
                     <span class="text-gray-300 group-hover:text-gray-500 shrink-0 transition-colors mt-1">
@@ -165,7 +165,7 @@ defmodule SpitegearWeb.PublicLandingLive do
                     <div class="flex items-center gap-3 mb-4">
                       <span class="text-3xl">🏆</span>
                       <span class="text-xl sm:text-2xl font-bold text-amber-600">
-                        <%= Enum.join(@most_recent.winners, " & ") %>
+                        {Enum.join(@most_recent.winners, " & ")}
                       </span>
                     </div>
                   <% end %>
@@ -176,11 +176,11 @@ defmodule SpitegearWeb.PublicLandingLive do
                       <%= for %{rank: rank, player: player, score: score} <- @recent_placements do %>
                         <div class="flex items-center gap-2 text-sm">
                           <span class="w-6 text-xs text-gray-400 tabular-nums shrink-0 text-right">
-                            #<%= rank %>
+                            #{rank}
                           </span>
-                          <span class="flex-1 text-gray-700"><%= player %></span>
+                          <span class="flex-1 text-gray-700">{player}</span>
                           <span class="text-xs text-gray-400 font-mono tabular-nums">
-                            <%= format_score(score) %>
+                            {format_score(score)}
                           </span>
                         </div>
                       <% end %>
@@ -190,7 +190,7 @@ defmodule SpitegearWeb.PublicLandingLive do
                   <%!-- Date --%>
                   <%= if @most_recent.finished do %>
                     <p class="text-xs text-gray-400 mt-4">
-                      <%= format_wargear_date(@most_recent.finished, @timezone) %>
+                      {format_wargear_date(@most_recent.finished, @timezone)}
                     </p>
                   <% end %>
                 </div>
@@ -216,11 +216,11 @@ defmodule SpitegearWeb.PublicLandingLive do
                         _ -> "text-gray-300"
                       end
                     ]}>
-                      <%= rank %>
+                      {rank}
                     </span>
-                    <span class="flex-1 text-sm font-medium text-gray-800"><%= player %></span>
+                    <span class="flex-1 text-sm font-medium text-gray-800">{player}</span>
                     <span class="text-sm tabular-nums text-gray-500">
-                      <%= wins %> <%= if wins == 1, do: "win", else: "wins" %>
+                      {wins} {if wins == 1, do: "win", else: "wins"}
                     </span>
                   </div>
                 <% end %>

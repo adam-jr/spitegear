@@ -96,7 +96,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
     <div class="max-w-xl mx-auto mt-16 p-6 flex flex-col gap-10">
       <div>
         <a href={back_path(@game_id)} class="text-sm text-blue-600 hover:underline">
-          <%= if @game_id, do: "← Game", else: "← Admin" %>
+          {if @game_id, do: "← Game", else: "← Admin"}
         </a>
         <h1 class="text-2xl font-bold mt-1">Message Templates</h1>
         <p class="text-sm text-gray-500 mt-1">
@@ -118,7 +118,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
           <% active = game_custom || if(is_nil(@game_id), do: global_custom) %>
           <div class="border border-gray-200 rounded p-4">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-sm font-medium font-mono"><%= key_str %></span>
+              <span class="text-sm font-medium font-mono">{key_str}</span>
               <div class="flex items-center gap-3">
                 <%= cond do %>
                   <% @game_id && game_custom -> %>
@@ -128,7 +128,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
                       phx-value-key={key_str}
                       class="text-xs text-red-500 hover:underline"
                     >
-                      Reset to <%= if global_custom, do: "global", else: "default" %>
+                      Reset to {if global_custom, do: "global", else: "default"}
                     </button>
                   <% @game_id && global_custom -> %>
                     <span class="text-xs text-yellow-600 font-medium">global</span>
@@ -148,7 +148,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
             </div>
             <%= if MessageTemplates.available_vars(key) != [] do %>
               <p class="text-xs text-gray-400 mb-2">
-                vars: <%= Enum.join(MessageTemplates.available_vars(key), ", ") %>
+                vars: {Enum.join(MessageTemplates.available_vars(key), ", ")}
               </p>
             <% end %>
             <form

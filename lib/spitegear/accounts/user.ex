@@ -3,9 +3,9 @@ defmodule Spitegear.Accounts.User do
   import Ecto.Changeset
 
   schema "users" do
-    field :username, :string
-    field :password_hash, :string
-    field :password, :string, virtual: true
+    field(:username, :string)
+    field(:password_hash, :string)
+    field(:password, :string, virtual: true)
 
     timestamps()
   end

@@ -43,10 +43,10 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <span class="text-gray-200 shrink-0">|</span>
             <div class="min-w-0">
               <p class="font-semibold text-gray-900 truncate">
-                <%= @game.board_name || "Game #{@game_id}" %>
+                {@game.board_name || "Game #{@game_id}"}
               </p>
               <%= if @game.game_name do %>
-                <p class="text-xs text-gray-400 truncate"><%= @game.game_name %></p>
+                <p class="text-xs text-gray-400 truncate">{@game.game_name}</p>
               <% end %>
             </div>
           </div>
@@ -70,7 +70,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 Winner
               </p>
               <p class="text-xl font-bold text-amber-700">
-                <%= Enum.join(@game.winners, " & ") %>
+                {Enum.join(@game.winners, " & ")}
               </p>
             </div>
           </div>
@@ -85,35 +85,35 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <div>
               <dt class="text-xs text-gray-400 mb-0.5">Turns (log)</dt>
               <dd class="font-semibold text-gray-900 tabular-nums">
-                <%= @log_summary.turn_count %>
+                {@log_summary.turn_count}
               </dd>
             </div>
             <div>
               <dt class="text-xs text-gray-400 mb-0.5">Log Events</dt>
-              <dd class="font-semibold text-gray-900 tabular-nums"><%= @log_summary.max_seq %></dd>
+              <dd class="font-semibold text-gray-900 tabular-nums">{@log_summary.max_seq}</dd>
             </div>
             <%= if @days do %>
               <div>
                 <dt class="text-xs text-gray-400 mb-0.5">Duration</dt>
-                <dd class="font-semibold text-gray-900 tabular-nums"><%= @days %> days</dd>
+                <dd class="font-semibold text-gray-900 tabular-nums">{@days} days</dd>
               </div>
             <% end %>
             <%= if @game.created do %>
               <div>
                 <dt class="text-xs text-gray-400 mb-0.5">Started</dt>
-                <dd class="text-gray-700"><%= format_wargear_date(@game.created, @timezone) %></dd>
+                <dd class="text-gray-700">{format_wargear_date(@game.created, @timezone)}</dd>
               </div>
             <% end %>
             <%= if @game.finished do %>
               <div>
                 <dt class="text-xs text-gray-400 mb-0.5">Finished</dt>
-                <dd class="text-gray-700"><%= format_wargear_date(@game.finished, @timezone) %></dd>
+                <dd class="text-gray-700">{format_wargear_date(@game.finished, @timezone)}</dd>
               </div>
             <% end %>
           </dl>
         </section>
 
-<%!-- Net Units Chart --%>
+        <%!-- Net Units Chart --%>
         <%= if map_size(@net_units_series) > 0 do %>
           <section>
             <div class="flex items-center justify-between mb-1">
@@ -156,10 +156,10 @@ defmodule SpitegearWeb.PublicGameShowLive do
                       |> Enum.sort_by(&elem(&1, 1), :desc)
                       |> Enum.with_index(1) do %>
                   <div class="flex items-center gap-3 px-5 py-2.5">
-                    <span class="text-xs text-gray-300 w-6 tabular-nums shrink-0">#<%= rank %></span>
-                    <span class="flex-1 text-sm font-medium text-gray-800"><%= player %></span>
+                    <span class="text-xs text-gray-300 w-6 tabular-nums shrink-0">#{rank}</span>
+                    <span class="flex-1 text-sm font-medium text-gray-800">{player}</span>
                     <span class="text-sm font-mono tabular-nums text-gray-500">
-                      <%= format_score(score) %>
+                      {format_score(score)}
                     </span>
                   </div>
                 <% end %>

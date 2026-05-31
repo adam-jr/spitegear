@@ -112,17 +112,17 @@ defmodule SpitegearWeb.AdminGameShowLive do
         <div>
           <a href="/admin/games" class="text-sm text-blue-600 hover:underline">← Games</a>
           <h1 class="text-2xl font-bold mt-1">
-            <%= if @game, do: @game.game_name, else: "Game #{@game_id}" %>
+            {if @game, do: @game.game_name, else: "Game #{@game_id}"}
           </h1>
           <%= if @game && @game.board_name do %>
-            <p class="text-sm text-gray-500"><%= @game.board_name %></p>
+            <p class="text-sm text-gray-500">{@game.board_name}</p>
           <% end %>
         </div>
         <div class="flex items-center gap-3">
           <span class={
             if @poller_alive, do: "text-green-600 text-sm font-medium", else: "text-gray-400 text-sm"
           }>
-            <%= if @poller_alive, do: "● polling", else: "○ stopped" %>
+            {if @poller_alive, do: "● polling", else: "○ stopped"}
           </span>
           <%= if @poller_alive do %>
             <button phx-click="stop_poller" class="text-sm text-red-600 hover:underline">Stop</button>
@@ -153,15 +153,15 @@ defmodule SpitegearWeb.AdminGameShowLive do
             Current Turn
           </h2>
           <%= if @turn do %>
-            <p class="text-xl font-bold"><%= @turn.player.name %></p>
-            <p class="text-sm text-gray-500"><%= @turn.player.slack_name %></p>
+            <p class="text-xl font-bold">{@turn.player.name}</p>
+            <p class="text-sm text-gray-500">{@turn.player.slack_name}</p>
             <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt class="text-gray-500">Started</dt>
-              <dd><%= format_datetime(@turn.started) %></dd>
+              <dd>{format_datetime(@turn.started)}</dd>
               <dt class="text-gray-500">Duration</dt>
-              <dd><%= elapsed(@turn.started) %></dd>
+              <dd>{elapsed(@turn.started)}</dd>
               <dt class="text-gray-500">Reminders</dt>
-              <dd><%= @turn.reminders %></dd>
+              <dd>{@turn.reminders}</dd>
             </dl>
           <% else %>
             <p class="text-gray-400 text-sm">No active turn</p>
@@ -172,16 +172,16 @@ defmodule SpitegearWeb.AdminGameShowLive do
           <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Game Stats</h2>
           <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             <dt class="text-gray-500">Game ID</dt>
-            <dd class="font-mono"><%= @game_id %></dd>
+            <dd class="font-mono">{@game_id}</dd>
             <dt class="text-gray-500">Completed turns</dt>
-            <dd><%= @total_turns %></dd>
+            <dd>{@total_turns}</dd>
             <%= if @poller_turn_id do %>
               <dt class="text-gray-500">Turn ID</dt>
-              <dd class="font-mono"><%= @poller_turn_id %></dd>
+              <dd class="font-mono">{@poller_turn_id}</dd>
             <% end %>
             <%= if @game && @game.created do %>
               <dt class="text-gray-500">Created</dt>
-              <dd><%= @game.created %></dd>
+              <dd>{@game.created}</dd>
             <% end %>
           </dl>
         </div>
@@ -200,9 +200,9 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 )
               ]}>
                 <span class={if p.alive, do: "text-green-500", else: "text-gray-400"}>
-                  <%= if p.alive, do: "●", else: "✕" %>
+                  {if p.alive, do: "●", else: "✕"}
                 </span>
-                <%= p.player_name %>
+                {p.player_name}
               </span>
             <% end %>
           </div>
@@ -230,11 +230,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <tbody>
               <%= for s <- @stats do %>
                 <tr class="border-b border-gray-100">
-                  <td class="py-1 pr-4"><%= s.player_name %></td>
-                  <td class="py-1 pr-4"><%= s.count %></td>
-                  <td class="py-1 pr-4"><%= format_duration(s.avg_seconds) %></td>
-                  <td class="py-1 pr-4"><%= format_duration(s.fastest_seconds) %></td>
-                  <td class="py-1"><%= format_duration(s.slowest_seconds) %></td>
+                  <td class="py-1 pr-4">{s.player_name}</td>
+                  <td class="py-1 pr-4">{s.count}</td>
+                  <td class="py-1 pr-4">{format_duration(s.avg_seconds)}</td>
+                  <td class="py-1 pr-4">{format_duration(s.fastest_seconds)}</td>
+                  <td class="py-1">{format_duration(s.slowest_seconds)}</td>
                 </tr>
               <% end %>
             </tbody>
@@ -259,13 +259,13 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 disabled={@chart_status == :sending}
                 class="text-sm text-blue-600 hover:underline disabled:opacity-50"
               >
-                <%= if @chart_status == :sending, do: "Sending…", else: "Send to #spitegear-test" %>
+                {if @chart_status == :sending, do: "Sending…", else: "Send to #spitegear-test"}
               </button>
               <%= case @chart_status do %>
                 <% :sent -> %>
                   <span class="text-sm text-green-600">✓ Sent</span>
                 <% {:error, reason} -> %>
-                  <span class="text-sm text-red-600">Error: <%= reason %></span>
+                  <span class="text-sm text-red-600">Error: {reason}</span>
                 <% _ -> %>
               <% end %>
             </div>
@@ -292,10 +292,10 @@ defmodule SpitegearWeb.AdminGameShowLive do
                         |> Enum.sort_by(&elem(&1, 1), :desc)
                         |> Enum.with_index(1) do %>
                     <tr class="border-b border-gray-100">
-                      <td class="py-1.5 pr-3 text-gray-400 w-8 tabular-nums">#<%= rank %></td>
-                      <td class="py-1.5 pr-4 font-medium"><%= player %></td>
+                      <td class="py-1.5 pr-3 text-gray-400 w-8 tabular-nums">#{rank}</td>
+                      <td class="py-1.5 pr-4 font-medium">{player}</td>
                       <td class="py-1.5 text-right text-gray-600 font-mono tabular-nums">
-                        <%= format_score(score) %>
+                        {format_score(score)}
                       </td>
                     </tr>
                   <% end %>
@@ -320,9 +320,9 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <tbody>
               <%= for t <- @history do %>
                 <tr class="border-b border-gray-100">
-                  <td class="py-1 pr-4"><%= t.player_name %></td>
-                  <td class="py-1 pr-4"><%= format_datetime(t.started) %></td>
-                  <td class="py-1"><%= format_duration(DateTime.diff(t.ended, t.started)) %></td>
+                  <td class="py-1 pr-4">{t.player_name}</td>
+                  <td class="py-1 pr-4">{format_datetime(t.started)}</td>
+                  <td class="py-1">{format_duration(DateTime.diff(t.ended, t.started))}</td>
                 </tr>
               <% end %>
             </tbody>

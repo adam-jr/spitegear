@@ -64,7 +64,9 @@ defmodule Spitegear.GameLog.Parser do
       # Player may be "Neutral" for unowned capitals; \s+ handles occasional double-space
       m = match(~r/^Assigned Capital (?P<t>.+?)\s+to\s+(?P<p>.+)$/, action) ->
         player = if m["p"] == "Neutral", do: nil, else: m["p"]
-        {:ok, %{event_type: "assigned_capital", territory_to: String.trim(m["t"]), player: player}}
+
+        {:ok,
+         %{event_type: "assigned_capital", territory_to: String.trim(m["t"]), player: player}}
 
       # "Assigned factory Nothgierc to pants off vant hof"
       m = match(~r/^Assigned factory (?P<t>.+?) to (?P<p>.+)$/, action) ->

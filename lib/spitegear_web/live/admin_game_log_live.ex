@@ -43,10 +43,10 @@ defmodule SpitegearWeb.AdminGameLogLive do
       <div class="flex items-center justify-between">
         <div>
           <a href={"/admin/games/#{@game_id}"} class="text-sm text-blue-600 hover:underline">
-            ← <%= if @game, do: @game.game_name, else: "Game #{@game_id}" %>
+            ← {if @game, do: @game.game_name, else: "Game #{@game_id}"}
           </a>
-          <h1 class="text-xl font-bold mt-1">Log Events — Game <%= @game_id %></h1>
-          <p class="text-sm text-gray-500"><%= length(@events) %> events</p>
+          <h1 class="text-xl font-bold mt-1">Log Events — Game {@game_id}</h1>
+          <p class="text-sm text-gray-500">{length(@events)} events</p>
         </div>
         <div class="flex items-center gap-4">
           <button
@@ -54,15 +54,15 @@ defmodule SpitegearWeb.AdminGameLogLive do
             disabled={@refetch_status == :running}
             class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
           >
-            <%= if @refetch_status == :running, do: "Fetching…", else: "Refetch & Process" %>
+            {if @refetch_status == :running, do: "Fetching…", else: "Refetch & Process"}
           </button>
           <%= case @refetch_status do %>
             <% {:ok, counts} -> %>
               <span class="text-sm text-green-600">
-                ✓ <%= counts.new_events %> new, <%= counts.skipped %> skipped
+                ✓ {counts.new_events} new, {counts.skipped} skipped
               </span>
             <% {:error, reason} -> %>
-              <span class="text-sm text-red-600">Error: <%= reason %></span>
+              <span class="text-sm text-red-600">Error: {reason}</span>
             <% _ -> %>
           <% end %>
         </div>
@@ -103,28 +103,28 @@ defmodule SpitegearWeb.AdminGameLogLive do
                   "border-b border-gray-100 align-top hover:bg-gray-50",
                   if(e.event_type == "unrecognized", do: "bg-amber-50 hover:bg-amber-100", else: "")
                 ]}>
-                  <td class="py-1 pr-4 text-gray-400 sticky left-0 bg-inherit"><%= e.log_seq %></td>
-                  <td class="py-1 pr-4 text-gray-400"><%= e.occurred_at %></td>
-                  <td class="py-1 pr-4 text-gray-400"><%= e.seat %></td>
-                  <td class="py-1 pr-4 text-gray-400"><%= e.turn_id %></td>
+                  <td class="py-1 pr-4 text-gray-400 sticky left-0 bg-inherit">{e.log_seq}</td>
+                  <td class="py-1 pr-4 text-gray-400">{e.occurred_at}</td>
+                  <td class="py-1 pr-4 text-gray-400">{e.seat}</td>
+                  <td class="py-1 pr-4 text-gray-400">{e.turn_id}</td>
                   <td class={[
                     "py-1 pr-4 font-semibold",
                     if(e.event_type == "unrecognized", do: "text-amber-600", else: "text-blue-700")
                   ]}>
-                    <%= e.event_type %>
+                    {e.event_type}
                   </td>
-                  <td class="py-1 pr-4"><%= e.player %></td>
-                  <td class="py-1 pr-4"><%= e.defender %></td>
-                  <td class="py-1 pr-4 text-gray-500"><%= e.territory_from %></td>
-                  <td class="py-1 pr-4"><%= e.territory_to %></td>
-                  <td class="py-1 pr-4"><%= e.units %></td>
-                  <td class="py-1 pr-4 text-gray-500"><%= e.attacker_dice %></td>
-                  <td class="py-1 pr-4 text-gray-500"><%= e.defender_dice %></td>
-                  <td class="py-1 pr-4 text-gray-500"><%= e.battle_mod %></td>
-                  <td class="py-1 pr-4"><%= e.attacker_losses %></td>
-                  <td class="py-1 pr-4"><%= e.defender_losses %></td>
+                  <td class="py-1 pr-4">{e.player}</td>
+                  <td class="py-1 pr-4">{e.defender}</td>
+                  <td class="py-1 pr-4 text-gray-500">{e.territory_from}</td>
+                  <td class="py-1 pr-4">{e.territory_to}</td>
+                  <td class="py-1 pr-4">{e.units}</td>
+                  <td class="py-1 pr-4 text-gray-500">{e.attacker_dice}</td>
+                  <td class="py-1 pr-4 text-gray-500">{e.defender_dice}</td>
+                  <td class="py-1 pr-4 text-gray-500">{e.battle_mod}</td>
+                  <td class="py-1 pr-4">{e.attacker_losses}</td>
+                  <td class="py-1 pr-4">{e.defender_losses}</td>
                   <td class="py-1 text-gray-600 font-sans whitespace-normal max-w-sm">
-                    <%= e.raw_action %>
+                    {e.raw_action}
                   </td>
                 </tr>
               <% end %>

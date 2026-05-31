@@ -90,10 +90,10 @@ defmodule SpitegearWeb.PublicGamesIndexLive do
                 <%!-- Game info --%>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-                    <%= game.board_name || "Game #{game.game_id}" %>
+                    {game.board_name || "Game #{game.game_id}"}
                   </p>
                   <%= if game.game_name do %>
-                    <p class="text-xs text-gray-400 truncate"><%= game.game_name %></p>
+                    <p class="text-xs text-gray-400 truncate">{game.game_name}</p>
                   <% end %>
                 </div>
 
@@ -101,7 +101,7 @@ defmodule SpitegearWeb.PublicGamesIndexLive do
                 <div class="text-right shrink-0">
                   <%= if is_nil(game.finished) do %>
                     <%= if turn do %>
-                      <p class="text-xs text-gray-600 font-medium"><%= turn.player_name %></p>
+                      <p class="text-xs text-gray-600 font-medium">{turn.player_name}</p>
                       <p class="text-xs text-gray-400">active turn</p>
                     <% else %>
                       <p class="text-xs text-gray-400">active</p>
@@ -109,11 +109,11 @@ defmodule SpitegearWeb.PublicGamesIndexLive do
                   <% else %>
                     <%= if Enum.any?(game.winners) do %>
                       <p class="text-xs font-medium text-amber-600">
-                        🏆 <%= Enum.join(game.winners, ", ") %>
+                        🏆 {Enum.join(game.winners, ", ")}
                       </p>
                     <% end %>
                     <%= if game.finished do %>
-                      <p class="text-xs text-gray-400 mt-0.5"><%= game.finished %></p>
+                      <p class="text-xs text-gray-400 mt-0.5">{game.finished}</p>
                     <% end %>
                   <% end %>
                 </div>

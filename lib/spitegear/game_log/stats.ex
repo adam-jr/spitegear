@@ -115,9 +115,8 @@ defmodule Spitegear.GameLog.Stats do
       %{}
     else
       last_seq =
-        Repo.one(
-          from(e in GameLogEvent, where: e.game_id == ^game_id, select: max(e.log_seq))
-        ) || 0
+        Repo.one(from(e in GameLogEvent, where: e.game_id == ^game_id, select: max(e.log_seq))) ||
+          0
 
       Map.new(series, fn {player, points} ->
         {player, integrate(points, last_seq)}

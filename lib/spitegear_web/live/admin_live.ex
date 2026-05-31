@@ -137,7 +137,7 @@ defmodule SpitegearWeb.AdminLive do
     ~H"""
     <div class="flex items-center gap-3 font-mono text-sm bg-gray-50 border border-gray-200 rounded p-2">
       <span class="flex-1 truncate text-gray-700">
-        <%= if @revealed, do: @value, else: mask(@value) %>
+        {if @revealed, do: @value, else: mask(@value)}
       </span>
       <button
         type="button"
@@ -145,7 +145,7 @@ defmodule SpitegearWeb.AdminLive do
         phx-value-key={@key}
         class="text-xs text-blue-600 hover:underline shrink-0"
       >
-        <%= if @revealed, do: "Hide", else: "Reveal" %>
+        {if @revealed, do: "Hide", else: "Reveal"}
       </button>
       <%= if @revealed and @value != "" do %>
         <button

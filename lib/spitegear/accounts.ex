@@ -34,6 +34,6 @@ defmodule Spitegear.Accounts do
 
   @doc "Lists all usernames."
   def list_usernames do
-    Repo.all(from u in User, select: u.username, order_by: u.username)
+    Repo.all(from(u in User, select: u.username, order_by: u.username))
   end
 end

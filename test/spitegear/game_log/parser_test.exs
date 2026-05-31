@@ -68,9 +68,7 @@ defmodule Spitegear.GameLog.ParserTest do
                 territory_to: "San Diego-Tijuana (Baja-Cali)",
                 player: nil
               }} =
-               Parser.parse_row(
-                 row("Assigned Capital San Diego-Tijuana (Baja-Cali)  to Neutral")
-               )
+               Parser.parse_row(row("Assigned Capital San Diego-Tijuana (Baja-Cali)  to Neutral"))
     end
 
     test "started_turn" do

@@ -1,5 +1,43 @@
 import Chart from "../../vendor/chart.umd.min.js"
 
+// Parses a hex color string (#rrggbb) and returns [r, g, b].
+function parseHex(hex) {
+  const h = hex.replace('#', '')
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]
+}
+
+function toHex(r, g, b) {
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+}
+
+// Adjusts a player color for chart visibility:
+//   - near-white → medium gray (would be invisible on white background)
+//   - pure black → unchanged (user explicitly has a black player)
+//   - any other color darker than the luminance floor → lightened to the floor
+function sanitizeColor(colorStr) {
+  if (!colorStr || !colorStr.startsWith('#') || colorStr.length < 7) return colorStr
+  let [r, g, b] = parseHex(colorStr)
+
+  // Near-white: darken to a visible mid-gray
+  if (r > 220 && g > 220 && b > 220) return '#888888'
+
+  // Pure black: leave alone
+  if (r === 0 && g === 0 && b === 0) return colorStr
+
+  // Perceptual luminance (0–255 scale)
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b
+  const MIN_LUM = 100
+  if (lum < MIN_LUM) {
+    const scale = MIN_LUM / lum
+    r = Math.min(255, Math.round(r * scale))
+    g = Math.min(255, Math.round(g * scale))
+    b = Math.min(255, Math.round(b * scale))
+    return toHex(r, g, b)
+  }
+
+  return colorStr
+}
+
 const COLORS = [
   "rgb(59,130,246)",   // blue
   "rgb(239,68,68)",    // red
@@ -30,7 +68,7 @@ const NetUnitsChart = {
     const datasets = Object.entries(series)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([player, points], i) => {
-        const color = gameColors[player] || COLORS[i % COLORS.length]
+        const color = sanitizeColor(gameColors[player]) || COLORS[i % COLORS.length]
         return {
           label: player,
           data: points.map(p => ({ x: p.seq, y: p.net_units })),
@@ -55,7 +93,7 @@ const NetUnitsChart = {
           y: { title: { display: true, text: "Net Units" } },
         },
         plugins: {
-          legend: { position: "top" },
+          legend: { position: "right" },
         },
       },
     })

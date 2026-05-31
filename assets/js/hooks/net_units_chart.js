@@ -26,7 +26,7 @@ function sanitizeColor(colorStr) {
 
   // Perceptual luminance (0–255 scale)
   const lum = 0.299 * r + 0.587 * g + 0.114 * b
-  const MIN_LUM = 100
+  const MIN_LUM = 65
   if (lum < MIN_LUM) {
     const scale = MIN_LUM / lum
     r = Math.min(255, Math.round(r * scale))

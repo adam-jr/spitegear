@@ -13,7 +13,11 @@ defmodule Spitegear.Worker.GamePoller.TurnLogicTest do
     end
 
     test "true when no current_turn and current_player exists" do
-      state = %{view_screen: %ViewScreen{current_player: %Player{name: "adam"}}, current_turn: nil}
+      state = %{
+        view_screen: %ViewScreen{current_player: %Player{name: "adam"}},
+        current_turn: nil
+      }
+
       assert TurnLogic.new_turn?(state)
     end
 

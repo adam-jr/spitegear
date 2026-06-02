@@ -246,7 +246,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp new_turn(state) do
     player = state.view_screen.current_player
 
-    state = record_completed_turn(state)
+    state = record_completed_turn(state, player.name)
     state = infer_deaths_from_skip(state)
 
     round = state.last_round + 1
@@ -270,13 +270,13 @@ defmodule Spitegear.Worker.GamePoller do
     %{state | current_turn: turn, moving_announced: false}
   end
 
-  defp record_completed_turn(%{current_turn: nil} = state), do: state
+  defp record_completed_turn(%{current_turn: nil} = state, _next_player), do: state
 
-  defp record_completed_turn(state) do
+  defp record_completed_turn(state, next_player) do
     ended = DateTime.utc_now() |> DateTime.truncate(:second)
     Games.record_completed_turn(state.current_turn, ended)
 
-    completed = Games.completed_rounds(state.game_id)
+    completed = Games.completed_rounds(state.game_id, next_player)
 
     state
     |> maybe_announce_round(completed)

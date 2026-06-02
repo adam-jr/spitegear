@@ -170,7 +170,7 @@ defmodule Spitegear.GamesTest do
     end
   end
 
-  describe "completed_rounds/1" do
+  describe "completed_rounds/2" do
     test "returns 0 with no turn history" do
       assert Games.completed_rounds("11111") == 0
     end
@@ -215,8 +215,11 @@ defmodule Spitegear.GamesTest do
         ended: DateTime.add(base, 1199)
       })
 
-      # [adam, bob] — no repeat yet, round 1 not counted
+      # [adam, bob] — no repeat yet, round 1 not counted without lookahead
       assert Games.completed_rounds("11111") == 0
+
+      # with next_player lookahead: adam about to go again → round 1 is complete now
+      assert Games.completed_rounds("11111", "adam") == 1
 
       Repo.insert!(%TurnHistory{
         game_id: "11111",
@@ -225,8 +228,18 @@ defmodule Spitegear.GamesTest do
         ended: DateTime.add(base, 1799)
       })
 
-      # [adam, bob, adam] — adam repeated, round 1 is now complete
+      # [adam, bob, adam] — adam repeated, round 1 is now complete without lookahead too
       assert Games.completed_rounds("11111") == 1
+    end
+
+    test "next_player lookahead detects boundary in a 7-player game" do
+      insert_turn_sequence("11111", ~w[p1 p2 p3 p4 p5 p6 p7])
+
+      # without lookahead: no player has repeated yet → 0
+      assert Games.completed_rounds("11111") == 0
+
+      # p1 is about to go again — round 1 is complete
+      assert Games.completed_rounds("11111", "p1") == 1
     end
   end
 

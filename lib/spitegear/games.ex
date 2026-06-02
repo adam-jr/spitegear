@@ -156,7 +156,7 @@ defmodule Spitegear.Games do
     )
   end
 
-  def completed_rounds(game_id) do
+  def completed_rounds(game_id, next_player \\ nil) do
     Repo.all(
       from(t in TurnHistory,
         where: t.game_id == ^game_id,
@@ -164,6 +164,7 @@ defmodule Spitegear.Games do
         select: t.player_name
       )
     )
+    |> then(fn turns -> if next_player, do: turns ++ [next_player], else: turns end)
     |> count_completed_rounds()
   end
 

@@ -14,6 +14,9 @@ defmodule Spitegear.Worker.GamePollerNew do
 
   use GenServer
 
+  alias Spitegear.LiveGameState.HistoryResponses
+  alias Spitegear.LiveGameState.ViewScreens
+
   require Logger
 
   def child_spec(game_id: game_id) do
@@ -58,8 +61,15 @@ defmodule Spitegear.Worker.GamePollerNew do
   end
 
   @impl true
-  def handle_cast({:history_fetched, _turn_data}, state), do: {:noreply, state}
-  def handle_cast({:view_screen_fetched, _view_screen}, state), do: {:noreply, state}
+  def handle_cast({:history_fetched, turn_data}, state) do
+    HistoryResponses.record_if_changed(state.game_id, turn_data)
+    {:noreply, state}
+  end
+
+  def handle_cast({:view_screen_fetched, view_screen}, state) do
+    ViewScreens.record_if_changed(view_screen)
+    {:noreply, state}
+  end
 
   @impl true
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}

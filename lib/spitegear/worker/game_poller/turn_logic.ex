@@ -7,7 +7,7 @@ defmodule Spitegear.Worker.GamePoller.TurnLogic do
   """
 
   alias Spitegear.HTML.Player
-  alias Spitegear.HTML.ViewScreen
+  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Turn
 
   # 3 hours

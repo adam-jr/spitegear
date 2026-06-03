@@ -2,7 +2,7 @@ defmodule Spitegear.Worker.GamePoller.TurnLogicTest do
   use ExUnit.Case, async: true
 
   alias Spitegear.HTML.Player
-  alias Spitegear.HTML.ViewScreen
+  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Turn
   alias Spitegear.Worker.GamePoller.TurnLogic
 

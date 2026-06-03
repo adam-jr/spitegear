@@ -3,13 +3,13 @@ defmodule Spitegear.Worker.GamePoller do
   use GenServer
 
   alias Spitegear.Games
-  alias Spitegear.HTML.ViewScreen
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Slack.Message
   alias Spitegear.Turn
-  alias Spitegear.Wargear.History
-  alias Spitegear.Wargear.LogSnapshot
+  alias Spitegear.Wargear.HTTP.History
+  alias Spitegear.Wargear.HTTP.LogSnapshot
+  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Worker.GamePoller.TurnLogic
 
   require Logger

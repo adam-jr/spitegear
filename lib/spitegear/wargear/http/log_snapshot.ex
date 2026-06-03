@@ -1,4 +1,4 @@
-defmodule Spitegear.Wargear.LogSnapshot do
+defmodule Spitegear.Wargear.HTTP.LogSnapshot do
   @moduledoc """
   Fetches and stores the raw HTML game log from wargear.net for a completed game.
 
@@ -12,7 +12,7 @@ defmodule Spitegear.Wargear.LogSnapshot do
   alias Spitegear.GameLogSnapshot
   alias Spitegear.Repo
   alias Spitegear.Settings
-  alias Spitegear.Wargear.Login
+  alias Spitegear.Wargear.HTTP.Login
 
   @base_url "https://www.wargear.net"
 

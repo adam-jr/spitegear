@@ -1,9 +1,9 @@
-defmodule Spitegear.HTML.ViewScreen do
+defmodule Spitegear.Wargear.HTTP.ViewScreen do
   @moduledoc false
   require Logger
 
   alias Spitegear.HTML.Player
-  alias Spitegear.Wargear.Login
+  alias Spitegear.Wargear.HTTP.Login
 
   defstruct game_id: nil,
             url: nil,

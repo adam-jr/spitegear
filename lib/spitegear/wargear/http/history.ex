@@ -1,4 +1,4 @@
-defmodule Spitegear.Wargear.History do
+defmodule Spitegear.Wargear.HTTP.History do
   @moduledoc false
   alias Spitegear.Settings
 

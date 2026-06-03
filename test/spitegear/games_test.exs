@@ -6,7 +6,7 @@ defmodule Spitegear.GamesTest do
   alias Spitegear.Game
   alias Spitegear.GameDeath
   alias Spitegear.Games
-  alias Spitegear.HTML.ViewScreen
+  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Repo
   alias Spitegear.Turn
   alias Spitegear.TurnHistory

@@ -1,8 +1,8 @@
-defmodule Spitegear.Wargear.LoginTest do
+defmodule Spitegear.Wargear.HTTP.LoginTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  alias Spitegear.Wargear.Login
+  alias Spitegear.Wargear.HTTP.Login
 
   describe "extract_cookie/1" do
     test "extracts and joins cookie values from Set-Cookie headers" do

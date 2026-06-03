@@ -50,18 +50,18 @@ defmodule Spitegear.Worker.GamePollerNew do
   def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
     schedule_next_turn_check()
-    {:ok, LiveGameState.new(game_id)}
+    {:ok, %{game_id: game_id, game_state: LiveGameState.new(game_id)}}
   end
 
-  def handle_info(:fetch_latest_turn, state) do
-    state = LiveGameState.fetch_game_state(state)
+  def handle_info(:fetch_latest_turn, %{game_state: game_state} = state) do
+    game_state = LiveGameState.fetch_game_state(game_state)
 
-    if LiveGameState.new_activity?(state) do
-      PubSub.msg(:spitegear_test, "new activity on game #{state.game_id}")
+    if LiveGameState.new_activity?(game_state) do
+      PubSub.msg(:spitegear_test, "new activity on game #{game_state.game_id}")
     end
 
     schedule_next_turn_check()
-    {:noreply, state}
+    {:noreply, %{state | game_state: game_state}}
   end
 
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}

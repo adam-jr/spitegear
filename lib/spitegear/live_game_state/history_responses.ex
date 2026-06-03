@@ -33,7 +33,9 @@ defmodule Spitegear.LiveGameState.HistoryResponses do
   has not changed, or `{:error, changeset}` on failure.
   """
   @spec record_if_changed(game_id(), map()) ::
-          {:ok, WargearHistoryApiResponseDb.t()} | {:ok, :unchanged} | {:error, Ecto.Changeset.t()}
+          {:ok, WargearHistoryApiResponseDb.t()}
+          | {:ok, :unchanged}
+          | {:error, Ecto.Changeset.t()}
   def record_if_changed(game_id, turn_data) when is_map(turn_data) do
     case get_latest(game_id) do
       nil ->

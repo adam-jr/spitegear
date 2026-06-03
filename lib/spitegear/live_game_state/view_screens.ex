@@ -40,8 +40,11 @@ defmodule Spitegear.LiveGameState.ViewScreens do
     incoming = WargearViewScreenDb.from_view_screen(raw)
 
     case get_latest(incoming.game_id) do
-      nil -> Repo.insert(incoming)
-      existing -> if changed?(existing, incoming), do: Repo.insert(incoming), else: {:ok, :unchanged}
+      nil ->
+        Repo.insert(incoming)
+
+      existing ->
+        if changed?(existing, incoming), do: Repo.insert(incoming), else: {:ok, :unchanged}
     end
   end
 

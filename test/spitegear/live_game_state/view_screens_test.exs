@@ -40,8 +40,27 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
     end
 
     test "returns the most recently inserted snapshot" do
-      Repo.insert!(%WargearViewScreenDb{game_id: "11111", current_player_name: "adam", players: [], eliminated: [], winners: [], fogged: false, inserted_at: ~U[2024-01-01 00:00:00Z], updated_at: ~U[2024-01-01 00:00:00Z]})
-      Repo.insert!(%WargearViewScreenDb{game_id: "11111", current_player_name: "bob", players: [], eliminated: [], winners: [], fogged: false, inserted_at: ~U[2024-01-02 00:00:00Z], updated_at: ~U[2024-01-02 00:00:00Z]})
+      Repo.insert!(%WargearViewScreenDb{
+        game_id: "11111",
+        current_player_name: "adam",
+        players: [],
+        eliminated: [],
+        winners: [],
+        fogged: false,
+        inserted_at: ~U[2024-01-01 00:00:00Z],
+        updated_at: ~U[2024-01-01 00:00:00Z]
+      })
+
+      Repo.insert!(%WargearViewScreenDb{
+        game_id: "11111",
+        current_player_name: "bob",
+        players: [],
+        eliminated: [],
+        winners: [],
+        fogged: false,
+        inserted_at: ~U[2024-01-02 00:00:00Z],
+        updated_at: ~U[2024-01-02 00:00:00Z]
+      })
 
       assert ViewScreens.get_latest("11111").current_player_name == "bob"
     end
@@ -60,7 +79,10 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
 
     test "inserts a new snapshot when current player changes" do
       ViewScreens.record_if_changed(build_raw(current_player: player("adam")))
-      assert {:ok, %WargearViewScreenDb{}} = ViewScreens.record_if_changed(build_raw(current_player: player("bob")))
+
+      assert {:ok, %WargearViewScreenDb{}} =
+               ViewScreens.record_if_changed(build_raw(current_player: player("bob")))
+
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
     end
 
@@ -73,25 +95,37 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
 
     test "inserts when a player is newly eliminated" do
       ViewScreens.record_if_changed(build_raw(eliminated: []))
-      assert {:ok, %WargearViewScreenDb{}} = ViewScreens.record_if_changed(build_raw(eliminated: [player("bob")]))
+
+      assert {:ok, %WargearViewScreenDb{}} =
+               ViewScreens.record_if_changed(build_raw(eliminated: [player("bob")]))
+
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
     end
 
     test "inserts when winners are set" do
       ViewScreens.record_if_changed(build_raw(winners: []))
-      assert {:ok, %WargearViewScreenDb{}} = ViewScreens.record_if_changed(build_raw(winners: [player("adam")]))
+
+      assert {:ok, %WargearViewScreenDb{}} =
+               ViewScreens.record_if_changed(build_raw(winners: [player("adam")]))
+
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
     end
 
     test "inserts when game is finished" do
       ViewScreens.record_if_changed(build_raw(finished: nil))
-      assert {:ok, %WargearViewScreenDb{}} = ViewScreens.record_if_changed(build_raw(finished: "2024-12-01"))
+
+      assert {:ok, %WargearViewScreenDb{}} =
+               ViewScreens.record_if_changed(build_raw(finished: "2024-12-01"))
+
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
     end
 
     test "inserts when fogged state changes" do
       ViewScreens.record_if_changed(build_raw(fogged?: false))
-      assert {:ok, %WargearViewScreenDb{}} = ViewScreens.record_if_changed(build_raw(fogged?: true))
+
+      assert {:ok, %WargearViewScreenDb{}} =
+               ViewScreens.record_if_changed(build_raw(fogged?: true))
+
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
     end
 
@@ -109,7 +143,18 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
   describe "prune/1" do
     test "deletes snapshots older than the given number of days" do
       old = DateTime.utc_now() |> DateTime.add(-91 * 86_400) |> DateTime.truncate(:second)
-      Repo.insert!(%WargearViewScreenDb{game_id: "11111", current_player_name: "adam", players: [], eliminated: [], winners: [], fogged: false, inserted_at: old, updated_at: old})
+
+      Repo.insert!(%WargearViewScreenDb{
+        game_id: "11111",
+        current_player_name: "adam",
+        players: [],
+        eliminated: [],
+        winners: [],
+        fogged: false,
+        inserted_at: old,
+        updated_at: old
+      })
+
       insert_snapshot()
 
       {count, _} = ViewScreens.prune(90)

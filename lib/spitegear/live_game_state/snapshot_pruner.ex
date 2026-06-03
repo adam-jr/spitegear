@@ -14,6 +14,9 @@ defmodule Spitegear.LiveGameState.SnapshotPruner do
   def run do
     {vs_count, _} = ViewScreens.prune(@days)
     {hr_count, _} = HistoryResponses.prune(@days)
-    Logger.info("#{__MODULE__} pruned #{vs_count} view screen(s) and #{hr_count} history response(s) older than #{@days} days")
+
+    Logger.info(
+      "#{__MODULE__} pruned #{vs_count} view screen(s) and #{hr_count} history response(s) older than #{@days} days"
+    )
   end
 end

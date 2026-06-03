@@ -13,8 +13,19 @@ defmodule Spitegear.LiveGameState.HistoryResponsesTest do
     end
 
     test "returns the most recently inserted record" do
-      Repo.insert!(%WargearHistoryApiResponseDb{game_id: "11111", turn_data: turn_data("1"), inserted_at: ~U[2024-01-01 00:00:00Z], updated_at: ~U[2024-01-01 00:00:00Z]})
-      Repo.insert!(%WargearHistoryApiResponseDb{game_id: "11111", turn_data: turn_data("2"), inserted_at: ~U[2024-01-02 00:00:00Z], updated_at: ~U[2024-01-02 00:00:00Z]})
+      Repo.insert!(%WargearHistoryApiResponseDb{
+        game_id: "11111",
+        turn_data: turn_data("1"),
+        inserted_at: ~U[2024-01-01 00:00:00Z],
+        updated_at: ~U[2024-01-01 00:00:00Z]
+      })
+
+      Repo.insert!(%WargearHistoryApiResponseDb{
+        game_id: "11111",
+        turn_data: turn_data("2"),
+        inserted_at: ~U[2024-01-02 00:00:00Z],
+        updated_at: ~U[2024-01-02 00:00:00Z]
+      })
 
       assert HistoryResponses.get_latest("11111").turn_data["turnid"] == "2"
     end
@@ -27,13 +38,18 @@ defmodule Spitegear.LiveGameState.HistoryResponsesTest do
 
   describe "record_if_changed/2" do
     test "inserts a record when none exists yet" do
-      assert {:ok, %WargearHistoryApiResponseDb{}} = HistoryResponses.record_if_changed("11111", turn_data("1"))
+      assert {:ok, %WargearHistoryApiResponseDb{}} =
+               HistoryResponses.record_if_changed("11111", turn_data("1"))
+
       assert Repo.aggregate(WargearHistoryApiResponseDb, :count) == 1
     end
 
     test "inserts a new record when turnid changes" do
       HistoryResponses.record_if_changed("11111", turn_data("1"))
-      assert {:ok, %WargearHistoryApiResponseDb{}} = HistoryResponses.record_if_changed("11111", turn_data("2"))
+
+      assert {:ok, %WargearHistoryApiResponseDb{}} =
+               HistoryResponses.record_if_changed("11111", turn_data("2"))
+
       assert Repo.aggregate(WargearHistoryApiResponseDb, :count) == 2
     end
 
@@ -59,7 +75,14 @@ defmodule Spitegear.LiveGameState.HistoryResponsesTest do
   describe "prune/1" do
     test "deletes records older than the given number of days" do
       old = DateTime.utc_now() |> DateTime.add(-91 * 86_400) |> DateTime.truncate(:second)
-      Repo.insert!(%WargearHistoryApiResponseDb{game_id: "11111", turn_data: turn_data("1"), inserted_at: old, updated_at: old})
+
+      Repo.insert!(%WargearHistoryApiResponseDb{
+        game_id: "11111",
+        turn_data: turn_data("1"),
+        inserted_at: old,
+        updated_at: old
+      })
+
       Repo.insert!(%WargearHistoryApiResponseDb{game_id: "11111", turn_data: turn_data("2")})
 
       {count, _} = HistoryResponses.prune(90)

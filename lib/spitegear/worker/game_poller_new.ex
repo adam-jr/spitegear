@@ -1,5 +1,22 @@
 defmodule Spitegear.Worker.GamePollerNew do
-  @moduledoc false
+  @moduledoc """
+  Experimental replacement for `GamePoller`.
+
+  One `GamePollerNew` GenServer runs per active game. Every
+  #{div(:timer.seconds(20), 1000)} seconds it asks `LiveGameState` to fetch
+  the latest turn from wargear.net and checks whether the result has changed.
+  On new activity it posts a notification to the `spitegear_test` Slack
+  channel.
+
+  All HTTP logic and state comparison live in `LiveGameState`. This module's
+  only job is to drive the polling loop.
+
+  Start and stop a poller for any running game from the admin:
+
+      Games.start_new_poller(game_id)
+      Games.stop_new_poller(game_id)
+  """
+
   use GenServer
 
   alias Spitegear.LiveGameState
@@ -22,10 +39,12 @@ defmodule Spitegear.Worker.GamePollerNew do
     GenServer.start_link(__MODULE__, [game_id: game_id], name: name)
   end
 
-  @doc "Returns the registered name for the poller for `game_id`."
+  @doc "Returns the registered process name for `game_id`."
+  @spec name(String.t()) :: atom()
   def name(game_id), do: :"#{__MODULE__}_#{game_id}"
 
-  @doc "Returns `true` if a poller is running for `game_id`."
+  @doc "Returns `true` if a `GamePollerNew` is currently running for `game_id`."
+  @spec alive?(String.t()) :: boolean()
   def alive?(game_id), do: Process.whereis(name(game_id)) != nil
 
   def init(game_id: game_id) do

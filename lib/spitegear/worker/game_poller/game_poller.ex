@@ -40,19 +40,10 @@ defmodule Spitegear.Worker.GamePoller do
     send(self(), :update_current_turn)
     schedule_work()
 
-    dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
-    current_turn = Games.get_current_turn(game_id)
-    current_player_name = current_turn && current_turn.player && current_turn.player.name
-
-    game_state = LiveGameState.new(game_id)
-
-    {:ok,
-     %{
-       game_state
-       | game_id: game_id,
-         last_round: LiveGameState.completed_rounds(game_id, current_player_name),
-         dead_players: dead_players
-     }}
+    LiveGameState.new(game_id)
+    |> LiveGameState.refresh_last_round()
+    |> LiveGameState.refresh_dead_players()
+    |> then(&{:ok, &1})
   end
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do

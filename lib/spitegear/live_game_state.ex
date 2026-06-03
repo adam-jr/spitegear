@@ -9,6 +9,7 @@ defmodule Spitegear.LiveGameState do
   bridges that gap.
   """
 
+  alias Spitegear.Games
   alias Spitegear.Turns
 
   @type t :: %__MODULE__{}
@@ -28,6 +29,21 @@ defmodule Spitegear.LiveGameState do
   @doc "Returns a fresh state struct for `game_id` with all other fields at their initial defaults."
   @spec new(String.t()) :: t()
   def new(game_id), do: %__MODULE__{game_id: game_id}
+
+  @doc "Loads `dead_players` from the DB into the state."
+  @spec refresh_dead_players(t()) :: t()
+  def refresh_dead_players(%__MODULE__{game_id: game_id} = state) do
+    dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
+    %{state | dead_players: dead_players}
+  end
+
+  @doc "Loads `last_round` from the DB into the state, accounting for the current live turn."
+  @spec refresh_last_round(t()) :: t()
+  def refresh_last_round(%__MODULE__{game_id: game_id} = state) do
+    current_turn = Games.get_current_turn(game_id)
+    current_player_name = current_turn && current_turn.player && current_turn.player.name
+    %{state | last_round: completed_rounds(game_id, current_player_name)}
+  end
 
   @doc """
   Returns the number of completed rounds for `game_id`, accounting for the
@@ -50,5 +66,4 @@ defmodule Spitegear.LiveGameState do
       _ -> complete_count
     end
   end
-
 end

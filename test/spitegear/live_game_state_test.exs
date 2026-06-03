@@ -73,8 +73,8 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.prev_turn == nil
       assert state.current_view_screen == nil
       assert state.prev_view_screen == nil
-      assert state.current_history_response == nil
-      assert state.prev_history_response == nil
+      assert state.current_api_response == nil
+      assert state.prev_api_response == nil
     end
   end
 
@@ -114,13 +114,13 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.prev_view_screen.current_player_name == "adam"
     end
 
-    test "hydrates current_history_response from the latest record" do
+    test "hydrates current_api_response from the latest record" do
       insert_history_response(turn_data: %{"turnid" => "5"})
       state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
-      assert state.current_history_response.turn_data["turnid"] == "5"
+      assert state.current_api_response.turn_data["turnid"] == "5"
     end
 
-    test "hydrates prev_history_response from the second most recent record" do
+    test "hydrates prev_api_response from the second most recent record" do
       insert_history_response(
         turn_data: %{"turnid" => "4"},
         inserted_at: ~U[2024-01-01 00:00:00Z],
@@ -134,7 +134,7 @@ defmodule Spitegear.LiveGameStateTest do
       )
 
       state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
-      assert state.prev_history_response.turn_data["turnid"] == "4"
+      assert state.prev_api_response.turn_data["turnid"] == "4"
     end
 
     test "sets nil for all fields when DB is empty" do
@@ -143,8 +143,8 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.prev_turn == nil
       assert state.current_view_screen == nil
       assert state.prev_view_screen == nil
-      assert state.current_history_response == nil
-      assert state.prev_history_response == nil
+      assert state.current_api_response == nil
+      assert state.prev_api_response == nil
     end
 
     test "preserves game_id and does not cross game boundaries" do
@@ -156,19 +156,19 @@ defmodule Spitegear.LiveGameStateTest do
   end
 
   describe "dispatch_history_response/2" do
-    test "inserts on first fetch and sets current_history_response" do
+    test "inserts on first fetch and sets current_api_response" do
       state = %LiveGameState{game_id: "11111"}
       state = LiveGameState.dispatch_history_response(state, %{"turnid" => "1"})
-      assert state.current_history_response.turn_data["turnid"] == "1"
-      assert state.prev_history_response == nil
+      assert state.current_api_response.turn_data["turnid"] == "1"
+      assert state.prev_api_response == nil
     end
 
     test "shifts current to prev when turnid changes" do
       state = %LiveGameState{game_id: "11111"}
       state = LiveGameState.dispatch_history_response(state, %{"turnid" => "1"})
       state = LiveGameState.dispatch_history_response(state, %{"turnid" => "2"})
-      assert state.current_history_response.turn_data["turnid"] == "2"
-      assert state.prev_history_response.turn_data["turnid"] == "1"
+      assert state.current_api_response.turn_data["turnid"] == "2"
+      assert state.prev_api_response.turn_data["turnid"] == "1"
     end
 
     test "returns state unchanged when turnid has not changed" do

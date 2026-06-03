@@ -5,6 +5,8 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
   alias Spitegear.HTML.Player
   alias Spitegear.Wargear.HTTP.Login
 
+  @type t :: %__MODULE__{}
+
   defstruct game_id: nil,
             url: nil,
             game_name: nil,
@@ -21,10 +23,11 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
   def get_game(game_id), do: fetch_game(game_id, false)
 
   defp fetch_game(game_id, retried) do
-    with base_url <- URI.parse("https://www.wargear.net"),
-         url <- %{base_url | path: "/games/view/#{game_id}"},
-         {:ok, %{body: body}} <-
-           HTTPoison.get(url, [{"Cookie", wargear_cookie()}],
+    url_string = "https://www.wargear.net/games/view/#{game_id}"
+    url = URI.parse(url_string)
+
+    with {:ok, %{body: body}} <-
+           HTTPoison.get(url_string, [{"Cookie", wargear_cookie()}],
              timeout: 30_000,
              recv_timeout: 30_000
            ),

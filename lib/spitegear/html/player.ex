@@ -6,6 +6,8 @@ defmodule Spitegear.HTML.Player do
   """
   require Logger
 
+  @type t :: %__MODULE__{}
+
   @primary_key false
   embedded_schema do
     field(:name, :string)

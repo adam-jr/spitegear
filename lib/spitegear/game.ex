@@ -1,6 +1,8 @@
 defmodule Spitegear.Game do
   use Ecto.Schema
 
+  @type t :: %__MODULE__{}
+
   schema "games" do
     field(:game_id, :string)
     field(:url, :string)

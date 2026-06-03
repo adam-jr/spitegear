@@ -17,7 +17,7 @@ defmodule Spitegear.Worker.GamePoller.TurnLogic do
   Returns `true` when the player shown in `view_screen` differs from the player
   recorded in `current_turn`, signalling that a new turn has started.
   """
-  @spec new_turn?(%{view_screen: ViewScreen.t(), current_turn: Turn.t() | nil}) :: boolean()
+  @spec new_turn?(map()) :: boolean()
   def new_turn?(%{view_screen: %ViewScreen{current_player: nil}}), do: false
 
   def new_turn?(%{

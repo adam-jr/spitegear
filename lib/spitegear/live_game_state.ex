@@ -1,7 +1,7 @@
 defmodule Spitegear.LiveGameState do
   @moduledoc false
 
-  alias Spitegear.Wargear.HTTP.History
+  alias Spitegear.Wargear.HTTP
 
   @type t :: %__MODULE__{}
 
@@ -21,7 +21,7 @@ defmodule Spitegear.LiveGameState do
   """
   @spec fetch_game_state(t()) :: t()
   def fetch_game_state(%__MODULE__{game_id: game_id, latest_turn: current} = state) do
-    case History.latest_turn(game_id) do
+    case HTTP.History.latest_turn(game_id) do
       {:ok, turn} -> %{state | prev_poll_latest_turn: current, latest_turn: turn}
       _ -> state
     end

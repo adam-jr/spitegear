@@ -38,7 +38,6 @@ defmodule Spitegear.Worker.GamePollerNew do
     state = LiveGameState.fetch_game_state(state)
 
     if LiveGameState.new_activity?(state) do
-      Logger.info("#{__MODULE__} new activity on game #{state.game_id}")
       PubSub.msg(:spitegear_test, "new activity on game #{state.game_id}")
     end
 

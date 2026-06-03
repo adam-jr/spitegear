@@ -49,8 +49,8 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("Initializing #{__MODULE__} with game_id #{game_id}")
     Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
 
-    update_game()
-    update_current_turn()
+    send(self(), :update_game)
+    send(self(), :update_current_turn)
     schedule_work()
 
     dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
@@ -138,8 +138,6 @@ defmodule Spitegear.Worker.GamePoller do
 
   def name(game_id), do: :"#{__MODULE__}_#{game_id}"
 
-  def update_current_turn, do: send(self(), :update_current_turn)
-
   def update_status(state) do
     if state.view_screen.current_player do
       %{state | status: :in_progress}
@@ -162,7 +160,7 @@ defmodule Spitegear.Worker.GamePoller do
           |> maybe_announce_winners()
 
         if Enum.any?(view_screen.winners) do
-          update_game()
+          send(self(), :update_game)
           finish_game(state.game_id)
           {:stop, state}
         else
@@ -308,8 +306,6 @@ defmodule Spitegear.Worker.GamePoller do
       state
     end
   end
-
-  defp update_game, do: send(self(), :update_game)
 
   defp finish_game(game_id) do
     Task.start(fn -> LogSnapshot.capture(game_id) end)

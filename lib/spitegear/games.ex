@@ -420,6 +420,17 @@ defmodule Spitegear.Games do
     end)
   end
 
+  @doc "Starts a `GamePollerNew` for each active game. Called once at application startup."
+  @spec resume_new_pollers() :: :ok
+  def resume_new_pollers do
+    Enum.each(list_active_games(), fn game ->
+      DynamicSupervisor.start_child(
+        GameSupervisor,
+        GamePollerNew.child_spec(game_id: game.game_id)
+      )
+    end)
+  end
+
   @doc "Starts a `GamePollerNew` for `game_id` alongside any existing poller."
   @spec start_new_poller(game_id()) ::
           {:ok, pid()} | {:error, {:already_started, pid()} | :max_children | term()}

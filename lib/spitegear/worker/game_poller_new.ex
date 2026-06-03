@@ -15,9 +15,6 @@ defmodule Spitegear.Worker.GamePollerNew do
   use GenServer
 
   alias Spitegear.LiveGameState
-  alias Spitegear.LiveGameState.HistoryResponses
-  alias Spitegear.LiveGameState.Turns
-  alias Spitegear.LiveGameState.ViewScreens
 
   require Logger
 
@@ -68,32 +65,15 @@ defmodule Spitegear.Worker.GamePollerNew do
   end
 
   @impl true
-  def handle_cast({:history_fetched, turn_data}, state) do
-    HistoryResponses.record_if_changed(state.game_state.game_id, turn_data)
-    {:noreply, state}
+  def handle_cast({:history_fetched, turn_data}, %{game_state: game_state} = state) do
+    {:noreply, %{state | game_state: LiveGameState.on_history_fetched(game_state, turn_data)}}
   end
 
-  def handle_cast({:view_screen_fetched, view_screen}, state) do
-    ViewScreens.record_if_changed(view_screen)
-    incoming_player = view_screen.current_player && view_screen.current_player.name
-    {:noreply, maybe_record_turn_start(state, incoming_player)}
+  def handle_cast({:view_screen_fetched, view_screen}, %{game_state: game_state} = state) do
+    {:noreply,
+     %{state | game_state: LiveGameState.on_view_screen_fetched(game_state, view_screen)}}
   end
 
   @impl true
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
-
-  # No current player (game not yet in progress) — nothing to record.
-  defp maybe_record_turn_start(state, nil), do: state
-
-  # Player changed (or first observation) — record and reload game state.
-  defp maybe_record_turn_start(%{game_state: game_state} = state, new_player) do
-    current = game_state.current_turn && game_state.current_turn.player_name
-
-    if current == new_player do
-      state
-    else
-      Turns.record_turn_start(game_state.game_id, new_player)
-      %{state | game_state: LiveGameState.hydrate(game_state)}
-    end
-  end
 end

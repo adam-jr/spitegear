@@ -6,6 +6,7 @@ defmodule Spitegear.LiveGameStateTest do
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
   alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.Repo
+  alias Spitegear.Wargear.HTTP.ViewScreen, as: RawViewScreen
 
   @base ~U[2024-01-01 12:00:00Z]
 
@@ -42,6 +43,23 @@ defmodule Spitegear.LiveGameStateTest do
       updated_at:
         Keyword.get(attrs, :updated_at, DateTime.utc_now() |> DateTime.truncate(:second))
     })
+  end
+
+  defp player(name), do: %{name: name, slack_name: "@#{name}"}
+
+  defp build_raw_view_screen(attrs \\ []) do
+    %RawViewScreen{
+      game_id: Keyword.get(attrs, :game_id, "11111"),
+      game_name: "Test Game",
+      board_name: "Classic",
+      created: "2024-01-01",
+      finished: nil,
+      current_player: Keyword.get(attrs, :current_player, player("adam")),
+      players: [player("adam"), player("bob")],
+      eliminated: [],
+      winners: [],
+      fogged?: false
+    }
   end
 
   describe "new/1" do
@@ -134,6 +152,95 @@ defmodule Spitegear.LiveGameStateTest do
       state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.game_id == "11111"
       assert state.current_turn == nil
+    end
+  end
+
+  describe "on_history_fetched/2" do
+    test "inserts on first fetch and sets current_history_response" do
+      state = %LiveGameState{game_id: "11111"}
+      state = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
+      assert state.current_history_response.turn_data["turnid"] == "1"
+      assert state.prev_history_response == nil
+    end
+
+    test "shifts current to prev when turnid changes" do
+      state = %LiveGameState{game_id: "11111"}
+      state = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
+      state = LiveGameState.on_history_fetched(state, %{"turnid" => "2"})
+      assert state.current_history_response.turn_data["turnid"] == "2"
+      assert state.prev_history_response.turn_data["turnid"] == "1"
+    end
+
+    test "returns state unchanged when turnid has not changed" do
+      state = %LiveGameState{game_id: "11111"}
+      state = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
+      state2 = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
+      assert state2 == state
+    end
+  end
+
+  describe "on_view_screen_fetched/2" do
+    test "inserts on first fetch and sets current_view_screen" do
+      state = %LiveGameState{game_id: "11111"}
+      state = LiveGameState.on_view_screen_fetched(state, build_raw_view_screen())
+      assert state.current_view_screen.current_player_name == "adam"
+      assert state.prev_view_screen == nil
+    end
+
+    test "shifts current to prev when view screen changes" do
+      state = %LiveGameState{game_id: "11111"}
+
+      state =
+        LiveGameState.on_view_screen_fetched(
+          state,
+          build_raw_view_screen(current_player: player("adam"))
+        )
+
+      state =
+        LiveGameState.on_view_screen_fetched(
+          state,
+          build_raw_view_screen(current_player: player("bob"))
+        )
+
+      assert state.current_view_screen.current_player_name == "bob"
+      assert state.prev_view_screen.current_player_name == "adam"
+    end
+
+    test "returns state unchanged when view screen has not changed" do
+      state = %LiveGameState{game_id: "11111"}
+      raw = build_raw_view_screen()
+      state = LiveGameState.on_view_screen_fetched(state, raw)
+      state2 = LiveGameState.on_view_screen_fetched(state, raw)
+      assert state2.current_view_screen == state.current_view_screen
+      assert Repo.aggregate(WargearViewScreenDb, :count) == 1
+    end
+
+    test "records a new turn when the active player changes" do
+      state = %LiveGameState{game_id: "11111"}
+
+      state =
+        LiveGameState.on_view_screen_fetched(
+          state,
+          build_raw_view_screen(current_player: player("adam"))
+        )
+
+      state =
+        LiveGameState.on_view_screen_fetched(
+          state,
+          build_raw_view_screen(current_player: player("bob"))
+        )
+
+      assert state.current_turn.player_name == "bob"
+      assert state.prev_turn.player_name == "adam"
+    end
+
+    test "does not record a new turn when the active player is unchanged" do
+      state = %LiveGameState{game_id: "11111"}
+      raw = build_raw_view_screen(current_player: player("adam"))
+      state = LiveGameState.on_view_screen_fetched(state, raw)
+      state = LiveGameState.on_view_screen_fetched(state, raw)
+      assert state.current_turn.player_name == "adam"
+      assert Repo.aggregate(Turn, :count) == 1
     end
   end
 end

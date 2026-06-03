@@ -6,9 +6,13 @@ defmodule Spitegear.LiveGameState do
   API responses as persisted DB records. All fields are loaded from the
   database — they reflect what has already been written, not raw API responses.
 
-  Use `new/1` to build an initial struct for a game, or `hydrate/1`
-  to refresh an existing struct's fields (e.g. after a turn change or a new
-  snapshot is recorded).
+  Use `new/1` to build an initial struct for a game, or `hydrate/1` to
+  refresh an existing struct's fields (e.g. after restart).
+
+  Use `on_history_fetched/2` and `on_view_screen_fetched/2` to process incoming
+  data from the legacy poller. Each function checks whether the incoming data
+  represents a change, persists it if so, and returns an updated struct with
+  the current/prev fields shifted in-memory — no extra DB read needed.
   """
 
   alias Spitegear.LiveGameState.HistoryResponses
@@ -17,6 +21,7 @@ defmodule Spitegear.LiveGameState do
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
   alias Spitegear.LiveGameState.WargearViewScreenDb
+  alias Spitegear.Wargear.HTTP.ViewScreen, as: RawViewScreen
 
   @type t :: %__MODULE__{
           game_id: String.t() | nil,
@@ -52,13 +57,12 @@ defmodule Spitegear.LiveGameState do
   Hydrates all DB-backed fields on the given struct from the database.
   Preserves all other fields on `state`.
 
-  Loads:
-  - `current_turn` / `prev_turn` — open and last-closed `LiveGameState.Turn`
-  - `current_view_screen` / `prev_view_screen` — two most recent `WargearViewScreenDb` snapshots
-  - `current_history_response` / `prev_history_response` — two most recent `WargearHistoryApiResponseDb` records
+  Loads the open/last-closed turn, two most recent view screen snapshots,
+  and two most recent history API responses.
 
-  Call this after recording a turn, view screen, or history response to keep
-  the struct current without discarding any other state already stored on it.
+  Call this on startup or after a crash restart. For ongoing updates, prefer
+  `on_history_fetched/2` and `on_view_screen_fetched/2`, which update the
+  struct in-memory without an extra DB read.
   """
   @spec hydrate(t()) :: t()
   def hydrate(%__MODULE__{game_id: game_id} = state) do
@@ -71,5 +75,83 @@ defmodule Spitegear.LiveGameState do
         current_history_response: HistoryResponses.get_latest(game_id),
         prev_history_response: HistoryResponses.get_prev(game_id)
     }
+  end
+
+  @doc """
+  Processes a raw History API response. Persists it if the `turnid` has
+  changed, then shifts `current_history_response` → `prev_history_response`
+  and sets `current_history_response` to the new record.
+
+  Returns the struct unchanged if the response is identical to the last stored
+  one or if the insert fails.
+  """
+  @spec on_history_fetched(t(), map()) :: t()
+  def on_history_fetched(%__MODULE__{} = state, turn_data) do
+    case HistoryResponses.record_if_changed(state.game_id, turn_data) do
+      {:ok, :unchanged} ->
+        state
+
+      {:ok, record} ->
+        %{
+          state
+          | prev_history_response: state.current_history_response,
+            current_history_response: record
+        }
+
+      {:error, _} ->
+        state
+    end
+  end
+
+  @doc """
+  Processes a raw ViewScreen. Persists it if any tracked field has changed,
+  shifts `current_view_screen` → `prev_view_screen`, and sets
+  `current_view_screen` to the new snapshot.
+
+  Also detects turn changes: if the active player in the incoming ViewScreen
+  differs from `current_turn.player_name`, records the turn transition via
+  `Turns.record_turn_start/2` and shifts `current_turn` → `prev_turn`
+  in-memory.
+
+  Returns the struct unchanged if the view screen and active player are both
+  identical to the last stored state, or if any write fails.
+  """
+  @spec on_view_screen_fetched(t(), RawViewScreen.t()) :: t()
+  def on_view_screen_fetched(%__MODULE__{} = state, raw) do
+    state =
+      case ViewScreens.record_if_changed(raw) do
+        {:ok, :unchanged} ->
+          state
+
+        {:ok, snapshot} ->
+          %{state | prev_view_screen: state.current_view_screen, current_view_screen: snapshot}
+
+        {:error, _} ->
+          state
+      end
+
+    incoming_player = raw.current_player && raw.current_player.name
+    maybe_record_turn_start(state, incoming_player)
+  end
+
+  defp maybe_record_turn_start(state, nil), do: state
+
+  defp maybe_record_turn_start(%__MODULE__{} = state, new_player) do
+    current = state.current_turn && state.current_turn.player_name
+
+    if current == new_player do
+      state
+    else
+      case Turns.record_turn_start(state.game_id, new_player) do
+        {:ok, new_turn} ->
+          closed_prev =
+            state.current_turn && %{state.current_turn | ended_at: new_turn.started_at}
+
+          %{state | prev_turn: closed_prev, current_turn: new_turn}
+
+        {:error, _} ->
+          state
+      end
+    end
   end
 end

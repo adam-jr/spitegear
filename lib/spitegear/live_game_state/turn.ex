@@ -1,30 +1,34 @@
 defmodule Spitegear.LiveGameState.Turn do
   @moduledoc """
-  Append-only record of a single turn as observed during live game tracking,
-  combining turn-boundary detection with per-turn reminder state.
+  Append-only record of a single turn observed during live game tracking.
+  Combines turn-boundary detection with per-turn reminder state.
 
-  Turns are detected by polling the wargear.net History API endpoint and
-  ViewScreen while the game is in progress. Because most wargear games use fog
-  of war, the game log is hidden until the game ends and the map is unfogged.
-  Turn boundaries must therefore be back-inferred from polling: a turn is
-  considered to have started the first time a player is seen as the active
-  player, and ended the first time a different player is detected. As a result,
-  `started_at` and `ended_at` reflect when the change was *detected* rather than
-  the exact moment the move was submitted, and carry inherent imprecision
-  proportional to the polling interval.
+  Turns are inferred by polling the wargear.net History API and ViewScreen
+  while a game is in progress. In most games, fog of war hides the log until
+  the game ends, so turn boundaries cannot be read directly.
 
-  Games without fog of war do have the full log available from the start, but
-  for simplicity this live tracking approach is used uniformly regardless of fog
-  settings. Once a game ends and the log is unfogged, the canonical turn data
-  can be read from the log snapshot for more precise historical analysis.
+  Instead:
+  - A turn *starts* the first time a player is observed as the active player
+  - A turn *ends* the first time a different active player is detected
+
+  As a result, `started_at` and `ended_at` reflect when the change was
+  *detected*, not when the move was actually submitted. Their accuracy is
+  bounded by the polling interval.
+
+  For games without fog of war, the full log is available immediately.
+  However, this polling-based approach is used consistently across all games
+  for simplicity. After a game ends and the map is unfogged, canonical turn
+  data can be reconstructed from the final log snapshot for precise analysis.
 
   ## Migration from `TurnHistory`
 
-  The legacy `Spitegear.TurnHistory` schema tracks the same turn-boundary data
-  but without reminder state. Use `to_live_game_state_turn/1` to convert a
-  `TurnHistory` record when backfilling. Reminder fields (`reminded`,
-  `reminders`, `moving_announced`) will be set to defaults, as that data was
-  not captured at the time.
+  The legacy `Spitegear.TurnHistory` schema tracks turn boundaries but does
+  not include reminder state.
+
+  Use `to_live_game_state_turn/1` to convert existing records when
+  backfilling. Reminder-related fields (`reminded`, `reminders`,
+  `moving_announced`) will be initialized to defaults, since that data was
+  not captured historically.
   """
 
   use Ecto.Schema

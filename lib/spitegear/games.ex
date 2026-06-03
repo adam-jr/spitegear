@@ -174,12 +174,12 @@ defmodule Spitegear.Games do
   @doc "Appends a completed-turn record to `turn_history`."
   @spec record_completed_turn(Turn.t(), DateTime.t()) ::
           {:ok, TurnHistory.t()} | {:error, Ecto.Changeset.t()}
-  def record_completed_turn(turn, ended) do
+  def record_completed_turn(turn, ended_at) do
     Repo.insert(%TurnHistory{
       game_id: turn.game_id,
       player_name: turn.player.name,
       started: turn.started,
-      ended: ended
+      ended: ended_at
     })
   end
 

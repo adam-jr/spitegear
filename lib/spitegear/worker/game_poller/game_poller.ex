@@ -3,6 +3,7 @@ defmodule Spitegear.Worker.GamePoller do
   use GenServer
 
   alias Spitegear.Games
+  alias Spitegear.LiveGameState
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Slack.Message
@@ -17,20 +18,6 @@ defmodule Spitegear.Worker.GamePoller do
   @interval :timer.seconds(20)
   @view_screen_interval :timer.minutes(1)
   @view_screen_max_polls 10
-
-  @state %{
-    game_id: nil,
-    view_screen: nil,
-    dead_players: [],
-    current_turn: nil,
-    last_turn_id: nil,
-    status: :players_joining,
-    view_screen_timer: nil,
-    view_screen_polls_remaining: 0,
-    moving_announced: false,
-    last_round: 0,
-    last_stats_round: 0
-  }
 
   def child_spec(game_id: game_id) do
     %{
@@ -54,12 +41,16 @@ defmodule Spitegear.Worker.GamePoller do
     schedule_work()
 
     dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
+    current_turn = Games.get_current_turn(game_id)
+    current_player_name = current_turn && current_turn.player && current_turn.player.name
+
+    game_state = LiveGameState.new(game_id)
 
     {:ok,
      %{
-       @state
+       game_state
        | game_id: game_id,
-         last_round: Games.completed_rounds(game_id),
+         last_round: LiveGameState.completed_rounds(game_id, current_player_name),
          dead_players: dead_players
      }}
   end
@@ -254,10 +245,13 @@ defmodule Spitegear.Worker.GamePoller do
   defp record_completed_turn(%{current_turn: nil} = state), do: state
 
   defp record_completed_turn(state) do
-    ended = DateTime.utc_now() |> DateTime.truncate(:second)
-    Games.record_completed_turn(state.current_turn, ended)
+    ended_at = DateTime.utc_now() |> DateTime.truncate(:second)
+    Games.record_completed_turn(state.current_turn, ended_at)
 
-    completed = Games.completed_rounds(state.game_id)
+    current_player_name =
+      state.view_screen.current_player && state.view_screen.current_player.name
+
+    completed = LiveGameState.completed_rounds(state.game_id, current_player_name)
 
     state
     |> maybe_announce_round(completed)

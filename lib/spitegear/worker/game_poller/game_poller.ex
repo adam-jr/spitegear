@@ -46,6 +46,7 @@ defmodule Spitegear.Worker.GamePoller do
     GenServer.start_link(__MODULE__, [game_id: game_id], name: name)
   end
 
+  @impl true
   def init(game_id: game_id) do
     Logger.info("Initializing #{__MODULE__} with game_id #{game_id}")
     Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
@@ -65,6 +66,7 @@ defmodule Spitegear.Worker.GamePoller do
      }}
   end
 
+  @impl true
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
     case History.latest_turn(game_id) do
       {:ok, %{"turnid" => turn_id} = turn_data} ->

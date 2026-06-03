@@ -51,13 +51,16 @@ defmodule Spitegear.Worker.GamePollerNew do
     :ok
   end
 
+  @impl true
   def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
     {:ok, %{game_id: game_id}}
   end
 
+  @impl true
   def handle_cast({:history_fetched, _turn_data}, state), do: {:noreply, state}
   def handle_cast({:view_screen_fetched, _view_screen}, state), do: {:noreply, state}
 
+  @impl true
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
 end

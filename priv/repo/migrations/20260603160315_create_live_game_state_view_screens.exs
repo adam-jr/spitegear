@@ -14,7 +14,7 @@ defmodule Spitegear.Repo.Migrations.CreateLiveGameStateViewScreens do
       add :winners, {:array, :string}, null: false, default: []
       add :fogged, :boolean, null: false, default: false
 
-      timestamps()
+      timestamps(type: :utc_datetime)
     end
 
     create index(:live_game_state_view_screens, [:game_id])

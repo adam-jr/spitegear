@@ -1,4 +1,4 @@
-defmodule Spitegear.LiveGameState.HistoryResponse do
+defmodule Spitegear.LiveGameState.WargearHistoryApiResponseDb do
   @moduledoc """
   Append-only record of a raw History API response as observed during live
   game tracking.
@@ -16,6 +16,7 @@ defmodule Spitegear.LiveGameState.HistoryResponse do
 
   @type t :: %__MODULE__{}
 
+  @timestamps_opts [type: :utc_datetime]
   schema "live_game_state_history_responses" do
     field(:game_id, :string)
     field(:turn_data, :map)

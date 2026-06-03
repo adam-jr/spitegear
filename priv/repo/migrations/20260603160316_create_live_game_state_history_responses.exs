@@ -6,7 +6,7 @@ defmodule Spitegear.Repo.Migrations.CreateLiveGameStateHistoryResponses do
       add :game_id, :string, null: false
       add :turn_data, :map, null: false
 
-      timestamps()
+      timestamps(type: :utc_datetime)
     end
 
     create index(:live_game_state_history_responses, [:game_id])

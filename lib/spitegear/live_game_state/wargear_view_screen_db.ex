@@ -1,4 +1,4 @@
-defmodule Spitegear.LiveGameState.ViewScreen do
+defmodule Spitegear.LiveGameState.WargearViewScreenDb do
   @moduledoc """
   Append-only snapshot of a parsed wargear.net ViewScreen as observed during
   live game tracking.
@@ -18,6 +18,7 @@ defmodule Spitegear.LiveGameState.ViewScreen do
 
   @type t :: %__MODULE__{}
 
+  @timestamps_opts [type: :utc_datetime]
   schema "live_game_state_view_screens" do
     field(:game_id, :string)
     field(:game_name, :string)
@@ -33,7 +34,7 @@ defmodule Spitegear.LiveGameState.ViewScreen do
     timestamps()
   end
 
-  @doc "Builds a `LiveGameState.ViewScreen` from a parsed `ViewScreen` struct."
+  @doc "Builds a `WargearViewScreenDb` from a parsed `ViewScreen` struct."
   @spec from_view_screen(RawViewScreen.t()) :: t()
   def from_view_screen(%RawViewScreen{} = vs) do
     %__MODULE__{

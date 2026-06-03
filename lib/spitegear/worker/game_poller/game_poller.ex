@@ -41,8 +41,8 @@ defmodule Spitegear.Worker.GamePoller do
     schedule_work()
 
     LiveGameState.new(game_id)
-    |> LiveGameState.refresh_last_round()
-    |> LiveGameState.refresh_dead_players()
+    |> LiveGameState.load_last_round()
+    |> LiveGameState.load_dead_players()
     |> then(&{:ok, &1})
   end
 

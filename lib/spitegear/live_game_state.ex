@@ -26,20 +26,36 @@ defmodule Spitegear.LiveGameState do
             last_round: 0,
             last_stats_round: 0
 
-  @doc "Returns a fresh state struct for `game_id` with all other fields at their initial defaults."
+  @doc """
+  Returns a fresh state struct for `game_id` with all other fields at their
+  initial defaults.
+
+      iex> state = Spitegear.LiveGameState.new("42")
+      iex> {state.game_id, state.status, state.last_round, state.dead_players}
+      {"42", :players_joining, 0, []}
+
+  """
   @spec new(String.t()) :: t()
   def new(game_id), do: %__MODULE__{game_id: game_id}
 
-  @doc "Loads `dead_players` from the DB into the state."
-  @spec refresh_dead_players(t()) :: t()
-  def refresh_dead_players(%__MODULE__{game_id: game_id} = state) do
+  @doc """
+  Queries the DB for eliminated players and populates `dead_players` in the
+  state. Each entry is a plain map `%{name: player_name}` for compatibility
+  with the rest of the poller.
+  """
+  @spec load_dead_players(t()) :: t()
+  def load_dead_players(%__MODULE__{game_id: game_id} = state) do
     dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
     %{state | dead_players: dead_players}
   end
 
-  @doc "Loads `last_round` from the DB into the state, accounting for the current live turn."
-  @spec refresh_last_round(t()) :: t()
-  def refresh_last_round(%__MODULE__{game_id: game_id} = state) do
+  @doc """
+  Queries the DB for the current active turn and sets `last_round` using
+  `completed_rounds/2`, which accounts for the live player not yet written
+  to `turn_history`.
+  """
+  @spec load_last_round(t()) :: t()
+  def load_last_round(%__MODULE__{game_id: game_id} = state) do
     current_turn = Games.get_current_turn(game_id)
     current_player_name = current_turn && current_turn.player && current_turn.player.name
     %{state | last_round: completed_rounds(game_id, current_player_name)}

@@ -2,8 +2,8 @@ defmodule Spitegear.Worker.GamePollerNew do
   @moduledoc false
   use GenServer
 
+  alias Spitegear.LiveGameState
   alias Spitegear.PubSub
-  alias Spitegear.Wargear.HTTP.History
 
   require Logger
 
@@ -30,41 +30,42 @@ defmodule Spitegear.Worker.GamePollerNew do
 
   def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
-    schedule_work()
+    schedule_next_turn_check()
     {:ok, %{game_id: game_id, last_turn_id: nil}}
   end
 
-  def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
-    case History.latest_turn(game_id) do
+  def handle_info(:fetch_latest_turn, %{game_id: game_id, last_turn_id: nil} = state) do
+    case LiveGameState.fetch_latest_turn(game_id) do
       {:ok, %{"turnid" => turn_id}} ->
-        schedule_work()
+        schedule_next_turn_check()
         {:noreply, %{state | last_turn_id: turn_id}}
 
       _ ->
-        schedule_work()
+        schedule_next_turn_check()
         {:noreply, state}
     end
   end
 
-  def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
-    case History.latest_turn(game_id) do
+  def handle_info(:fetch_latest_turn, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
+    case LiveGameState.fetch_latest_turn(game_id) do
       {:ok, %{"turnid" => ^last_turn_id}} ->
-        schedule_work()
+        schedule_next_turn_check()
         {:noreply, state}
 
       {:ok, %{"turnid" => turn_id}} ->
         Logger.info("#{__MODULE__} new activity on game #{game_id}: turn #{turn_id}")
         PubSub.msg(:spitegear_test, "new activity on game #{game_id} (turn #{turn_id})")
-        schedule_work()
+        schedule_next_turn_check()
         {:noreply, %{state | last_turn_id: turn_id}}
 
       _ ->
-        schedule_work()
+        schedule_next_turn_check()
         {:noreply, state}
     end
   end
 
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
 
-  defp schedule_work, do: Process.send_after(self(), :work, @interval)
+  defp schedule_next_turn_check,
+    do: Process.send_after(self(), :fetch_latest_turn, @interval)
 end

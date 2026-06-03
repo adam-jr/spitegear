@@ -203,7 +203,10 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp reminder_due?(state) do
-    TurnLogic.reminder_due?(%{current_turn: state.current_turn}, DateTime.utc_now() |> DateTime.truncate(:second))
+    TurnLogic.reminder_due?(
+      %{current_turn: state.current_turn},
+      DateTime.utc_now() |> DateTime.truncate(:second)
+    )
   end
 
   defp remind_player(state) do

@@ -159,6 +159,7 @@ defmodule Spitegear.Worker.GamePoller do
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         GamePollerNew.notify_view_screen_fetched(state.game_id, view_screen)
+
         state =
           %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
           |> maybe_announce_moving()

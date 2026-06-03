@@ -18,7 +18,9 @@ defmodule Spitegear.Application do
       Spitegear.Worker.SlackMessenger,
       Spitegear.Scheduler,
       Supervisor.child_spec({Task, &Spitegear.Games.resume_games/0}, id: :resume_games),
-      Supervisor.child_spec({Task, &Spitegear.Games.resume_new_pollers/0}, id: :resume_new_pollers)
+      Supervisor.child_spec({Task, &Spitegear.Games.resume_new_pollers/0},
+        id: :resume_new_pollers
+      )
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

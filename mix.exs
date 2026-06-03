@@ -9,7 +9,8 @@ defmodule Spitegear.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      dialyzer: [plt_file: {:no_warn, "priv/plts/dialyzer.plt"}]
     ]
   end
 
@@ -64,7 +65,8 @@ defmodule Spitegear.MixProject do
       {:quantum, "~> 3.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:mix_audit, "~> 2.0", only: [:dev, :test], runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 

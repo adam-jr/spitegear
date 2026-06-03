@@ -26,6 +26,22 @@ defmodule Spitegear.LiveGameState.HistoryResponses do
   end
 
   @doc """
+  Returns the second most recent `WargearHistoryApiResponseDb` for `game_id`,
+  or `nil` if fewer than two records exist.
+  """
+  @spec get_prev(game_id()) :: WargearHistoryApiResponseDb.t() | nil
+  def get_prev(game_id) do
+    Repo.one(
+      from(h in WargearHistoryApiResponseDb,
+        where: h.game_id == ^game_id,
+        order_by: [desc: h.inserted_at],
+        limit: 1,
+        offset: 1
+      )
+    )
+  end
+
+  @doc """
   Inserts a new record if the incoming `turn_data` has a different `turnid`
   than the most recently stored response for the game.
 

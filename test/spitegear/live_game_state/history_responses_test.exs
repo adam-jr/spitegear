@@ -36,6 +36,35 @@ defmodule Spitegear.LiveGameState.HistoryResponsesTest do
     end
   end
 
+  describe "get_prev/1" do
+    test "returns nil when no records exist" do
+      assert HistoryResponses.get_prev("11111") == nil
+    end
+
+    test "returns nil when only one record exists" do
+      Repo.insert!(%WargearHistoryApiResponseDb{game_id: "11111", turn_data: turn_data("1")})
+      assert HistoryResponses.get_prev("11111") == nil
+    end
+
+    test "returns the second most recent record" do
+      Repo.insert!(%WargearHistoryApiResponseDb{
+        game_id: "11111",
+        turn_data: turn_data("1"),
+        inserted_at: ~U[2024-01-01 00:00:00Z],
+        updated_at: ~U[2024-01-01 00:00:00Z]
+      })
+
+      Repo.insert!(%WargearHistoryApiResponseDb{
+        game_id: "11111",
+        turn_data: turn_data("2"),
+        inserted_at: ~U[2024-01-02 00:00:00Z],
+        updated_at: ~U[2024-01-02 00:00:00Z]
+      })
+
+      assert HistoryResponses.get_prev("11111").turn_data["turnid"] == "1"
+    end
+  end
+
   describe "record_if_changed/2" do
     test "inserts a record when none exists yet" do
       assert {:ok, %WargearHistoryApiResponseDb{}} =

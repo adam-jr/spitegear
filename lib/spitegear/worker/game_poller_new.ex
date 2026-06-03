@@ -59,7 +59,12 @@ defmodule Spitegear.Worker.GamePollerNew do
   @impl true
   def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
-    {:ok, %{game_state: LiveGameState.new(game_id)}}
+    {:ok, %{game_state: %LiveGameState{game_id: game_id}}, {:continue, :load_recent_turns}}
+  end
+
+  @impl true
+  def handle_continue(:load_recent_turns, %{game_state: game_state} = state) do
+    {:noreply, %{state | game_state: LiveGameState.load_recent_turns(game_state)}}
   end
 
   @impl true

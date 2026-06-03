@@ -11,6 +11,7 @@ defmodule Spitegear.Worker.GamePoller do
   alias Spitegear.Wargear.HTTP.LogSnapshot
   alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Worker.GamePoller.TurnLogic
+  alias Spitegear.Worker.GamePollerNew
 
   require Logger
 
@@ -66,7 +67,8 @@ defmodule Spitegear.Worker.GamePoller do
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
     case History.latest_turn(game_id) do
-      {:ok, %{"turnid" => turn_id}} ->
+      {:ok, %{"turnid" => turn_id} = turn_data} ->
+        GamePollerNew.notify_history_fetched(game_id, turn_data)
         schedule_work()
         {:noreply, %{state | last_turn_id: turn_id}}
 
@@ -78,12 +80,14 @@ defmodule Spitegear.Worker.GamePoller do
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
     case History.latest_turn(game_id) do
-      {:ok, %{"turnid" => ^last_turn_id}} ->
+      {:ok, %{"turnid" => ^last_turn_id} = turn_data} ->
+        GamePollerNew.notify_history_fetched(game_id, turn_data)
         state = maybe_remind(state)
         schedule_work()
         {:noreply, state}
 
-      {:ok, %{"turnid" => turn_id}} ->
+      {:ok, %{"turnid" => turn_id} = turn_data} ->
+        GamePollerNew.notify_history_fetched(game_id, turn_data)
         if state.view_screen_timer, do: Process.cancel_timer(state.view_screen_timer)
 
         state = %{
@@ -119,6 +123,7 @@ defmodule Spitegear.Worker.GamePoller do
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         Games.upsert_game(view_screen)
+        GamePollerNew.notify_view_screen_fetched(state.game_id, view_screen)
         {:noreply, update_status(%{state | view_screen: view_screen})}
 
       _ ->
@@ -153,6 +158,7 @@ defmodule Spitegear.Worker.GamePoller do
 
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
+        GamePollerNew.notify_view_screen_fetched(state.game_id, view_screen)
         state =
           %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
           |> maybe_announce_moving()

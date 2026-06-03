@@ -2,14 +2,9 @@ defmodule Spitegear.Worker.GamePollerNew do
   @moduledoc """
   Experimental replacement for `GamePoller`.
 
-  One `GamePollerNew` GenServer runs per active game. Every
-  #{div(:timer.seconds(20), 1000)} seconds it asks `LiveGameState` to fetch
-  the latest turn from wargear.net and checks whether the result has changed.
-  On new activity it posts a notification to the `spitegear_test` Slack
-  channel.
-
-  All HTTP logic and state comparison live in `LiveGameState`. This module's
-  only job is to drive the polling loop.
+  One `GamePollerNew` GenServer runs per active game. Rather than polling
+  wargear.net directly, it receives notifications from `GamePoller` whenever
+  that poller successfully fetches a `History.latest_turn` or `ViewScreen`.
 
   Start and stop a poller for any running game from the admin:
 
@@ -19,12 +14,7 @@ defmodule Spitegear.Worker.GamePollerNew do
 
   use GenServer
 
-  alias Spitegear.LiveGameState
-  alias Spitegear.PubSub
-
   require Logger
-
-  @interval :timer.seconds(20)
 
   def child_spec(game_id: game_id) do
     %{
@@ -47,25 +37,27 @@ defmodule Spitegear.Worker.GamePollerNew do
   @spec alive?(String.t()) :: boolean()
   def alive?(game_id), do: Process.whereis(name(game_id)) != nil
 
+  @doc "Notifies the new poller of a successful `History.latest_turn` fetch. No-op if not running."
+  @spec notify_history_fetched(String.t(), map()) :: :ok
+  def notify_history_fetched(game_id, turn_data) do
+    if alive?(game_id), do: GenServer.cast(name(game_id), {:history_fetched, turn_data})
+    :ok
+  end
+
+  @doc "Notifies the new poller of a successful `ViewScreen.get_game` fetch. No-op if not running."
+  @spec notify_view_screen_fetched(String.t(), term()) :: :ok
+  def notify_view_screen_fetched(game_id, view_screen) do
+    if alive?(game_id), do: GenServer.cast(name(game_id), {:view_screen_fetched, view_screen})
+    :ok
+  end
+
   def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
-    schedule_next_turn_check()
-    {:ok, %{game_id: game_id, game_state: LiveGameState.new(game_id)}}
+    {:ok, %{game_id: game_id}}
   end
 
-  def handle_info(:fetch_latest_turn, %{game_state: game_state} = state) do
-    game_state = LiveGameState.fetch_game_state(game_state)
-
-    if LiveGameState.new_activity?(game_state) do
-      PubSub.msg(:spitegear_test, "new activity on game #{game_state.game_id}")
-    end
-
-    schedule_next_turn_check()
-    {:noreply, %{state | game_state: game_state}}
-  end
+  def handle_cast({:history_fetched, _turn_data}, state), do: {:noreply, state}
+  def handle_cast({:view_screen_fetched, _view_screen}, state), do: {:noreply, state}
 
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
-
-  defp schedule_next_turn_check,
-    do: Process.send_after(self(), :fetch_latest_turn, @interval)
 end

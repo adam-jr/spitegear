@@ -33,7 +33,7 @@ defmodule Spitegear.LiveGameState.TurnsTest do
       assert Turns.list_turns("11111") == []
     end
 
-    test "returns multiple turns ordered chronologically by started_at" do
+    test "returns multiple turns ordered newest first by started_at" do
       second = DateTime.add(@base, 3600)
       third = DateTime.add(@base, 7200)
 
@@ -42,7 +42,7 @@ defmodule Spitegear.LiveGameState.TurnsTest do
       insert_turn(player_name: "bob", started_at: second)
 
       names = Turns.list_turns("11111") |> Enum.map(& &1.player_name)
-      assert names == ["adam", "bob", "charlie"]
+      assert names == ["charlie", "bob", "adam"]
     end
 
     test "returns all turn fields" do

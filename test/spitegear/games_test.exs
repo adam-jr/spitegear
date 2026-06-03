@@ -6,10 +6,10 @@ defmodule Spitegear.GamesTest do
   alias Spitegear.Game
   alias Spitegear.GameDeath
   alias Spitegear.Games
-  alias Spitegear.HTML.ViewScreen
   alias Spitegear.Repo
   alias Spitegear.Turn
   alias Spitegear.TurnHistory
+  alias Spitegear.Wargear.HTTP.ViewScreen
 
   defp build_view_screen(attrs \\ []) do
     game_id = Keyword.get(attrs, :game_id, "11111")

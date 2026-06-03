@@ -13,7 +13,7 @@ defmodule Spitegear.GameLog.Processor do
   alias Spitegear.GameLogEvent
   alias Spitegear.GameLogSnapshot
   alias Spitegear.Repo
-  alias Spitegear.Wargear.LogSnapshot
+  alias Spitegear.Wargear.HTTP.LogSnapshot
 
   @doc """
   Processes every stored snapshot. Idempotent — existing events are updated

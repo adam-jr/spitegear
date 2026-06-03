@@ -97,7 +97,7 @@ config :spitegear, Spitegear.Scheduler,
     cookie_refresh: [
       # 3am on the 1st and 15th of each month (~every 2 weeks)
       schedule: "0 3 1,15 * *",
-      task: {Spitegear.Wargear.Login, :refresh_cookie, []}
+      task: {Spitegear.Wargear.HTTP.Login, :refresh_cookie, []}
     ]
   ]
 

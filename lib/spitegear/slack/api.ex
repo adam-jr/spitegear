@@ -4,8 +4,8 @@ defmodule Spitegear.Slack.API do
 
   def post_message(text, channel \\ :spitegear) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
-
-    url = %{config[:url] | path: config[:endpoints][:post_message]}
+    %URI{} = base = config[:url]
+    url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
 
     body =
       %{text: text, channel: channel_id(channel), username: @bot_name}
@@ -16,7 +16,8 @@ defmodule Spitegear.Slack.API do
 
   def post_blocks(blocks, fallback_text, channel \\ :spitegear) do
     config = Application.get_env(:spitegear, __MODULE__)
-    url = %{config[:url] | path: config[:endpoints][:post_message]}
+    %URI{} = base = config[:url]
+    url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
 
     body =
       %{channel: channel_id(channel), blocks: blocks, text: fallback_text, username: @bot_name}
@@ -28,7 +29,8 @@ defmodule Spitegear.Slack.API do
   def post_dm(text, recipient) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
 
-    url = %{config[:url] | path: config[:endpoints][:post_message]}
+    %URI{} = base = config[:url]
+    url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
     headers = headers()
 
     body =
@@ -58,7 +60,8 @@ defmodule Spitegear.Slack.API do
   end
 
   defp get_upload_url(base_url, filename, length, auth) do
-    url = %{base_url | path: "/api/files.getUploadURLExternal"}
+    %URI{} = base_url
+    url = %{base_url | path: "/api/files.getUploadURLExternal"} |> URI.to_string()
     params = [filename: filename, length: length]
 
     case HTTPoison.get(url, auth, params: params, recv_timeout: 15_000) do
@@ -88,7 +91,8 @@ defmodule Spitegear.Slack.API do
   end
 
   defp complete_upload(base_url, file_id, title, channel_id, auth) do
-    url = %{base_url | path: "/api/files.completeUploadExternal"}
+    %URI{} = base_url
+    url = %{base_url | path: "/api/files.completeUploadExternal"} |> URI.to_string()
 
     body =
       Jason.encode!(%{
@@ -138,7 +142,8 @@ defmodule Spitegear.Slack.API do
 
   defp url(endpoint) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
-    %{config[:url] | path: config[:endpoints][endpoint]}
+    %URI{} = base = config[:url]
+    %{base | path: config[:endpoints][endpoint]} |> URI.to_string()
   end
 
   defp headers do

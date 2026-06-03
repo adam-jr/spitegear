@@ -3,13 +3,14 @@ defmodule Spitegear.Worker.GamePoller do
   use GenServer
 
   alias Spitegear.Games
-  alias Spitegear.HTML.ViewScreen
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Slack.Message
   alias Spitegear.Turn
-  alias Spitegear.Wargear.History
-  alias Spitegear.Wargear.LogSnapshot
+  alias Spitegear.Wargear.HTTP.History
+  alias Spitegear.Wargear.HTTP.LogSnapshot
+  alias Spitegear.Wargear.HTTP.ViewScreen
+  alias Spitegear.Worker.GamePoller.TurnLogic
 
   require Logger
 
@@ -195,26 +196,18 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp update_turn(state) do
     cond do
-      new_turn?(state) -> new_turn(state)
+      TurnLogic.new_turn?(state) -> new_turn(state)
       reminder_due?(state) -> remind_player(state)
       true -> state
     end
   end
 
-  # 3 hours
-  @horizon_seconds 3 * 60 * 60
-  defp reminder_due?(%{current_turn: %{reminded: reminded_time}}) do
-    current_time_utc = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    {:ok, current_time_chicago} = DateTime.shift_zone(current_time_utc, "America/Chicago")
-    current_hour_chicago = current_time_chicago.hour
-    waking_hours_chicago? = current_hour_chicago >= 7 and current_hour_chicago < 24
-
-    beyond_horizon? = DateTime.diff(current_time_utc, reminded_time) > @horizon_seconds
-    waking_hours_chicago? and beyond_horizon?
+  defp reminder_due?(state) do
+    TurnLogic.reminder_due?(
+      %{current_turn: state.current_turn},
+      DateTime.utc_now() |> DateTime.truncate(:second)
+    )
   end
-
-  defp reminder_due?(_state), do: false
 
   defp remind_player(state) do
     player = state.current_turn.player
@@ -231,16 +224,6 @@ defmodule Spitegear.Worker.GamePoller do
     Games.upsert_turn(turn)
 
     %{state | current_turn: turn}
-  end
-
-  defp new_turn?(%{view_screen: %{current_player: nil}}), do: false
-
-  defp new_turn?(%{current_turn: %{player: %{name: name}}, view_screen: view_screen}) do
-    name != view_screen.current_player.name
-  end
-
-  defp new_turn?(%{view_screen: view_screen}) do
-    view_screen.current_player != nil
   end
 
   defp new_turn(state) do
@@ -377,18 +360,8 @@ defmodule Spitegear.Worker.GamePoller do
     curr_idx = Enum.find_index(alive_players, &(&1.name == curr_name))
 
     alive_players
-    |> skipped_players(n, prev_idx, curr_idx)
+    |> TurnLogic.skipped_players(n, prev_idx, curr_idx)
     |> record_inferred_deaths(state)
-  end
-
-  defp skipped_players(_players, n, prev_idx, curr_idx)
-       when is_nil(prev_idx) or is_nil(curr_idx) or n < 2,
-       do: []
-
-  defp skipped_players(players, n, prev_idx, curr_idx) do
-    Stream.iterate(rem(prev_idx + 1, n), &rem(&1 + 1, n))
-    |> Enum.take_while(&(&1 != curr_idx))
-    |> Enum.map(&Enum.at(players, &1))
   end
 
   defp record_inferred_deaths([], state), do: state

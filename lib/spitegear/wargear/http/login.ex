@@ -1,4 +1,4 @@
-defmodule Spitegear.Wargear.Login do
+defmodule Spitegear.Wargear.HTTP.Login do
   @moduledoc false
   require Logger
 

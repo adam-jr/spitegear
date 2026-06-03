@@ -15,6 +15,7 @@ defmodule Spitegear.LiveGameState do
   the current/prev fields shifted in-memory — no extra DB read needed.
   """
 
+  require Logger
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
@@ -29,8 +30,8 @@ defmodule Spitegear.LiveGameState do
           prev_turn: Turn.t() | nil,
           current_view_screen: WargearViewScreenDb.t() | nil,
           prev_view_screen: WargearViewScreenDb.t() | nil,
-          current_history_response: WargearHistoryApiResponseDb.t() | nil,
-          prev_history_response: WargearHistoryApiResponseDb.t() | nil
+          current_api_response: WargearHistoryApiResponseDb.t() | nil,
+          prev_api_response: WargearHistoryApiResponseDb.t() | nil
         }
 
   defstruct game_id: nil,
@@ -38,8 +39,8 @@ defmodule Spitegear.LiveGameState do
             prev_turn: nil,
             current_view_screen: nil,
             prev_view_screen: nil,
-            current_history_response: nil,
-            prev_history_response: nil
+            current_api_response: nil,
+            prev_api_response: nil
 
   @doc """
   Returns a new `LiveGameState` for `game_id` with all fields loaded from
@@ -72,15 +73,15 @@ defmodule Spitegear.LiveGameState do
         prev_turn: Turns.get_last_closed_turn(game_id),
         current_view_screen: ViewScreens.get_latest(game_id),
         prev_view_screen: ViewScreens.get_prev(game_id),
-        current_history_response: HistoryResponses.get_latest(game_id),
-        prev_history_response: HistoryResponses.get_prev(game_id)
+        current_api_response: HistoryResponses.get_latest(game_id),
+        prev_api_response: HistoryResponses.get_prev(game_id)
     }
   end
 
   @doc """
   Processes a raw History API response. Persists it if the `turnid` has
-  changed, then shifts `current_history_response` → `prev_history_response`
-  and sets `current_history_response` to the new record.
+  changed, then shifts `current_api_response` → `prev_api_response`
+  and sets `current_api_response` to the new record.
 
   Returns the struct unchanged if the response is identical to the last stored
   one or if the insert fails.
@@ -94,11 +95,12 @@ defmodule Spitegear.LiveGameState do
       {:ok, record} ->
         %{
           state
-          | prev_history_response: state.current_history_response,
-            current_history_response: record
+          | prev_api_response: state.current_api_response,
+            current_api_response: record
         }
 
       {:error, _} ->
+        Logger.error("#{__MODULE__} failed to record history response for game #{state.game_id}")
         state
     end
   end
@@ -127,6 +129,7 @@ defmodule Spitegear.LiveGameState do
           %{state | prev_view_screen: state.current_view_screen, current_view_screen: snapshot}
 
         {:error, _} ->
+          Logger.error("#{__MODULE__} failed to record view screen for game #{state.game_id}")
           state
       end
 

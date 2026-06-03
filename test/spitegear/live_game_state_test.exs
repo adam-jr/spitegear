@@ -23,6 +23,33 @@ defmodule Spitegear.LiveGameStateTest do
     })
   end
 
+  describe "reset_view_screen_poll/2" do
+    test "sets last_turn_id and resets poll tracking to initial values" do
+      state = LiveGameState.new(@game_id)
+      updated = LiveGameState.reset_view_screen_poll(state, "turn_99")
+
+      assert updated.last_turn_id == "turn_99"
+      assert updated.view_screen_timer == nil
+      assert updated.view_screen_polls_remaining == 10
+    end
+
+    test "overwrites an existing last_turn_id" do
+      state = %{LiveGameState.new(@game_id) | last_turn_id: "old_turn"}
+      updated = LiveGameState.reset_view_screen_poll(state, "new_turn")
+
+      assert updated.last_turn_id == "new_turn"
+    end
+
+    test "preserves all other fields" do
+      state = %{LiveGameState.new(@game_id) | status: :in_progress, last_round: 3}
+      updated = LiveGameState.reset_view_screen_poll(state, "t1")
+
+      assert updated.status == :in_progress
+      assert updated.last_round == 3
+      assert updated.game_id == @game_id
+    end
+  end
+
   describe "load_dead_players/1" do
     test "leaves dead_players empty when no deaths recorded" do
       state = LiveGameState.new(@game_id) |> LiveGameState.load_dead_players()

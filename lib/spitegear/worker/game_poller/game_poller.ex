@@ -15,7 +15,6 @@ defmodule Spitegear.Worker.GamePoller do
 
   @interval :timer.seconds(20)
   @view_screen_interval :timer.minutes(1)
-  @view_screen_max_polls 10
 
   def child_spec(game_id: game_id) do
     %{
@@ -56,35 +55,30 @@ defmodule Spitegear.Worker.GamePoller do
     end
   end
 
-  def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
+  def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = game_state) do
     case HTTP.History.latest_turn(game_id) do
       {:ok, %{"turnid" => ^last_turn_id}} ->
-        state = maybe_remind(state)
+        game_state = maybe_remind(game_state)
         schedule_work()
-        {:noreply, state}
+        {:noreply, game_state}
 
       {:ok, %{"turnid" => turn_id}} ->
-        if state.view_screen_timer, do: Process.cancel_timer(state.view_screen_timer)
+        if game_state.view_screen_timer, do: Process.cancel_timer(game_state.view_screen_timer)
 
-        state = %{
-          state
-          | last_turn_id: turn_id,
-            view_screen_timer: nil,
-            view_screen_polls_remaining: @view_screen_max_polls
-        }
+        game_state = LiveGameState.reset_view_screen_poll(game_state, turn_id)
 
-        case fetch_view_screen(state) do
-          {:stop, state} ->
-            {:stop, :normal, state}
+        case fetch_view_screen(game_state) do
+          {:stop, game_state} ->
+            {:stop, :normal, game_state}
 
-          {:continue, state} ->
+          {:continue, game_state} ->
             schedule_work()
-            {:noreply, state}
+            {:noreply, game_state}
         end
 
       _ ->
         schedule_work()
-        {:noreply, state}
+        {:noreply, game_state}
     end
   end
 

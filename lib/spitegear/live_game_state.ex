@@ -14,6 +14,8 @@ defmodule Spitegear.LiveGameState do
 
   @type t :: %__MODULE__{}
 
+  @view_screen_max_polls 10
+
   defstruct game_id: nil,
             view_screen: nil,
             dead_players: [],
@@ -81,5 +83,29 @@ defmodule Spitegear.LiveGameState do
     else
       _ -> complete_count
     end
+  end
+
+  @doc """
+  Resets view-screen polling state when a new turn is detected.
+
+  Sets `last_turn_id` to the newly observed turn, clears any scheduled
+  poll timer reference, and restores `view_screen_polls_remaining` to the
+  maximum. The caller is responsible for cancelling the old timer before
+  calling this.
+
+      iex> state = Spitegear.LiveGameState.new("g1")
+      iex> updated = Spitegear.LiveGameState.reset_view_screen_poll(state, "t42")
+      iex> {updated.last_turn_id, updated.view_screen_timer, updated.view_screen_polls_remaining}
+      {"t42", nil, 10}
+
+  """
+  @spec reset_view_screen_poll(t(), String.t()) :: t()
+  def reset_view_screen_poll(%__MODULE__{} = game_state, turn_id) do
+    %{
+      game_state
+      | last_turn_id: turn_id,
+        view_screen_timer: nil,
+        view_screen_polls_remaining: @view_screen_max_polls
+    }
   end
 end

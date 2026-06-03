@@ -204,6 +204,13 @@ defmodule Spitegear.Worker.GamePoller do
     state = record_completed_turn(state)
     state = infer_deaths_from_skip(state)
 
+    completed = LiveGameState.completed_rounds(state.game_id, player.name)
+
+    state =
+      state
+      |> maybe_announce_round(completed)
+      |> maybe_post_round_stats(completed)
+
     round = state.last_round + 1
     turn_number = Games.completed_turn_count(state.game_id) + 1
     Logger.info("Notifying #{player.name} of turn (round #{round}, turn #{turn_number})...")
@@ -230,15 +237,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp record_completed_turn(state) do
     ended_at = DateTime.utc_now() |> DateTime.truncate(:second)
     Games.record_completed_turn(state.current_turn, ended_at)
-
-    current_player_name =
-      state.view_screen.current_player && state.view_screen.current_player.name
-
-    completed = LiveGameState.completed_rounds(state.game_id, current_player_name)
-
     state
-    |> maybe_announce_round(completed)
-    |> maybe_post_round_stats(completed)
   end
 
   defp maybe_announce_round(%{last_round: last_round} = state, completed)

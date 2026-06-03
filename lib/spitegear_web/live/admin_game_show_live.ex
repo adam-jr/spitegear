@@ -2,6 +2,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
   use SpitegearWeb, :live_view
   alias Spitegear.GameLog.Stats
   alias Spitegear.Games
+  alias Spitegear.LiveGameState.Turns
   alias Spitegear.PubSub
   alias Spitegear.QuickChart
   alias Spitegear.Slack.API, as: SlackAPI
@@ -11,7 +12,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
   def mount(%{"game_id" => game_id}, _session, socket) do
     if connected?(socket), do: Process.send_after(self(), :refresh, @refresh_interval)
-    {:ok, assign(socket, load(game_id)) |> assign(chart_status: nil)}
+    {:ok, assign(socket, load(game_id)) |> assign(chart_status: nil, backfill_result: nil)}
   end
 
   def handle_info(:refresh, socket) do
@@ -45,6 +46,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
   def handle_event("stop_new_poller", _params, socket) do
     Games.stop_new_poller(socket.assigns.game_id)
     {:noreply, assign(socket, load(socket.assigns.game_id))}
+  end
+
+  def handle_event("backfill_turns", _params, socket) do
+    {count, _} = Turns.backfill_from_turn_history(socket.assigns.game_id)
+    {:noreply, assign(socket, backfill_result: count)}
   end
 
   def handle_event("send_test_stats", _params, socket) do
@@ -337,7 +343,19 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
       <%= if Enum.any?(@history) do %>
         <section>
-          <h2 class="text-lg font-semibold mb-3">Recent Turns</h2>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Recent Turns</h2>
+            <div class="flex items-center gap-3">
+              <button phx-click="backfill_turns" class="text-sm text-blue-600 hover:underline">
+                Backfill live turns
+              </button>
+              <%= case @backfill_result do %>
+                <% nil -> %>
+                <% count when is_integer(count) -> %>
+                  <span class="text-sm text-green-600">✓ {count} inserted</span>
+              <% end %>
+            </div>
+          </div>
           <table class="w-full text-sm border-collapse">
             <thead>
               <tr class="text-left border-b border-gray-200">

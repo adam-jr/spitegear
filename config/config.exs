@@ -98,6 +98,11 @@ config :spitegear, Spitegear.Scheduler,
       # 3am on the 1st and 15th of each month (~every 2 weeks)
       schedule: "0 3 1,15 * *",
       task: {Spitegear.Wargear.HTTP.Login, :refresh_cookie, []}
+    ],
+    prune_live_game_state_snapshots: [
+      # 2am daily
+      schedule: "0 2 * * *",
+      task: {Spitegear.LiveGameState.SnapshotPruner, :run, []}
     ]
   ]
 

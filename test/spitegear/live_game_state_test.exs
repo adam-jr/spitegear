@@ -60,22 +60,22 @@ defmodule Spitegear.LiveGameStateTest do
     end
   end
 
-  describe "load_recent_turns/1" do
+  describe "hydrate/1" do
     test "hydrates current_turn from the open turn" do
       insert_turn(player_name: "adam", ended_at: nil)
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.current_turn.player_name == "adam"
     end
 
     test "hydrates prev_turn from the most recently closed turn" do
       insert_turn(player_name: "adam", ended_at: DateTime.add(@base, 3600))
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.prev_turn.player_name == "adam"
     end
 
     test "hydrates current_view_screen from the latest snapshot" do
       insert_view_screen(current_player_name: "adam")
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.current_view_screen.current_player_name == "adam"
     end
 
@@ -92,13 +92,13 @@ defmodule Spitegear.LiveGameStateTest do
         updated_at: ~U[2024-01-02 00:00:00Z]
       )
 
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.prev_view_screen.current_player_name == "adam"
     end
 
     test "hydrates current_history_response from the latest record" do
       insert_history_response(turn_data: %{"turnid" => "5"})
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.current_history_response.turn_data["turnid"] == "5"
     end
 
@@ -115,12 +115,12 @@ defmodule Spitegear.LiveGameStateTest do
         updated_at: ~U[2024-01-02 00:00:00Z]
       )
 
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.prev_history_response.turn_data["turnid"] == "4"
     end
 
     test "sets nil for all fields when DB is empty" do
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.current_turn == nil
       assert state.prev_turn == nil
       assert state.current_view_screen == nil
@@ -131,7 +131,7 @@ defmodule Spitegear.LiveGameStateTest do
 
     test "preserves game_id and does not cross game boundaries" do
       insert_turn(game_id: "99999", ended_at: nil)
-      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.hydrate()
       assert state.game_id == "11111"
       assert state.current_turn == nil
     end

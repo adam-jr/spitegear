@@ -59,12 +59,12 @@ defmodule Spitegear.Worker.GamePollerNew do
   @impl true
   def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
-    {:ok, %{game_state: %LiveGameState{game_id: game_id}}, {:continue, :load_recent_turns}}
+    {:ok, %{game_state: %LiveGameState{game_id: game_id}}, {:continue, :hydrate}}
   end
 
   @impl true
-  def handle_continue(:load_recent_turns, %{game_state: game_state} = state) do
-    {:noreply, %{state | game_state: LiveGameState.load_recent_turns(game_state)}}
+  def handle_continue(:hydrate, %{game_state: game_state} = state) do
+    {:noreply, %{state | game_state: LiveGameState.hydrate(game_state)}}
   end
 
   @impl true
@@ -93,7 +93,7 @@ defmodule Spitegear.Worker.GamePollerNew do
       state
     else
       Turns.record_turn_start(game_state.game_id, new_player)
-      %{state | game_state: LiveGameState.load_recent_turns(game_state)}
+      %{state | game_state: LiveGameState.hydrate(game_state)}
     end
   end
 end

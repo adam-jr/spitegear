@@ -6,7 +6,7 @@ defmodule Spitegear.LiveGameState do
   API responses as persisted DB records. All fields are loaded from the
   database — they reflect what has already been written, not raw API responses.
 
-  Use `new/1` to build an initial struct for a game, or `load_recent_turns/1`
+  Use `new/1` to build an initial struct for a game, or `hydrate/1`
   to refresh an existing struct's fields (e.g. after a turn change or a new
   snapshot is recorded).
   """
@@ -46,7 +46,7 @@ defmodule Spitegear.LiveGameState do
 
   """
   @spec new(String.t()) :: t()
-  def new(game_id), do: load_recent_turns(%__MODULE__{game_id: game_id})
+  def new(game_id), do: hydrate(%__MODULE__{game_id: game_id})
 
   @doc """
   Hydrates all DB-backed fields on the given struct from the database.
@@ -60,8 +60,8 @@ defmodule Spitegear.LiveGameState do
   Call this after recording a turn, view screen, or history response to keep
   the struct current without discarding any other state already stored on it.
   """
-  @spec load_recent_turns(t()) :: t()
-  def load_recent_turns(%__MODULE__{game_id: game_id} = state) do
+  @spec hydrate(t()) :: t()
+  def hydrate(%__MODULE__{game_id: game_id} = state) do
     %{
       state
       | current_turn: Turns.get_open_turn(game_id),

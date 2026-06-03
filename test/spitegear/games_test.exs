@@ -128,13 +128,13 @@ defmodule Spitegear.GamesTest do
     end
   end
 
-  describe "record_completed_turn/2" do
+  describe "finish_turn/2" do
     test "inserts a turn_history record with correct fields" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       ended = now |> DateTime.add(300)
       turn = build_turn(started: now)
 
-      assert {:ok, record} = Games.record_completed_turn(turn, ended)
+      assert {:ok, record} = Games.finish_turn(turn, ended)
       assert record.game_id == "11111"
       assert record.player_name == "adam jormp jomp"
       assert record.started == now
@@ -145,8 +145,8 @@ defmodule Spitegear.GamesTest do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       turn = build_turn(started: now)
 
-      Games.record_completed_turn(turn, DateTime.add(now, 100))
-      Games.record_completed_turn(turn, DateTime.add(now, 200))
+      Games.finish_turn(turn, DateTime.add(now, 100))
+      Games.finish_turn(turn, DateTime.add(now, 200))
 
       assert Repo.aggregate(TurnHistory, :count) == 2
     end

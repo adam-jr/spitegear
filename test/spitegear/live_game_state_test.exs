@@ -2,9 +2,12 @@ defmodule Spitegear.LiveGameStateTest do
   use Spitegear.DataCase, async: true
 
   alias Spitegear.GameDeath
+  alias Spitegear.HTML.Player
   alias Spitegear.LiveGameState
   alias Spitegear.Repo
+  alias Spitegear.Turn
   alias Spitegear.TurnHistory
+  alias Spitegear.Wargear.HTTP.ViewScreen
 
   doctest Spitegear.LiveGameState
 
@@ -21,6 +24,41 @@ defmodule Spitegear.LiveGameStateTest do
       started: started,
       ended: ended
     })
+  end
+
+  defp build_turn(player_name) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    %Turn{
+      game_id: @game_id,
+      player: %{name: player_name},
+      player_name: player_name,
+      started: now,
+      reminded: now,
+      reminders: 0
+    }
+  end
+
+  defp build_view_screen(current_player_name, all_player_names, opts \\ []) do
+    players =
+      Enum.map(all_player_names, fn name ->
+        %Player{
+          name: name,
+          eliminated?: false,
+          winner?: false,
+          current_turn?: name == current_player_name
+        }
+      end)
+
+    %ViewScreen{
+      game_id: @game_id,
+      game_name: "Test Game",
+      current_player: Enum.find(players, &(&1.name == current_player_name)),
+      players: players,
+      eliminated: [],
+      winners: [],
+      fogged?: Keyword.get(opts, :fogged?, false)
+    }
   end
 
   describe "reset_view_screen_poll/2" do
@@ -87,6 +125,156 @@ defmodule Spitegear.LiveGameStateTest do
 
       state = LiveGameState.new(@game_id) |> LiveGameState.load_last_round()
       assert state.last_round == 1
+    end
+  end
+
+  describe "finish_current_turn/1" do
+    test "no-op when current_turn is nil" do
+      state = LiveGameState.new(@game_id)
+      result = LiveGameState.finish_current_turn(state)
+
+      assert result == state
+      assert Repo.aggregate(TurnHistory, :count) == 0
+    end
+
+    test "records the current turn to turn_history and returns state unchanged" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      turn = %Turn{
+        game_id: @game_id,
+        player: %{name: "adam"},
+        player_name: "adam",
+        started: now,
+        reminded: now,
+        reminders: 0
+      }
+
+      state = %{LiveGameState.new(@game_id) | current_turn: turn}
+
+      result = LiveGameState.finish_current_turn(state)
+
+      assert result.current_turn == turn
+      assert Repo.aggregate(TurnHistory, :count) == 1
+    end
+  end
+
+  describe "infer_deaths_from_skip/1" do
+    test "no-op when current_turn is nil" do
+      state = %{
+        LiveGameState.new(@game_id)
+        | view_screen: build_view_screen("bob", ["adam", "bob"])
+      }
+
+      result = LiveGameState.infer_deaths_from_skip(state)
+
+      assert result.dead_players == []
+    end
+
+    test "no-op when no players are skipped" do
+      state = %{
+        LiveGameState.new(@game_id)
+        | current_turn: build_turn("adam"),
+          view_screen: build_view_screen("bob", ["adam", "bob"]),
+          dead_players: []
+      }
+
+      result = LiveGameState.infer_deaths_from_skip(state)
+      assert result.dead_players == []
+    end
+
+    test "records skipped players as inferred deaths" do
+      state = %{
+        LiveGameState.new(@game_id)
+        | current_turn: build_turn("adam"),
+          view_screen: build_view_screen("carol", ["adam", "bob", "carol"]),
+          dead_players: []
+      }
+
+      result = LiveGameState.infer_deaths_from_skip(state)
+
+      assert length(result.dead_players) == 1
+      assert hd(result.dead_players).name == "bob"
+      assert Repo.aggregate(GameDeath, :count) == 1
+    end
+
+    test "skips players already in dead_players" do
+      state = %{
+        LiveGameState.new(@game_id)
+        | current_turn: build_turn("adam"),
+          view_screen: build_view_screen("carol", ["adam", "carol"]),
+          dead_players: [%{name: "bob"}]
+      }
+
+      result = LiveGameState.infer_deaths_from_skip(state)
+      assert result.dead_players == [%{name: "bob"}]
+    end
+  end
+
+  describe "update_rounds/1" do
+    test "no change when no history" do
+      state = %{
+        LiveGameState.new(@game_id)
+        | view_screen: build_view_screen("adam", ["adam", "bob"]),
+          last_round: 0
+      }
+
+      result = LiveGameState.update_rounds(state)
+      assert result.last_round == 0
+    end
+
+    test "increments last_round when current player completes a round" do
+      insert_turn("adam", 0)
+      insert_turn("bob", 600)
+
+      state = %{
+        LiveGameState.new(@game_id)
+        | view_screen: build_view_screen("adam", ["adam", "bob"]),
+          last_round: 0
+      }
+
+      result = LiveGameState.update_rounds(state)
+      assert result.last_round == 1
+    end
+
+    test "does not re-announce a round already recorded in last_round" do
+      insert_turn("adam", 0)
+      insert_turn("bob", 600)
+      insert_turn("adam", 1200)
+
+      state = %{
+        LiveGameState.new(@game_id)
+        | view_screen: build_view_screen("bob", ["adam", "bob"]),
+          last_round: 1
+      }
+
+      result = LiveGameState.update_rounds(state)
+      assert result.last_round == 1
+    end
+  end
+
+  describe "start_new_turn/1" do
+    test "creates a Turn record in the DB and updates state" do
+      state = %{
+        LiveGameState.new(@game_id)
+        | view_screen: build_view_screen("adam", ["adam", "bob"]),
+          moving_announced: true
+      }
+
+      result = LiveGameState.start_new_turn(state)
+
+      assert result.moving_announced == false
+      assert result.current_turn.player.name == "adam"
+      assert Repo.aggregate(Turn, :count) == 1
+    end
+
+    test "sets current_turn player from view_screen.current_player" do
+      state = %{
+        LiveGameState.new(@game_id)
+        | view_screen: build_view_screen("bob", ["adam", "bob"])
+      }
+
+      result = LiveGameState.start_new_turn(state)
+      assert result.current_turn.player.name == "bob"
     end
   end
 

@@ -9,8 +9,15 @@ defmodule Spitegear.LiveGameState do
   bridges that gap.
   """
 
+  require Logger
+
   alias Spitegear.Games
+  alias Spitegear.MessageTemplates
+  alias Spitegear.PubSub
+  alias Spitegear.Slack.Message
+  alias Spitegear.Turn
   alias Spitegear.Turns
+  alias Spitegear.Worker.GamePoller.TurnLogic
 
   @type t :: %__MODULE__{}
 
@@ -107,5 +114,146 @@ defmodule Spitegear.LiveGameState do
         view_screen_timer: nil,
         view_screen_polls_remaining: @view_screen_max_polls
     }
+  end
+
+  @doc """
+  Records the current turn to `turn_history` if one exists, then returns
+  state unchanged. No-op when `current_turn` is nil.
+  """
+  @spec finish_current_turn(t()) :: t()
+  def finish_current_turn(%__MODULE__{current_turn: nil} = state), do: state
+
+  def finish_current_turn(%__MODULE__{} = state) do
+    Games.finish_turn(state.current_turn, DateTime.utc_now() |> DateTime.truncate(:second))
+    state
+  end
+
+  @doc """
+  Detects players who were skipped in turn order between the previous and
+  current player, records them as eliminated in the DB, and adds them to
+  `dead_players` in the state. No-op when `current_turn` is nil.
+  """
+  @spec infer_deaths_from_skip(t()) :: t()
+  def infer_deaths_from_skip(%__MODULE__{current_turn: nil} = state), do: state
+
+  def infer_deaths_from_skip(%__MODULE__{} = state) do
+    prev_name = state.current_turn.player.name
+    curr_name = state.view_screen.current_player.name
+    known_dead = MapSet.new(state.dead_players, & &1.name)
+
+    alive_players =
+      Enum.reject(state.view_screen.players, fn p ->
+        MapSet.member?(known_dead, p.name) or p.eliminated? or p.winner?
+      end)
+
+    n = length(alive_players)
+    prev_idx = Enum.find_index(alive_players, &(&1.name == prev_name))
+    curr_idx = Enum.find_index(alive_players, &(&1.name == curr_name))
+
+    alive_players
+    |> TurnLogic.skipped_players(n, prev_idx, curr_idx)
+    |> record_inferred_deaths(state)
+  end
+
+  @doc """
+  Computes completed rounds for the game, announces a new round to Slack if
+  one has completed, and posts turn stats every 5 rounds. Updates
+  `last_round` and `last_stats_round` in state accordingly.
+  """
+  @spec update_rounds(t()) :: t()
+  def update_rounds(%__MODULE__{} = state) do
+    current_player_name =
+      state.view_screen.current_player && state.view_screen.current_player.name
+
+    completed = completed_rounds(state.game_id, current_player_name)
+
+    state
+    |> maybe_announce_round(completed)
+    |> maybe_post_round_stats(completed)
+  end
+
+  @doc """
+  Sends the "it's your turn" Slack notification for the player shown in
+  `view_screen`. Returns state unchanged.
+  """
+  @spec announce_next_turn(t()) :: t()
+  def announce_next_turn(%__MODULE__{} = state) do
+    player = state.view_screen.current_player
+    round = state.last_round + 1
+    turn_number = Games.completed_turn_count(state.game_id) + 1
+    Logger.info("Notifying #{player.name} of turn (round #{round}, turn #{turn_number})...")
+
+    text =
+      MessageTemplates.next_turn(
+        player,
+        state.game_id,
+        round,
+        turn_number,
+        state.view_screen.game_name
+      )
+
+    PubSub.msg(:spitegear, text)
+    state
+  end
+
+  @doc """
+  Creates a new `Turn` record for the current view-screen player, persists
+  it, and updates `current_turn` and `moving_announced` in state.
+  """
+  @spec start_new_turn(t()) :: t()
+  def start_new_turn(%__MODULE__{} = state) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    turn = %Turn{
+      game_id: state.game_id,
+      player: state.view_screen.current_player,
+      started: now,
+      reminded: now,
+      reminders: 0
+    }
+
+    Games.upsert_turn(turn)
+    %{state | current_turn: turn, moving_announced: false}
+  end
+
+  # --- Private ---
+
+  defp maybe_announce_round(%__MODULE__{last_round: last_round} = state, completed)
+       when completed > last_round do
+    text = MessageTemplates.round_complete(state.game_id, completed, state.view_screen.game_name)
+    PubSub.msg(:spitegear, text)
+    %{state | last_round: completed}
+  end
+
+  defp maybe_announce_round(state, _completed), do: state
+
+  defp maybe_post_round_stats(state, completed) do
+    if completed > 0 && rem(completed, 5) == 0 && completed != state.last_stats_round do
+      stats = Games.turn_stats(state.game_id)
+      blocks = Message.blocks(:turn_stats, stats, state.game_id, completed)
+      fallback = Message.text(:turn_stats, stats, state.game_id, completed)
+      PubSub.msg(:spitegear_test, type: :turn_stats, payload: {blocks, fallback})
+      %{state | last_stats_round: completed}
+    else
+      state
+    end
+  end
+
+  defp record_inferred_deaths([], state), do: state
+
+  defp record_inferred_deaths(newly_dead, state) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Enum.each(newly_dead, fn player ->
+      Logger.info("#{__MODULE__} inferring #{player.name} dead (skipped in turn order)")
+      Games.record_death(state.game_id, player.name, now)
+
+      unless state.view_screen.fogged? do
+        text = MessageTemplates.player_died(player, state.game_id, state.view_screen.game_name)
+        PubSub.msg(:spitegear_test, text)
+      end
+    end)
+
+    %{state | dead_players: Enum.uniq_by(state.dead_players ++ newly_dead, & &1.name)}
   end
 end

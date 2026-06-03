@@ -9,7 +9,7 @@ defmodule Spitegear.LiveGameState do
   Use `new/1` to build an initial struct for a game, or `hydrate/1` to
   refresh an existing struct's fields (e.g. after restart).
 
-  Use `on_history_fetched/2` and `on_view_screen_fetched/2` to process incoming
+  Use `dispatch_history_response/2` and `dispatch_view_screen/2` to process incoming
   data from the legacy poller. Each function checks whether the incoming data
   represents a change, persists it if so, and returns an updated struct with
   the current/prev fields shifted in-memory — no extra DB read needed.
@@ -61,7 +61,7 @@ defmodule Spitegear.LiveGameState do
   and two most recent history API responses.
 
   Call this on startup or after a crash restart. For ongoing updates, prefer
-  `on_history_fetched/2` and `on_view_screen_fetched/2`, which update the
+  `dispatch_history_response/2` and `dispatch_view_screen/2`, which update the
   struct in-memory without an extra DB read.
   """
   @spec hydrate(t()) :: t()
@@ -85,8 +85,8 @@ defmodule Spitegear.LiveGameState do
   Returns the struct unchanged if the response is identical to the last stored
   one or if the insert fails.
   """
-  @spec on_history_fetched(t(), map()) :: t()
-  def on_history_fetched(%__MODULE__{} = state, turn_data) do
+  @spec dispatch_history_response(t(), map()) :: t()
+  def dispatch_history_response(%__MODULE__{} = state, turn_data) do
     case HistoryResponses.record_if_changed(state.game_id, turn_data) do
       {:ok, :unchanged} ->
         state
@@ -116,8 +116,8 @@ defmodule Spitegear.LiveGameState do
   Returns the struct unchanged if the view screen and active player are both
   identical to the last stored state, or if any write fails.
   """
-  @spec on_view_screen_fetched(t(), RawViewScreen.t()) :: t()
-  def on_view_screen_fetched(%__MODULE__{} = state, raw) do
+  @spec dispatch_view_screen(t(), RawViewScreen.t()) :: t()
+  def dispatch_view_screen(%__MODULE__{} = state, raw) do
     state =
       case ViewScreens.record_if_changed(raw) do
         {:ok, :unchanged} ->

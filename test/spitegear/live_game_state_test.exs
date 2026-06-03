@@ -155,34 +155,34 @@ defmodule Spitegear.LiveGameStateTest do
     end
   end
 
-  describe "on_history_fetched/2" do
+  describe "dispatch_history_response/2" do
     test "inserts on first fetch and sets current_history_response" do
       state = %LiveGameState{game_id: "11111"}
-      state = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
+      state = LiveGameState.dispatch_history_response(state, %{"turnid" => "1"})
       assert state.current_history_response.turn_data["turnid"] == "1"
       assert state.prev_history_response == nil
     end
 
     test "shifts current to prev when turnid changes" do
       state = %LiveGameState{game_id: "11111"}
-      state = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
-      state = LiveGameState.on_history_fetched(state, %{"turnid" => "2"})
+      state = LiveGameState.dispatch_history_response(state, %{"turnid" => "1"})
+      state = LiveGameState.dispatch_history_response(state, %{"turnid" => "2"})
       assert state.current_history_response.turn_data["turnid"] == "2"
       assert state.prev_history_response.turn_data["turnid"] == "1"
     end
 
     test "returns state unchanged when turnid has not changed" do
       state = %LiveGameState{game_id: "11111"}
-      state = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
-      state2 = LiveGameState.on_history_fetched(state, %{"turnid" => "1"})
+      state = LiveGameState.dispatch_history_response(state, %{"turnid" => "1"})
+      state2 = LiveGameState.dispatch_history_response(state, %{"turnid" => "1"})
       assert state2 == state
     end
   end
 
-  describe "on_view_screen_fetched/2" do
+  describe "dispatch_view_screen/2" do
     test "inserts on first fetch and sets current_view_screen" do
       state = %LiveGameState{game_id: "11111"}
-      state = LiveGameState.on_view_screen_fetched(state, build_raw_view_screen())
+      state = LiveGameState.dispatch_view_screen(state, build_raw_view_screen())
       assert state.current_view_screen.current_player_name == "adam"
       assert state.prev_view_screen == nil
     end
@@ -191,13 +191,13 @@ defmodule Spitegear.LiveGameStateTest do
       state = %LiveGameState{game_id: "11111"}
 
       state =
-        LiveGameState.on_view_screen_fetched(
+        LiveGameState.dispatch_view_screen(
           state,
           build_raw_view_screen(current_player: player("adam"))
         )
 
       state =
-        LiveGameState.on_view_screen_fetched(
+        LiveGameState.dispatch_view_screen(
           state,
           build_raw_view_screen(current_player: player("bob"))
         )
@@ -209,8 +209,8 @@ defmodule Spitegear.LiveGameStateTest do
     test "returns state unchanged when view screen has not changed" do
       state = %LiveGameState{game_id: "11111"}
       raw = build_raw_view_screen()
-      state = LiveGameState.on_view_screen_fetched(state, raw)
-      state2 = LiveGameState.on_view_screen_fetched(state, raw)
+      state = LiveGameState.dispatch_view_screen(state, raw)
+      state2 = LiveGameState.dispatch_view_screen(state, raw)
       assert state2.current_view_screen == state.current_view_screen
       assert Repo.aggregate(WargearViewScreenDb, :count) == 1
     end
@@ -219,13 +219,13 @@ defmodule Spitegear.LiveGameStateTest do
       state = %LiveGameState{game_id: "11111"}
 
       state =
-        LiveGameState.on_view_screen_fetched(
+        LiveGameState.dispatch_view_screen(
           state,
           build_raw_view_screen(current_player: player("adam"))
         )
 
       state =
-        LiveGameState.on_view_screen_fetched(
+        LiveGameState.dispatch_view_screen(
           state,
           build_raw_view_screen(current_player: player("bob"))
         )
@@ -237,8 +237,8 @@ defmodule Spitegear.LiveGameStateTest do
     test "does not record a new turn when the active player is unchanged" do
       state = %LiveGameState{game_id: "11111"}
       raw = build_raw_view_screen(current_player: player("adam"))
-      state = LiveGameState.on_view_screen_fetched(state, raw)
-      state = LiveGameState.on_view_screen_fetched(state, raw)
+      state = LiveGameState.dispatch_view_screen(state, raw)
+      state = LiveGameState.dispatch_view_screen(state, raw)
       assert state.current_turn.player_name == "adam"
       assert Repo.aggregate(Turn, :count) == 1
     end

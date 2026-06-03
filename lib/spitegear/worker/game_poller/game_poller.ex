@@ -8,9 +8,7 @@ defmodule Spitegear.Worker.GamePoller do
   alias Spitegear.PubSub
   alias Spitegear.Slack.Message
   alias Spitegear.Turn
-  alias Spitegear.Wargear.HTTP.History
-  alias Spitegear.Wargear.HTTP.LogSnapshot
-  alias Spitegear.Wargear.HTTP.ViewScreen
+  alias Spitegear.Wargear.HTTP
   alias Spitegear.Worker.GamePoller.TurnLogic
 
   require Logger
@@ -47,7 +45,7 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
-    case History.latest_turn(game_id) do
+    case HTTP.History.latest_turn(game_id) do
       {:ok, %{"turnid" => turn_id}} ->
         schedule_work()
         {:noreply, %{state | last_turn_id: turn_id}}
@@ -59,7 +57,7 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
-    case History.latest_turn(game_id) do
+    case HTTP.History.latest_turn(game_id) do
       {:ok, %{"turnid" => ^last_turn_id}} ->
         state = maybe_remind(state)
         schedule_work()
@@ -98,7 +96,7 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   def handle_info(:update_game, state) do
-    case ViewScreen.get_game(state.game_id) do
+    case HTTP.ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         Games.upsert_game(view_screen)
         {:noreply, update_status(%{state | view_screen: view_screen})}
@@ -131,7 +129,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp fetch_view_screen(state) do
     polls_remaining = state.view_screen_polls_remaining - 1
 
-    case ViewScreen.get_game(state.game_id) do
+    case HTTP.ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
         state =
           %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
@@ -293,7 +291,7 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp finish_game(game_id) do
-    Task.start(fn -> LogSnapshot.capture(game_id) end)
+    Task.start(fn -> HTTP.LogSnapshot.capture(game_id) end)
     :ok
   end
 

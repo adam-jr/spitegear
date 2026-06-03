@@ -50,6 +50,23 @@ defmodule Spitegear.LiveGameState.Turns do
   end
 
   @doc """
+  Runs `backfill_from_turn_history/1` for every game that has records in
+  `turn_history`. Returns the total number of rows inserted across all games.
+
+  Intended for a one-time migration. Safe to call multiple times only if
+  `live_game_state_turns` has been cleared first.
+  """
+  @spec backfill_all_games() :: non_neg_integer()
+  def backfill_all_games do
+    game_ids = Repo.all(from(th in TurnHistory, select: th.game_id, distinct: true))
+
+    Enum.reduce(game_ids, 0, fn game_id, total ->
+      {count, _} = backfill_from_turn_history(game_id)
+      total + count
+    end)
+  end
+
+  @doc """
   Bulk-inserts `LiveGameState.Turn` rows for `game_id` by converting every
   `TurnHistory` record for that game. Intended for a one-time backfill — safe
   to call multiple times only if the table has been cleared first.

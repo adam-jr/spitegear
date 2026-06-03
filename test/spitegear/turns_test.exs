@@ -12,7 +12,13 @@ defmodule Spitegear.TurnsTest do
   defp insert_turn(player, offset_seconds) do
     started = DateTime.add(@base, offset_seconds)
     ended = DateTime.add(@base, offset_seconds + 599)
-    Repo.insert!(%TurnHistory{game_id: @game_id, player_name: player, started: started, ended: ended})
+
+    Repo.insert!(%TurnHistory{
+      game_id: @game_id,
+      player_name: player,
+      started: started,
+      ended: ended
+    })
   end
 
   describe "list_rounds/1" do

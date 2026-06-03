@@ -50,6 +50,21 @@ defmodule Spitegear.LiveGameState.Turns do
   end
 
   @doc """
+  Returns the most recently closed turn for `game_id` — the row with the
+  latest non-nil `ended_at` — or `nil` if no closed turn exists.
+  """
+  @spec get_last_closed_turn(game_id()) :: Turn.t() | nil
+  def get_last_closed_turn(game_id) do
+    Repo.one(
+      from(t in Turn,
+        where: t.game_id == ^game_id and not is_nil(t.ended_at),
+        order_by: [desc: t.ended_at],
+        limit: 1
+      )
+    )
+  end
+
+  @doc """
   Runs `backfill_from_turn_history/1` for every game that has records in
   `turn_history`. Returns the total number of rows inserted across all games.
 

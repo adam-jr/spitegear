@@ -106,6 +106,30 @@ defmodule Spitegear.LiveGameState.TurnsTest do
     end
   end
 
+  describe "get_last_closed_turn/1" do
+    test "returns nil when no turns exist" do
+      assert Turns.get_last_closed_turn("11111") == nil
+    end
+
+    test "returns nil when only open turns exist" do
+      insert_turn(ended_at: nil)
+      assert Turns.get_last_closed_turn("11111") == nil
+    end
+
+    test "returns the most recently closed turn" do
+      second = DateTime.add(@base, 3600)
+      insert_turn(player_name: "adam", started_at: @base, ended_at: second)
+      insert_turn(player_name: "bob", started_at: second, ended_at: DateTime.add(second, 3600))
+
+      assert Turns.get_last_closed_turn("11111").player_name == "bob"
+    end
+
+    test "does not return closed turns from other games" do
+      insert_turn(game_id: "99999", ended_at: DateTime.add(@base, 3600))
+      assert Turns.get_last_closed_turn("11111") == nil
+    end
+  end
+
   describe "record_turn_start/2" do
     test "inserts a new open turn for the player" do
       {:ok, turn} = Turns.record_turn_start("11111", "adam")

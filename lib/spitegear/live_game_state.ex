@@ -1,86 +1,57 @@
 defmodule Spitegear.LiveGameState do
   @moduledoc """
-  Struct and polling logic for a single active game.
+  Struct representing the known live state of a single active game.
 
-  `LiveGameState` is the source of truth for what the poller knows about a
-  game at any given moment. Each poll, `fetch_game_state/1` makes one HTTP
-  call to the wargear.net history API, shifts the previous result into
-  `prev_poll_latest_turn`, and stores the fresh result in `latest_turn`.
+  Tracks the current and previous turns as persisted `LiveGameState.Turn`
+  records. Both fields are loaded from the database — they reflect what has
+  already been written, not raw API responses.
 
-  Keeping both values lets `new_activity?/1` detect a turn change without
-  the poller needing to carry any extra state or do any comparisons itself.
+  Use `new/1` to build an initial struct for a game, or `load_recent_turns/1`
+  to refresh an existing struct's turn fields (e.g. after a turn change is
+  recorded by `Turns.record_turn_start/2`).
   """
 
-  alias Spitegear.Wargear.HTTP
-
-  @type turn :: %{String.t() => term()}
+  alias Spitegear.LiveGameState.Turn
+  alias Spitegear.LiveGameState.Turns
 
   @type t :: %__MODULE__{
           game_id: String.t() | nil,
-          latest_turn: turn() | nil,
-          prev_poll_latest_turn: turn() | nil
+          current_turn: Turn.t() | nil,
+          prev_turn: Turn.t() | nil
         }
 
   defstruct game_id: nil,
-            latest_turn: nil,
-            prev_poll_latest_turn: nil
+            current_turn: nil,
+            prev_turn: nil
 
   @doc """
-  Returns a fresh state struct for `game_id` with no turn data yet.
+  Returns a new `LiveGameState` for `game_id` with `current_turn` and
+  `prev_turn` loaded from the database.
 
       iex> state = Spitegear.LiveGameState.new("42")
-      iex> {state.game_id, state.latest_turn, state.prev_poll_latest_turn}
-      {"42", nil, nil}
+      iex> state.game_id
+      "42"
 
   """
   @spec new(String.t()) :: t()
-  def new(game_id), do: %__MODULE__{game_id: game_id}
+  def new(game_id), do: load_recent_turns(%__MODULE__{game_id: game_id})
 
   @doc """
-  Fetches the latest turn from the wargear.net history API and returns an
-  updated state.
+  Hydrates `current_turn` and `prev_turn` on the given struct from the
+  database. Preserves all other fields on `state`.
 
-  `latest_turn` is moved into `prev_poll_latest_turn` before the new value
-  is stored, so callers can compare across polls without keeping extra state.
-  On failure the struct is returned unchanged.
+  - `current_turn` — the open turn (ended_at IS NULL), or `nil`
+  - `prev_turn` — the most recently closed turn, or `nil`
+
+  Call this after `Turns.record_turn_start/2` to keep the struct current
+  without discarding any other state already stored on it.
   """
-  @spec fetch_game_state(t()) :: t()
-  def fetch_game_state(%__MODULE__{game_id: game_id, latest_turn: current} = state) do
-    case HTTP.History.latest_turn(game_id) do
-      {:ok, turn} -> %{state | prev_poll_latest_turn: current, latest_turn: turn}
-      _ -> state
-    end
-  end
-
-  @doc """
-  Returns `true` when the turn ID in `latest_turn` differs from the one in
-  `prev_poll_latest_turn`, indicating activity since the last poll.
-
-  Returns `false` on the first poll (when `prev_poll_latest_turn` is still
-  `nil`) and whenever the fetch failed and the struct was not updated.
-
-      iex> Spitegear.LiveGameState.new_activity?(Spitegear.LiveGameState.new("42"))
-      false
-
-      iex> state = %Spitegear.LiveGameState{
-      ...>   game_id: "42",
-      ...>   latest_turn: %{"turnid" => "2"},
-      ...>   prev_poll_latest_turn: %{"turnid" => "1"}
-      ...> }
-      iex> Spitegear.LiveGameState.new_activity?(state)
-      true
-
-      iex> same = %Spitegear.LiveGameState{
-      ...>   game_id: "42",
-      ...>   latest_turn: %{"turnid" => "5"},
-      ...>   prev_poll_latest_turn: %{"turnid" => "5"}
-      ...> }
-      iex> Spitegear.LiveGameState.new_activity?(same)
-      false
-
-  """
-  @spec new_activity?(t()) :: boolean()
-  def new_activity?(%__MODULE__{latest_turn: latest, prev_poll_latest_turn: prev}) do
-    latest != nil && prev != nil && latest["turnid"] != prev["turnid"]
+  @spec load_recent_turns(t()) :: t()
+  def load_recent_turns(%__MODULE__{game_id: game_id} = state) do
+    %{
+      state
+      | current_turn: Turns.get_open_turn(game_id),
+        prev_turn: Turns.get_last_closed_turn(game_id)
+    }
   end
 end

@@ -1,53 +1,79 @@
 defmodule Spitegear.LiveGameStateTest do
-  use ExUnit.Case, async: true
+  use Spitegear.DataCase, async: true
 
   alias Spitegear.LiveGameState
+  alias Spitegear.LiveGameState.Turn
+  alias Spitegear.Repo
 
-  doctest Spitegear.LiveGameState
+  @base ~U[2024-01-01 12:00:00Z]
 
-  describe "new_activity?/1" do
-    test "false on a fresh struct with no turn data" do
-      refute LiveGameState.new_activity?(LiveGameState.new("42"))
+  defp insert_turn(attrs \\ []) do
+    Repo.insert!(%Turn{
+      game_id: Keyword.get(attrs, :game_id, "11111"),
+      player_name: Keyword.get(attrs, :player_name, "adam"),
+      started_at: Keyword.get(attrs, :started_at, @base),
+      ended_at: Keyword.get(attrs, :ended_at, nil)
+    })
+  end
+
+  describe "new/1" do
+    test "returns a struct with the given game_id" do
+      state = LiveGameState.new("11111")
+      assert state.game_id == "11111"
     end
 
-    test "false when prev_poll_latest_turn is nil (first successful fetch)" do
-      state = %LiveGameState{
-        game_id: "42",
-        latest_turn: %{"turnid" => "1"},
-        prev_poll_latest_turn: nil
-      }
-
-      refute LiveGameState.new_activity?(state)
+    test "current_turn is nil when no open turn exists" do
+      assert LiveGameState.new("11111").current_turn == nil
     end
 
-    test "false when latest_turn is nil (fetch failed)" do
-      state = %LiveGameState{
-        game_id: "42",
-        latest_turn: nil,
-        prev_poll_latest_turn: %{"turnid" => "1"}
-      }
-
-      refute LiveGameState.new_activity?(state)
+    test "current_turn is the open turn for the game" do
+      insert_turn(player_name: "adam", ended_at: nil)
+      assert LiveGameState.new("11111").current_turn.player_name == "adam"
     end
 
-    test "false when turn ID is unchanged between polls" do
-      state = %LiveGameState{
-        game_id: "42",
-        latest_turn: %{"turnid" => "5"},
-        prev_poll_latest_turn: %{"turnid" => "5"}
-      }
-
-      refute LiveGameState.new_activity?(state)
+    test "prev_turn is nil when no closed turn exists" do
+      assert LiveGameState.new("11111").prev_turn == nil
     end
 
-    test "true when turn ID has advanced" do
-      state = %LiveGameState{
-        game_id: "42",
-        latest_turn: %{"turnid" => "6"},
-        prev_poll_latest_turn: %{"turnid" => "5"}
-      }
+    test "prev_turn is the most recently closed turn" do
+      insert_turn(player_name: "adam", started_at: @base, ended_at: DateTime.add(@base, 3600))
+      insert_turn(player_name: "bob", started_at: DateTime.add(@base, 3600), ended_at: nil)
+      assert LiveGameState.new("11111").prev_turn.player_name == "adam"
+    end
+  end
 
-      assert LiveGameState.new_activity?(state)
+  describe "load_recent_turns/1" do
+    test "hydrates current_turn from the open turn in the DB" do
+      insert_turn(player_name: "adam", ended_at: nil)
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      assert state.current_turn.player_name == "adam"
+    end
+
+    test "hydrates prev_turn from the most recently closed turn" do
+      insert_turn(player_name: "adam", started_at: @base, ended_at: DateTime.add(@base, 3600))
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      assert state.prev_turn.player_name == "adam"
+    end
+
+    test "sets current_turn to nil when no open turn exists" do
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      assert state.current_turn == nil
+    end
+
+    test "sets prev_turn to nil when no closed turn exists" do
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      assert state.prev_turn == nil
+    end
+
+    test "preserves other fields on the struct" do
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      assert state.game_id == "11111"
+    end
+
+    test "does not cross game_id boundaries" do
+      insert_turn(game_id: "99999", player_name: "adam", ended_at: nil)
+      state = %LiveGameState{game_id: "11111"} |> LiveGameState.load_recent_turns()
+      assert state.current_turn == nil
     end
   end
 end

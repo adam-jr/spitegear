@@ -7,8 +7,8 @@ defmodule Spitegear.Worker.GamePoller.TurnLogic do
   """
 
   alias Spitegear.HTML.Player
-  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Turn
+  alias Spitegear.Wargear.HTTP.ViewScreen
 
   # 3 hours
   @reminder_interval_seconds 3 * 60 * 60

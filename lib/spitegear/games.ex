@@ -9,11 +9,11 @@ defmodule Spitegear.Games do
   alias Spitegear.GameDeath
   alias Spitegear.GameLogSnapshot
   alias Spitegear.HTML.Player
-  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Repo
   alias Spitegear.Turn
   alias Spitegear.TurnHistory
   alias Spitegear.Wargear.HTTP.LogSnapshot
+  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Worker.GamePoller
 
   @type game_id :: String.t()

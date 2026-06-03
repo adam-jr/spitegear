@@ -2,8 +2,8 @@ defmodule Spitegear.Worker.GamePoller.TurnLogicTest do
   use ExUnit.Case, async: true
 
   alias Spitegear.HTML.Player
-  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Turn
+  alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Worker.GamePoller.TurnLogic
 
   describe "new_turn?/1" do

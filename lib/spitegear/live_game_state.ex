@@ -33,7 +33,6 @@ defmodule Spitegear.LiveGameState do
   alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.PubSub
   alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen
-  alias Spitegear.HTML.Player
 
   @type t :: %__MODULE__{
           game_id: String.t() | nil,
@@ -170,7 +169,7 @@ defmodule Spitegear.LiveGameState do
 
   def advance_turn(
         %__MODULE__{
-          current_view_screen: %HTTPViewScreen{current_player: %Player{name: player_name}},
+          current_view_screen: %WargearViewScreenDb{current_player_name: player_name},
           current_turn: %Turn{player_name: player_name}
         } =
           state
@@ -178,7 +177,7 @@ defmodule Spitegear.LiveGameState do
       do: %{state | turn_advanced: false}
 
   def advance_turn(%__MODULE__{} = state) do
-    new_player = state.current_view_screen.current_player.name
+    new_player = state.current_view_screen.current_player_name
 
     with {:ok, finished_prev} <- finish_prev_turn(state.current_turn),
          {:ok, new_turn} <- Turns.start_turn(state.game_id, new_player) do

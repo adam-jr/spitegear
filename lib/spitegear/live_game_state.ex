@@ -42,7 +42,7 @@ defmodule Spitegear.LiveGameState do
           prev_view_screen: WargearViewScreenDb.t() | nil,
           current_api_response: WargearHistoryApiResponseDb.t() | nil,
           prev_api_response: WargearHistoryApiResponseDb.t() | nil,
-          last_round: non_neg_integer(),
+          current_round: non_neg_integer(),
           view_screen_changed: boolean(),
           turn_advanced: boolean()
         }
@@ -54,7 +54,7 @@ defmodule Spitegear.LiveGameState do
             prev_view_screen: nil,
             current_api_response: nil,
             prev_api_response: nil,
-            last_round: 0,
+            current_round: 0,
             view_screen_changed: false,
             turn_advanced: false
 
@@ -88,7 +88,7 @@ defmodule Spitegear.LiveGameState do
         prev_view_screen: ViewScreens.get_prev(game_id),
         current_api_response: HistoryResponses.get_latest(game_id),
         prev_api_response: HistoryResponses.get_prev(game_id),
-        last_round: Turns.completed_rounds(game_id)
+        current_round: Turns.completed_rounds(game_id)
     }
   end
 
@@ -171,29 +171,26 @@ defmodule Spitegear.LiveGameState do
     new_player = state.current_view_screen.current_player_name
     current = state.current_turn && state.current_turn.player_name
 
-    if current == new_player do
-      %{state | turn_advanced: false}
+    with true <- current != new_player,
+         {:ok, finished_prev} <- finish_prev_turn(state.current_turn),
+         {:ok, new_turn} <- Turns.start_turn(state.game_id, new_player) do
+      %{state | prev_turn: finished_prev, current_turn: new_turn, turn_advanced: true}
     else
-      finished_prev =
-        case state.current_turn && Turns.finish_turn(state.current_turn) do
-          {:ok, finished} -> finished
-          _ -> nil
-        end
+      false ->
+        %{state | turn_advanced: false}
 
-      case Turns.start_turn(state.game_id, new_player) do
-        {:ok, new_turn} ->
-          %{state | prev_turn: finished_prev, current_turn: new_turn, turn_advanced: true}
-
-        {:error, _} ->
-          Logger.error("#{__MODULE__} failed to start turn for game #{state.game_id}")
-          %{state | turn_advanced: false}
-      end
+      {:error, _} ->
+        Logger.error("#{__MODULE__} failed to advance turn for game #{state.game_id}")
+        %{state | turn_advanced: false}
     end
   end
 
+  defp finish_prev_turn(nil), do: {:ok, nil}
+  defp finish_prev_turn(turn), do: Turns.finish_turn(turn)
+
   @doc """
   Publishes a round-complete message to `:spitegear_test` when
-  `Turns.completed_rounds/1` exceeds `last_round`. Updates `last_round` on
+  `Turns.completed_rounds/1` exceeds `current_round`. Updates `current_round` on
   the struct.
 
   No-op when `turn_advanced` is `false`.
@@ -204,9 +201,9 @@ defmodule Spitegear.LiveGameState do
   def announce_next_round(%__MODULE__{} = state) do
     rounds = Turns.completed_rounds(state.game_id)
 
-    if rounds > state.last_round do
+    if rounds > state.current_round do
       PubSub.msg(:spitegear_test, "Round #{rounds} complete in game #{state.game_id}")
-      %{state | last_round: rounds}
+      %{state | current_round: rounds}
     else
       state
     end

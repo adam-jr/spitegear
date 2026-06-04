@@ -77,7 +77,7 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.prev_view_screen == nil
       assert state.current_api_response == nil
       assert state.prev_api_response == nil
-      assert state.last_round == 0
+      assert state.current_round == 0
     end
   end
 
@@ -140,7 +140,7 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.prev_api_response.turn_data["turnid"] == "4"
     end
 
-    test "hydrates last_round from completed turns" do
+    test "hydrates current_round from completed turns" do
       insert_turn(player_name: "adam", started_at: @base, ended_at: DateTime.add(@base, 3600))
 
       insert_turn(
@@ -156,7 +156,7 @@ defmodule Spitegear.LiveGameStateTest do
       )
 
       state = blank_state() |> LiveGameState.hydrate()
-      assert state.last_round == 1
+      assert state.current_round == 1
     end
 
     test "sets nil/defaults for all fields when DB is empty" do
@@ -164,7 +164,7 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.current_turn == nil
       assert state.current_view_screen == nil
       assert state.current_api_response == nil
-      assert state.last_round == 0
+      assert state.current_round == 0
     end
   end
 
@@ -316,16 +316,16 @@ defmodule Spitegear.LiveGameStateTest do
 
   describe "announce_next_round/1" do
     test "no-op when turn_advanced is false" do
-      state = %LiveGameState{game_id: "11111", turn_advanced: false, last_round: 0}
-      assert LiveGameState.announce_next_round(state).last_round == 0
+      state = %LiveGameState{game_id: "11111", turn_advanced: false, current_round: 0}
+      assert LiveGameState.announce_next_round(state).current_round == 0
     end
 
     test "no-op when no new round has completed" do
-      state = %LiveGameState{game_id: "11111", turn_advanced: true, last_round: 0}
-      assert LiveGameState.announce_next_round(state).last_round == 0
+      state = %LiveGameState{game_id: "11111", turn_advanced: true, current_round: 0}
+      assert LiveGameState.announce_next_round(state).current_round == 0
     end
 
-    test "updates last_round and publishes message when a round completes" do
+    test "updates current_round and publishes message when a round completes" do
       Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
 
       now = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -343,10 +343,10 @@ defmodule Spitegear.LiveGameStateTest do
         ended_at: DateTime.add(now, 10_800)
       )
 
-      state = %LiveGameState{game_id: "11111", turn_advanced: true, last_round: 0}
+      state = %LiveGameState{game_id: "11111", turn_advanced: true, current_round: 0}
       result = LiveGameState.announce_next_round(state)
 
-      assert result.last_round == 1
+      assert result.current_round == 1
       assert_receive {:message, :spitegear_test, "Round 1 complete in game 11111"}, 500
     end
   end

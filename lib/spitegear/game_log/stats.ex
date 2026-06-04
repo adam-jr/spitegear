@@ -39,6 +39,22 @@ defmodule Spitegear.GameLog.Stats do
       }
   """
   def net_units_over_time(game_id) do
+    game_id
+    |> enriched_net_units_series()
+    |> Map.new(fn {player, points} ->
+      {player, Enum.map(points, &Map.take(&1, [:seq, :net_units]))}
+    end)
+  end
+
+  @doc """
+  Like `net_units_over_time/1` but each point also carries the log event that
+  caused the change:
+
+      %{seq: 42, net_units: 7, event_type: "attacked", source_player: "dandodd", defender: "Ky..."}
+
+  Used by the admin chart so tooltips can display the action behind each dot.
+  """
+  def enriched_net_units_series(game_id) do
     events =
       Repo.all(
         from(e in GameLogEvent,
@@ -49,8 +65,6 @@ defmodule Spitegear.GameLog.Stats do
 
     cutoff = setup_cutoff(events)
 
-    # Aggregate all setup placed_units into a single starting point per player
-    # at the cutoff seq, so the chart begins cleanly after setup completes.
     setup_deltas =
       if cutoff > 0 do
         events
@@ -59,7 +73,15 @@ defmodule Spitegear.GameLog.Stats do
         |> Enum.group_by(& &1.player)
         |> Enum.map(fn {player, deltas} ->
           total = Enum.sum(Enum.map(deltas, & &1.delta))
-          %{player: player, seq: cutoff, delta: total}
+
+          %{
+            player: player,
+            seq: cutoff,
+            delta: total,
+            event_type: "setup",
+            source_player: nil,
+            defender: nil
+          }
         end)
       else
         []
@@ -166,7 +188,9 @@ defmodule Spitegear.GameLog.Stats do
         player_deltas
         |> Enum.scan(0, fn %{delta: d}, acc -> acc + d end)
         |> Enum.zip(player_deltas)
-        |> Enum.map(fn {net, %{seq: s}} -> %{seq: s, net_units: net} end)
+        |> Enum.map(fn {net, %{seq: s, event_type: et, source_player: sp, defender: defender}} ->
+          %{seq: s, net_units: net, event_type: et, source_player: sp, defender: defender}
+        end)
 
       {player, series}
     end)
@@ -175,7 +199,7 @@ defmodule Spitegear.GameLog.Stats do
   # Positive: player received/produced/captured units
   defp event_to_deltas(%GameLogEvent{event_type: t, player: p, units: u, log_seq: s})
        when t in @positive_unit_events and not is_nil(p) and not is_nil(u) do
-    [%{player: p, seq: s, delta: u}]
+    [%{player: p, seq: s, delta: u, event_type: t, source_player: p, defender: nil}]
   end
 
   # Combat: attacker and/or defender lost units; both sides independent
@@ -188,10 +212,18 @@ defmodule Spitegear.GameLog.Stats do
          log_seq: s
        }) do
     attacker =
-      if not is_nil(p) and not is_nil(al), do: [%{player: p, seq: s, delta: -al}], else: []
+      if not is_nil(p) and not is_nil(al),
+        do: [
+          %{player: p, seq: s, delta: -al, event_type: "attacked", source_player: p, defender: d}
+        ],
+        else: []
 
     defender =
-      if not is_nil(d) and not is_nil(dl), do: [%{player: d, seq: s, delta: -dl}], else: []
+      if not is_nil(d) and not is_nil(dl),
+        do: [
+          %{player: d, seq: s, delta: -dl, event_type: "attacked", source_player: p, defender: d}
+        ],
+        else: []
 
     attacker ++ defender
   end
@@ -205,10 +237,32 @@ defmodule Spitegear.GameLog.Stats do
          log_seq: s
        }) do
     capturer =
-      if not is_nil(p) and not is_nil(u), do: [%{player: p, seq: s, delta: u}], else: []
+      if not is_nil(p) and not is_nil(u),
+        do: [
+          %{
+            player: p,
+            seq: s,
+            delta: u,
+            event_type: "captured_reserve_units",
+            source_player: p,
+            defender: d
+          }
+        ],
+        else: []
 
     eliminated =
-      if not is_nil(d) and not is_nil(u), do: [%{player: d, seq: s, delta: -u}], else: []
+      if not is_nil(d) and not is_nil(u),
+        do: [
+          %{
+            player: d,
+            seq: s,
+            delta: -u,
+            event_type: "captured_reserve_units",
+            source_player: p,
+            defender: d
+          }
+        ],
+        else: []
 
     capturer ++ eliminated
   end
@@ -221,7 +275,16 @@ defmodule Spitegear.GameLog.Stats do
          log_seq: s
        })
        when not is_nil(p) and not is_nil(u) do
-    [%{player: p, seq: s, delta: -u}]
+    [
+      %{
+        player: p,
+        seq: s,
+        delta: -u,
+        event_type: "factory_destroyed",
+        source_player: p,
+        defender: nil
+      }
+    ]
   end
 
   # Discarded units are a genuine unit loss
@@ -232,7 +295,16 @@ defmodule Spitegear.GameLog.Stats do
          log_seq: s
        })
        when not is_nil(p) and not is_nil(u) do
-    [%{player: p, seq: s, delta: -u}]
+    [
+      %{
+        player: p,
+        seq: s,
+        delta: -u,
+        event_type: "discarded_units",
+        source_player: p,
+        defender: nil
+      }
+    ]
   end
 
   defp event_to_deltas(_), do: []

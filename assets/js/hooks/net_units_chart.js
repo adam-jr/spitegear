@@ -71,7 +71,7 @@ const NetUnitsChart = {
         const color = sanitizeColor(gameColors[player]) || COLORS[i % COLORS.length]
         return {
           label: player,
-          data: points.map(p => ({ x: p.seq, y: p.net_units })),
+          data: points.map(p => ({ x: p.seq, y: p.net_units, event_type: p.event_type, source_player: p.source_player, defender: p.defender })),
           borderColor: color,
           backgroundColor: color,
           fill: false,
@@ -94,6 +94,21 @@ const NetUnitsChart = {
         },
         plugins: {
           legend: { position: "right" },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const d = context.raw
+                const player = context.dataset.label
+                let action
+                if (d.event_type === "attacked" && d.source_player && d.defender) {
+                  action = `${d.source_player} attacked ${d.defender}`
+                } else {
+                  action = (d.event_type || "").replace(/_/g, " ")
+                }
+                return action ? `${player}: ${d.y}  (${action})` : `${player}: ${d.y}`
+              }
+            }
+          },
         },
       },
     })

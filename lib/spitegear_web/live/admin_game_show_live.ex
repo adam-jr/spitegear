@@ -125,7 +125,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
     poller_turn_id = Games.poller_turn_id(game_id)
     new_poller_alive = Games.new_poller_alive?(game_id)
     player_statuses = Games.list_player_statuses(game_id)
-    net_units_series = Stats.net_units_over_time(game_id)
+    net_units_series = Stats.enriched_net_units_series(game_id)
     placement_scores = Stats.placement_scores(game_id)
 
     %{

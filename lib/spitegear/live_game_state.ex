@@ -14,7 +14,6 @@ defmodule Spitegear.LiveGameState do
   For view screen updates, call the pipeline steps in order:
 
       state
-      |> LiveGameState.reset_pipeline_defaults()
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
       |> LiveGameState.fetch_log_if_unfogged()
@@ -93,15 +92,6 @@ defmodule Spitegear.LiveGameState do
         prev_api_response: HistoryResponses.get_prev(game_id),
         completed_round: Turns.completed_rounds(game_id)
     }
-  end
-
-  @doc """
-  Resets transient dispatch flags to their safe defaults before a new pipeline
-  invocation. Call this as the first step in the view screen pipeline.
-  """
-  @spec reset_pipeline_defaults(t()) :: t()
-  def reset_pipeline_defaults(%__MODULE__{} = state) do
-    %{state | view_screen_changed: false, turn_advanced: false}
   end
 
   @doc """

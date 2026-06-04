@@ -33,6 +33,7 @@ defmodule Spitegear.LiveGameState do
   alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.PubSub
   alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen
+  alias Spitegear.HTML.Player
 
   @type t :: %__MODULE__{
           game_id: String.t() | nil,
@@ -167,19 +168,23 @@ defmodule Spitegear.LiveGameState do
   def advance_turn(%__MODULE__{current_view_screen: nil} = state),
     do: %{state | turn_advanced: false}
 
-  def advance_turn(%__MODULE__{} = state) do
-    new_player = state.current_view_screen.current_player_name
-    current = state.current_turn && state.current_turn.player_name
+  def advance_turn(
+        %__MODULE__{
+          current_view_screen: %HTTPViewScreen{current_player: %Player{name: player_name}},
+          current_turn: %Turn{player_name: player_name}
+        } =
+          state
+      ),
+      do: %{state | turn_advanced: false}
 
-    with true <- current != new_player,
-         {:ok, finished_prev} <- finish_prev_turn(state.current_turn),
+  def advance_turn(%__MODULE__{} = state) do
+    new_player = state.current_view_screen.current_player.name
+
+    with {:ok, finished_prev} <- finish_prev_turn(state.current_turn),
          {:ok, new_turn} <- Turns.start_turn(state.game_id, new_player) do
       %{state | prev_turn: finished_prev, current_turn: new_turn, turn_advanced: true}
     else
-      false ->
-        %{state | turn_advanced: false}
-
-      {:error, _} ->
+      _ ->
         Logger.error("#{__MODULE__} failed to advance turn for game #{state.game_id}")
         %{state | turn_advanced: false}
     end

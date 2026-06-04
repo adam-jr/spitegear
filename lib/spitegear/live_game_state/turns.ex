@@ -65,6 +65,46 @@ defmodule Spitegear.LiveGameState.Turns do
   end
 
   @doc """
+  Returns the number of completed rounds for `game_id` based on the
+  `live_game_state_turns` table.
+
+  A round is complete when every active player has taken at least one turn.
+  The algorithm walks closed turns in chronological order and counts a new round
+  each time a player reappears, so it handles eliminations without a separate
+  deaths table.
+  """
+  @spec completed_rounds(game_id()) :: non_neg_integer()
+  def completed_rounds(game_id) do
+    Repo.all(
+      from(t in Turn,
+        where: t.game_id == ^game_id and not is_nil(t.ended_at),
+        order_by: [asc: t.started_at],
+        select: t.player_name
+      )
+    )
+    |> count_completed_rounds()
+  end
+
+  defp count_completed_rounds([]), do: 0
+
+  defp count_completed_rounds(turns) do
+    {rounds, current_cycle, last_complete_cycle} =
+      Enum.reduce(turns, {0, [], []}, fn player, {rounds, cycle, last_complete} ->
+        if player in cycle do
+          {rounds + 1, [player], cycle}
+        else
+          {rounds, [player | cycle], last_complete}
+        end
+      end)
+
+    if MapSet.equal?(MapSet.new(current_cycle), MapSet.new(last_complete_cycle)) do
+      rounds + 1
+    else
+      rounds
+    end
+  end
+
+  @doc """
   Runs `backfill_from_turn_history/1` for every game that has records in
   `turn_history`. Returns the total number of rows inserted across all games.
 

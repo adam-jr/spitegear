@@ -1,5 +1,6 @@
 defmodule SpitegearWeb.AdminGameShowLive do
   use SpitegearWeb, :live_view
+  require Logger
   alias Spitegear.GameLog.Processor
   alias Spitegear.GameLog.Stats
   alias Spitegear.Games
@@ -29,11 +30,13 @@ defmodule SpitegearWeb.AdminGameShowLive do
   end
 
   def handle_info({:log_fetch_result, {:ok, counts}}, socket) do
+    Logger.info("fetch_log #{socket.assigns.game_id} done: #{inspect(counts)}")
     updates = Map.merge(load(socket.assigns.game_id), %{log_fetch_status: {:ok, counts}})
     {:noreply, assign(socket, updates)}
   end
 
   def handle_info({:log_fetch_result, {:error, reason}}, socket) do
+    Logger.error("fetch_log #{socket.assigns.game_id} error: #{inspect(reason)}")
     {:noreply, assign(socket, log_fetch_status: {:error, reason})}
   end
 
@@ -60,9 +63,12 @@ defmodule SpitegearWeb.AdminGameShowLive do
   def handle_event("fetch_log", _params, socket) do
     game_id = socket.assigns.game_id
     lv = self()
+    Logger.info("fetch_log #{game_id} started")
 
     Task.start(fn ->
+      Logger.info("fetch_log #{game_id} task running")
       result = Processor.refetch_and_process(game_id)
+      Logger.info("fetch_log #{game_id} task complete: #{inspect(result)}")
       send(lv, {:log_fetch_result, result})
     end)
 

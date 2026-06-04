@@ -14,6 +14,7 @@ defmodule Spitegear.Worker.GamePollerNew do
 
   use GenServer
 
+  alias Spitegear.GameLog.Processor
   alias Spitegear.LiveGameState
 
   require Logger
@@ -75,10 +76,27 @@ defmodule Spitegear.Worker.GamePollerNew do
       game_state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
+      |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
 
     {:noreply, %{state | game_state: game_state}}
+  end
+
+  def handle_cast(:fetch_log, %{game_state: %{game_id: game_id}} = state) do
+    Logger.info("#{__MODULE__} fetching log for game #{game_id} after turn advance")
+
+    Task.start(fn ->
+      case Processor.refetch_and_process(game_id) do
+        {:ok, counts} ->
+          Logger.info("#{__MODULE__} log fetch complete for game #{game_id}: #{inspect(counts)}")
+
+        {:error, reason} ->
+          Logger.error("#{__MODULE__} log fetch failed for game #{game_id}: #{inspect(reason)}")
+      end
+    end)
+
+    {:noreply, state}
   end
 
   @impl true

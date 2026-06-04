@@ -14,8 +14,7 @@ defmodule Spitegear.Worker.GamePollerNew do
 
   use GenServer
 
-  alias Spitegear.LiveGameState.HistoryResponses
-  alias Spitegear.LiveGameState.ViewScreens
+  alias Spitegear.LiveGameState
 
   require Logger
 
@@ -57,18 +56,29 @@ defmodule Spitegear.Worker.GamePollerNew do
   @impl true
   def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
-    {:ok, %{game_id: game_id}}
+    {:ok, %{game_state: %LiveGameState{game_id: game_id}}, {:continue, :hydrate}}
   end
 
   @impl true
-  def handle_cast({:history_fetched, turn_data}, state) do
-    HistoryResponses.record_if_changed(state.game_id, turn_data)
-    {:noreply, state}
+  def handle_continue(:hydrate, %{game_state: game_state} = state) do
+    {:noreply, %{state | game_state: LiveGameState.hydrate(game_state)}}
   end
 
-  def handle_cast({:view_screen_fetched, view_screen}, state) do
-    ViewScreens.record_if_changed(view_screen)
-    {:noreply, state}
+  @impl true
+  def handle_cast({:history_fetched, turn_data}, %{game_state: game_state} = state) do
+    {:noreply,
+     %{state | game_state: LiveGameState.dispatch_history_response(game_state, turn_data)}}
+  end
+
+  def handle_cast({:view_screen_fetched, view_screen}, %{game_state: game_state} = state) do
+    game_state =
+      game_state
+      |> LiveGameState.record_changed_view_screen_db(view_screen)
+      |> LiveGameState.advance_turn()
+      |> LiveGameState.announce_next_round()
+      |> LiveGameState.announce_next_turn()
+
+    {:noreply, %{state | game_state: game_state}}
   end
 
   @impl true

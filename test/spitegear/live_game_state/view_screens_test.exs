@@ -71,6 +71,43 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
     end
   end
 
+  describe "get_prev/1" do
+    test "returns nil when no snapshots exist" do
+      assert ViewScreens.get_prev("11111") == nil
+    end
+
+    test "returns nil when only one snapshot exists" do
+      insert_snapshot()
+      assert ViewScreens.get_prev("11111") == nil
+    end
+
+    test "returns the second most recent snapshot" do
+      Repo.insert!(%WargearViewScreenDb{
+        game_id: "11111",
+        current_player_name: "adam",
+        players: [],
+        eliminated: [],
+        winners: [],
+        fogged: false,
+        inserted_at: ~U[2024-01-01 00:00:00Z],
+        updated_at: ~U[2024-01-01 00:00:00Z]
+      })
+
+      Repo.insert!(%WargearViewScreenDb{
+        game_id: "11111",
+        current_player_name: "bob",
+        players: [],
+        eliminated: [],
+        winners: [],
+        fogged: false,
+        inserted_at: ~U[2024-01-02 00:00:00Z],
+        updated_at: ~U[2024-01-02 00:00:00Z]
+      })
+
+      assert ViewScreens.get_prev("11111").current_player_name == "adam"
+    end
+  end
+
   describe "record_if_changed/1" do
     test "inserts a snapshot when none exists yet" do
       assert {:ok, %WargearViewScreenDb{}} = ViewScreens.record_if_changed(build_raw())

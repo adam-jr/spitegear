@@ -27,6 +27,22 @@ defmodule Spitegear.LiveGameState.ViewScreens do
   end
 
   @doc """
+  Returns the second most recent `WargearViewScreenDb` snapshot for `game_id`,
+  or `nil` if fewer than two snapshots exist.
+  """
+  @spec get_prev(game_id()) :: WargearViewScreenDb.t() | nil
+  def get_prev(game_id) do
+    Repo.one(
+      from(v in WargearViewScreenDb,
+        where: v.game_id == ^game_id,
+        order_by: [desc: v.inserted_at],
+        limit: 1,
+        offset: 1
+      )
+    )
+  end
+
+  @doc """
   Inserts a new snapshot if the incoming `ViewScreen` differs from the most
   recently stored one. Compares `current_player_name`, `players`, `eliminated`,
   `winners`, `finished`, and `fogged`.

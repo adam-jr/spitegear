@@ -1,6 +1,7 @@
 defmodule SpitegearWeb.AdminGamesLive do
   use SpitegearWeb, :live_view
   alias Spitegear.Games
+  alias Spitegear.LiveGameState.Turns
 
   def mount(_params, _session, socket) do
     {:ok,
@@ -15,7 +16,8 @@ defmodule SpitegearWeb.AdminGamesLive do
        refresh_status: nil,
        refresh_done: 0,
        refresh_total: 0,
-       refresh_errors: []
+       refresh_errors: [],
+       backfill_status: nil
      )}
   end
 
@@ -71,6 +73,12 @@ defmodule SpitegearWeb.AdminGamesLive do
      )}
   end
 
+  def handle_event("backfill_all_turns", _params, socket) do
+    lv = self()
+    Task.start(fn -> send(lv, {:backfill_done, Turns.backfill_all_games()}) end)
+    {:noreply, assign(socket, backfill_status: :running)}
+  end
+
   def handle_info({:refresh_progress, game_id, result}, socket) do
     errors =
       case result do
@@ -83,6 +91,10 @@ defmodule SpitegearWeb.AdminGamesLive do
        refresh_done: socket.assigns.refresh_done + 1,
        refresh_errors: errors
      )}
+  end
+
+  def handle_info({:backfill_done, count}, socket) do
+    {:noreply, assign(socket, backfill_status: {:done, count})}
   end
 
   def handle_info(:refresh_done, socket) do
@@ -214,6 +226,32 @@ defmodule SpitegearWeb.AdminGamesLive do
                 <span class="text-green-600">✓ {ok} ok</span>
                 · <span class="text-red-600">{err} failed: {Enum.join(@refresh_errors, ", ")}</span>
               </span>
+            <% _ -> %>
+          <% end %>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold mb-1">Backfill Live Game State Turns</h2>
+        <p class="text-sm text-gray-500 mb-4">
+          One-time migration: copies all records from <code>turn_history</code>
+          into <code>live_game_state_turns</code>
+          for every game. Only run once —
+          from then on the new poller keeps the table in sync automatically.
+        </p>
+        <div class="flex items-center gap-4">
+          <button
+            phx-click="backfill_all_turns"
+            disabled={@backfill_status == :running}
+            class="bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 text-sm disabled:opacity-50"
+          >
+            {if @backfill_status == :running, do: "Running…", else: "Backfill All Games"}
+          </button>
+          <%= case @backfill_status do %>
+            <% :running -> %>
+              <span class="text-sm text-gray-500">Working…</span>
+            <% {:done, count} -> %>
+              <span class="text-green-600 text-sm">✓ {count} rows inserted</span>
             <% _ -> %>
           <% end %>
         </div>

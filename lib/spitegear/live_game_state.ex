@@ -16,13 +16,15 @@ defmodule Spitegear.LiveGameState do
   """
 
   require Logger
+
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
   alias Spitegear.LiveGameState.WargearViewScreenDb
-  alias Spitegear.Wargear.HTTP.ViewScreen, as: RawViewScreen
+  alias Spitegear.PubSub
+  alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen
 
   @type t :: %__MODULE__{
           game_id: String.t() | nil,
@@ -31,7 +33,11 @@ defmodule Spitegear.LiveGameState do
           current_view_screen: WargearViewScreenDb.t() | nil,
           prev_view_screen: WargearViewScreenDb.t() | nil,
           current_api_response: WargearHistoryApiResponseDb.t() | nil,
-          prev_api_response: WargearHistoryApiResponseDb.t() | nil
+          prev_api_response: WargearHistoryApiResponseDb.t() | nil,
+          last_round: non_neg_integer(),
+          incoming_view_screen: WargearViewScreenDb.t() | nil,
+          view_screen_changed: boolean(),
+          turn_advanced: boolean()
         }
 
   defstruct game_id: nil,
@@ -40,7 +46,11 @@ defmodule Spitegear.LiveGameState do
             current_view_screen: nil,
             prev_view_screen: nil,
             current_api_response: nil,
-            prev_api_response: nil
+            prev_api_response: nil,
+            last_round: 0,
+            incoming_view_screen: nil,
+            view_screen_changed: false,
+            turn_advanced: false
 
   @doc """
   Returns a new `LiveGameState` for `game_id` with all fields loaded from
@@ -56,10 +66,8 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Hydrates all DB-backed fields on the given struct from the database.
-  Preserves all other fields on `state`.
-
-  Loads the open/last-closed turn, two most recent view screen snapshots,
-  and two most recent history API responses.
+  Preserves transient dispatch flags (`view_screen_changed`, `turn_advanced`,
+  `incoming_view_screen`).
 
   Call this on startup or after a crash restart. For ongoing updates, prefer
   `dispatch_history_response/2` and `dispatch_view_screen/2`, which update the
@@ -74,7 +82,8 @@ defmodule Spitegear.LiveGameState do
         current_view_screen: ViewScreens.get_latest(game_id),
         prev_view_screen: ViewScreens.get_prev(game_id),
         current_api_response: HistoryResponses.get_latest(game_id),
-        prev_api_response: HistoryResponses.get_prev(game_id)
+        prev_api_response: HistoryResponses.get_prev(game_id),
+        last_round: Turns.completed_rounds(game_id)
     }
   end
 
@@ -106,55 +115,111 @@ defmodule Spitegear.LiveGameState do
   end
 
   @doc """
-  Processes a raw ViewScreen. Persists it if any tracked field has changed,
-  shifts `current_view_screen` → `prev_view_screen`, and sets
-  `current_view_screen` to the new snapshot.
+  Processes a raw ViewScreen through a pipeline:
 
-  Also detects turn changes: if the active player in the incoming ViewScreen
-  differs from `current_turn.player_name`, records the turn transition via
-  `Turns.record_turn_start/2` and shifts `current_turn` → `prev_turn`
-  in-memory.
+  1. Persists it to the DB if it has changed (`record_changed_view_screen_db/2`)
+  2. Swaps `current_view_screen` ← new snapshot, `prev_view_screen` ← old (`replace_current_view_screen/1`)
+  3. Records a new turn if the active player changed (`advance_turn/1`)
+  4. Announces a completed round to Slack if applicable (`announce_next_round/1`)
+  5. Announces the next turn to Slack if a turn was recorded (`announce_next_turn/1`)
 
-  Returns the struct unchanged if the view screen and active player are both
-  identical to the last stored state, or if any write fails.
+  Each step is a no-op when its precondition is not met.
   """
-  @spec dispatch_view_screen(t(), RawViewScreen.t()) :: t()
-  def dispatch_view_screen(%__MODULE__{} = state, raw) do
-    state =
-      case ViewScreens.record_if_changed(raw) do
-        {:ok, :unchanged} ->
-          state
-
-        {:ok, snapshot} ->
-          %{state | prev_view_screen: state.current_view_screen, current_view_screen: snapshot}
-
-        {:error, _} ->
-          Logger.error("#{__MODULE__} failed to record view screen for game #{state.game_id}")
-          state
-      end
-
-    incoming_player = raw.current_player && raw.current_player.name
-    maybe_record_turn_start(state, incoming_player)
+  @spec dispatch_view_screen(t(), HTTPViewScreen.t()) :: t()
+  def dispatch_view_screen(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
+    state
+    |> record_changed_view_screen_db(view_screen)
+    |> replace_current_view_screen()
+    |> advance_turn()
+    |> announce_next_round()
+    |> announce_next_turn()
   end
 
-  defp maybe_record_turn_start(state, nil), do: state
+  # Persists the view screen if it differs from the latest stored snapshot.
+  # Stores the newly-inserted record in `incoming_view_screen` and sets
+  # `view_screen_changed` so downstream steps know whether to act.
+  defp record_changed_view_screen_db(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
+    case ViewScreens.record_if_changed(view_screen) do
+      {:ok, :unchanged} ->
+        %{state | incoming_view_screen: nil, view_screen_changed: false}
 
-  defp maybe_record_turn_start(%__MODULE__{} = state, new_player) do
+      {:ok, snapshot} ->
+        %{state | incoming_view_screen: snapshot, view_screen_changed: true}
+
+      {:error, _} ->
+        Logger.error("#{__MODULE__} failed to record view screen for game #{state.game_id}")
+        %{state | incoming_view_screen: nil, view_screen_changed: false}
+    end
+  end
+
+  # Shifts current_view_screen → prev_view_screen and sets current_view_screen
+  # to the newly-persisted snapshot. No-op when nothing changed.
+  defp replace_current_view_screen(%__MODULE__{view_screen_changed: false} = state), do: state
+
+  defp replace_current_view_screen(%__MODULE__{incoming_view_screen: snapshot} = state) do
+    %{
+      state
+      | prev_view_screen: state.current_view_screen,
+        current_view_screen: snapshot,
+        incoming_view_screen: nil
+    }
+  end
+
+  # Records a new turn start if the active player changed. Shifts
+  # current_turn → prev_turn and sets turn_advanced. No-op when the view screen
+  # was unchanged or the player is the same.
+  defp advance_turn(%__MODULE__{view_screen_changed: false} = state),
+    do: %{state | turn_advanced: false}
+
+  defp advance_turn(%__MODULE__{current_view_screen: nil} = state),
+    do: %{state | turn_advanced: false}
+
+  defp advance_turn(%__MODULE__{} = state) do
+    new_player = state.current_view_screen.current_player_name
     current = state.current_turn && state.current_turn.player_name
 
     if current == new_player do
-      state
+      %{state | turn_advanced: false}
     else
       case Turns.record_turn_start(state.game_id, new_player) do
         {:ok, new_turn} ->
           closed_prev =
             state.current_turn && %{state.current_turn | ended_at: new_turn.started_at}
 
-          %{state | prev_turn: closed_prev, current_turn: new_turn}
+          %{state | prev_turn: closed_prev, current_turn: new_turn, turn_advanced: true}
 
         {:error, _} ->
-          state
+          Logger.error("#{__MODULE__} failed to advance turn for game #{state.game_id}")
+          %{state | turn_advanced: false}
       end
     end
+  end
+
+  # Publishes a round-complete message when the completed round count exceeds
+  # the last recorded round. Updates last_round. No-op when no turn advanced.
+  defp announce_next_round(%__MODULE__{turn_advanced: false} = state), do: state
+
+  defp announce_next_round(%__MODULE__{} = state) do
+    rounds = Turns.completed_rounds(state.game_id)
+
+    if rounds > state.last_round do
+      PubSub.msg(:spitegear_test, "Round #{rounds} complete in game #{state.game_id}")
+      %{state | last_round: rounds}
+    else
+      state
+    end
+  end
+
+  # Publishes a next-turn message. No-op when no turn advanced or no current turn.
+  defp announce_next_turn(%__MODULE__{turn_advanced: false} = state), do: state
+  defp announce_next_turn(%__MODULE__{current_turn: nil} = state), do: state
+
+  defp announce_next_turn(%__MODULE__{} = state) do
+    PubSub.msg(
+      :spitegear_test,
+      "#{state.current_turn.player_name}'s turn in game #{state.game_id}"
+    )
+
+    state
   end
 end

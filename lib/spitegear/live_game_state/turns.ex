@@ -38,6 +38,27 @@ defmodule Spitegear.LiveGameState.Turns do
   end
 
   @doc """
+  Closes `turn` by setting `ended_at` to the current UTC time. Returns the
+  updated struct with `ended_at` populated.
+  """
+  @spec finish_turn(Turn.t()) :: {:ok, Turn.t()} | {:error, term()}
+  def finish_turn(%Turn{id: id} = turn) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    Repo.update_all(from(t in Turn, where: t.id == ^id), set: [ended_at: now])
+    {:ok, %{turn | ended_at: now}}
+  end
+
+  @doc """
+  Inserts a new open turn for `player_name` in `game_id` with `started_at`
+  set to the current UTC time and `ended_at: nil`.
+  """
+  @spec start_turn(game_id(), String.t()) :: {:ok, Turn.t()} | {:error, term()}
+  def start_turn(game_id, player_name) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    Repo.insert(%Turn{game_id: game_id, player_name: player_name, started_at: now})
+  end
+
+  @doc """
   Records a new turn starting for `player_name`. Closes any currently open
   turn for the game first, then inserts a new row with `started_at` set to
   the current UTC time and `ended_at: nil`.

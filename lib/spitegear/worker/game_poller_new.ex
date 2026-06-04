@@ -74,7 +74,6 @@ defmodule Spitegear.Worker.GamePollerNew do
     game_state =
       game_state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
-      |> LiveGameState.replace_current_view_screen()
       |> LiveGameState.advance_turn()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()

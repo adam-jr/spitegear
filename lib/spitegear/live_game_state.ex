@@ -11,11 +11,10 @@ defmodule Spitegear.LiveGameState do
 
   Use `dispatch_history_response/2` to process incoming history API data.
 
-  For view screen updates, call the five pipeline steps in order:
+  For view screen updates, call the four pipeline steps in order:
 
       state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
-      |> LiveGameState.replace_current_view_screen()
       |> LiveGameState.advance_turn()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
@@ -44,7 +43,6 @@ defmodule Spitegear.LiveGameState do
           current_api_response: WargearHistoryApiResponseDb.t() | nil,
           prev_api_response: WargearHistoryApiResponseDb.t() | nil,
           last_round: non_neg_integer(),
-          incoming_view_screen: WargearViewScreenDb.t() | nil,
           view_screen_changed: boolean(),
           turn_advanced: boolean()
         }
@@ -57,7 +55,6 @@ defmodule Spitegear.LiveGameState do
             current_api_response: nil,
             prev_api_response: nil,
             last_round: 0,
-            incoming_view_screen: nil,
             view_screen_changed: false,
             turn_advanced: false
 
@@ -75,8 +72,7 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Hydrates all DB-backed fields on the given struct from the database.
-  Preserves transient dispatch flags (`view_screen_changed`, `turn_advanced`,
-  `incoming_view_screen`).
+  Preserves transient dispatch flags (`view_screen_changed`, `turn_advanced`).
 
   Call this on startup or after a crash restart. For ongoing updates, use the
   individual pipeline steps, which update the struct in-memory without an extra
@@ -126,54 +122,40 @@ defmodule Spitegear.LiveGameState do
   @doc """
   Persists the view screen if it differs from the latest stored snapshot.
 
-  Sets `incoming_view_screen` to the newly-inserted `WargearViewScreenDb`
-  record and `view_screen_changed: true` when a change is detected. Sets both
-  to their zero values when the screen is unchanged or the insert fails.
-
-  Always follow this with `replace_current_view_screen/1`.
+  When a change is detected, shifts `current_view_screen` → `prev_view_screen`,
+  sets `current_view_screen` to the newly-inserted snapshot, and sets
+  `view_screen_changed: true`. Sets `view_screen_changed: false` when the
+  screen is unchanged or the insert fails.
   """
   @spec record_changed_view_screen_db(t(), HTTPViewScreen.t()) :: t()
   def record_changed_view_screen_db(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
     case ViewScreens.record_if_changed(view_screen) do
       {:ok, :unchanged} ->
-        %{state | incoming_view_screen: nil, view_screen_changed: false}
+        %{state | view_screen_changed: false}
 
       {:ok, snapshot} ->
-        %{state | incoming_view_screen: snapshot, view_screen_changed: true}
+        %{
+          state
+          | current_view_screen: snapshot,
+            prev_view_screen: state.current_view_screen,
+            view_screen_changed: true
+        }
 
       {:error, _} ->
         Logger.error("#{__MODULE__} failed to record view screen for game #{state.game_id}")
-        %{state | incoming_view_screen: nil, view_screen_changed: false}
+        %{state | view_screen_changed: false}
     end
   end
 
   @doc """
-  Swaps `current_view_screen` ← `incoming_view_screen` and shifts the
-  previous `current_view_screen` into `prev_view_screen`. Clears
-  `incoming_view_screen` after the swap.
-
-  No-op when `view_screen_changed` is `false`.
-  """
-  @spec replace_current_view_screen(t()) :: t()
-  def replace_current_view_screen(%__MODULE__{view_screen_changed: false} = state), do: state
-
-  def replace_current_view_screen(%__MODULE__{incoming_view_screen: snapshot} = state) do
-    %{
-      state
-      | prev_view_screen: state.current_view_screen,
-        current_view_screen: snapshot,
-        incoming_view_screen: nil
-    }
-  end
-
-  @doc """
-  Records a new turn start when the active player in `current_view_screen`
+  Records a turn transition when the active player in `current_view_screen`
   differs from the player in `current_turn`.
 
-  On a player change, closes the open turn, inserts a new one via
-  `Turns.record_turn_start/2`, shifts `current_turn` → `prev_turn` (with
-  `ended_at` set to the new turn's `started_at`), and sets
-  `turn_advanced: true`.
+  On a player change:
+  1. Finishes the current open turn via `Turns.finish_turn/1`, setting
+     `ended_at` in the DB and shifting `current_turn` → `prev_turn`.
+  2. Starts a new turn via `Turns.start_turn/2` and sets it as `current_turn`.
+  3. Sets `turn_advanced: true`.
 
   No-op — setting `turn_advanced: false` — when the view screen was unchanged,
   `current_view_screen` is nil, or the active player is the same.
@@ -192,15 +174,18 @@ defmodule Spitegear.LiveGameState do
     if current == new_player do
       %{state | turn_advanced: false}
     else
-      case Turns.record_turn_start(state.game_id, new_player) do
-        {:ok, new_turn} ->
-          closed_prev =
-            state.current_turn && %{state.current_turn | ended_at: new_turn.started_at}
+      finished_prev =
+        case state.current_turn && Turns.finish_turn(state.current_turn) do
+          {:ok, finished} -> finished
+          _ -> nil
+        end
 
-          %{state | prev_turn: closed_prev, current_turn: new_turn, turn_advanced: true}
+      case Turns.start_turn(state.game_id, new_player) do
+        {:ok, new_turn} ->
+          %{state | prev_turn: finished_prev, current_turn: new_turn, turn_advanced: true}
 
         {:error, _} ->
-          Logger.error("#{__MODULE__} failed to advance turn for game #{state.game_id}")
+          Logger.error("#{__MODULE__} failed to start turn for game #{state.game_id}")
           %{state | turn_advanced: false}
       end
     end

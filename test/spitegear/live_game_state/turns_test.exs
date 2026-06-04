@@ -130,6 +130,44 @@ defmodule Spitegear.LiveGameState.TurnsTest do
     end
   end
 
+  describe "finish_turn/1" do
+    test "sets ended_at on the given turn in the DB" do
+      turn = insert_turn(ended_at: nil)
+      {:ok, finished} = Turns.finish_turn(turn)
+      assert finished.ended_at != nil
+      assert Repo.get!(Turn, turn.id).ended_at != nil
+    end
+
+    test "returns the updated struct with ended_at populated" do
+      turn = insert_turn(ended_at: nil)
+      {:ok, finished} = Turns.finish_turn(turn)
+      assert finished.player_name == turn.player_name
+      assert finished.started_at == turn.started_at
+    end
+
+    test "does not affect other turns" do
+      other = insert_turn(game_id: "22222", ended_at: nil)
+      turn = insert_turn(ended_at: nil)
+      Turns.finish_turn(turn)
+      assert Repo.get!(Turn, other.id).ended_at == nil
+    end
+  end
+
+  describe "start_turn/2" do
+    test "inserts a new open turn for the player" do
+      {:ok, turn} = Turns.start_turn("11111", "adam")
+      assert turn.game_id == "11111"
+      assert turn.player_name == "adam"
+      assert turn.ended_at == nil
+    end
+
+    test "does not close any existing open turn" do
+      existing = insert_turn(ended_at: nil)
+      Turns.start_turn("11111", "bob")
+      assert Repo.get!(Turn, existing.id).ended_at == nil
+    end
+  end
+
   describe "record_turn_start/2" do
     test "inserts a new open turn for the player" do
       {:ok, turn} = Turns.record_turn_start("11111", "adam")

@@ -11,11 +11,12 @@ defmodule Spitegear.LiveGameState do
 
   Use `dispatch_history_response/2` to process incoming history API data.
 
-  For view screen updates, call the four pipeline steps in order:
+  For view screen updates, call the pipeline steps in order:
 
       state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
+      |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
 
@@ -194,6 +195,22 @@ defmodule Spitegear.LiveGameState do
 
   defp finish_prev_turn(nil), do: {:ok, nil}
   defp finish_prev_turn(turn), do: Turns.finish_turn(turn)
+
+  @doc """
+  Sends `GenServer.cast(self(), :fetch_log)` to the calling process when a turn
+  just advanced on a non-fogged game, so the poller can re-fetch and process the
+  event log asynchronously.
+
+  No-op when `turn_advanced` is `false` or the current view screen is fogged.
+  """
+  @spec fetch_log_if_unfogged(t()) :: t()
+  def fetch_log_if_unfogged(%__MODULE__{turn_advanced: false} = state), do: state
+  def fetch_log_if_unfogged(%__MODULE__{current_view_screen: %{fogged: true}} = state), do: state
+
+  def fetch_log_if_unfogged(%__MODULE__{} = state) do
+    GenServer.cast(self(), :fetch_log)
+    state
+  end
 
   @doc """
   Queries `Turns.completed_rounds/1` and, when the result exceeds

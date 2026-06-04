@@ -76,12 +76,9 @@ defmodule Spitegear.Worker.GamePollerNew do
       game_state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
+      |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
-
-    if game_state.turn_advanced and not view_screen.fogged? do
-      GenServer.cast(self(), :fetch_log)
-    end
 
     {:noreply, %{state | game_state: game_state}}
   end

@@ -2,6 +2,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
   use SpitegearWeb, :live_view
   alias Spitegear.GameLog.Stats
   alias Spitegear.Games
+  alias Spitegear.LiveGameState
   alias Spitegear.PubSub
   alias Spitegear.QuickChart
   alias Spitegear.Slack.API, as: SlackAPI
@@ -99,6 +100,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
     player_statuses = Games.list_player_statuses(game_id)
     net_units_series = Stats.net_units_over_time(game_id)
     placement_scores = Stats.placement_scores(game_id)
+    live_game_state = LiveGameState.new(game_id)
 
     %{
       game_id: game_id,
@@ -113,7 +115,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
       new_poller_alive: new_poller_alive,
       player_statuses: player_statuses,
       net_units_series: net_units_series,
-      placement_scores: placement_scores
+      placement_scores: placement_scores,
+      live_game_state: live_game_state
     }
   end
 
@@ -334,6 +337,36 @@ defmodule SpitegearWeb.AdminGameShowLive do
           <% end %>
         </section>
       <% end %>
+
+      <section>
+        <h2 class="text-lg font-semibold mb-3">Live Game State</h2>
+        <dl class="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <dt class="text-gray-500">Current turn</dt>
+          <dd>
+            {if @live_game_state.current_turn,
+              do: @live_game_state.current_turn.player_name,
+              else: "—"}
+          </dd>
+          <dt class="text-gray-500">Prev turn</dt>
+          <dd>
+            {if @live_game_state.prev_turn, do: @live_game_state.prev_turn.player_name, else: "—"}
+          </dd>
+          <dt class="text-gray-500">Completed round</dt>
+          <dd>{@live_game_state.completed_round}</dd>
+          <dt class="text-gray-500">View screen player</dt>
+          <dd>
+            {if @live_game_state.current_view_screen,
+              do: @live_game_state.current_view_screen.current_player_name,
+              else: "—"}
+          </dd>
+          <dt class="text-gray-500">API turn ID</dt>
+          <dd class="font-mono">
+            {if @live_game_state.current_api_response,
+              do: @live_game_state.current_api_response.turn_data["turnid"],
+              else: "—"}
+          </dd>
+        </dl>
+      </section>
 
       <%= if Enum.any?(@history) do %>
         <section>

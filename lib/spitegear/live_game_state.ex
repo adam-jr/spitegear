@@ -42,7 +42,7 @@ defmodule Spitegear.LiveGameState do
           prev_view_screen: WargearViewScreenDb.t() | nil,
           current_api_response: WargearHistoryApiResponseDb.t() | nil,
           prev_api_response: WargearHistoryApiResponseDb.t() | nil,
-          current_round: non_neg_integer(),
+          completed_round: non_neg_integer(),
           view_screen_changed: boolean(),
           turn_advanced: boolean()
         }
@@ -54,7 +54,7 @@ defmodule Spitegear.LiveGameState do
             prev_view_screen: nil,
             current_api_response: nil,
             prev_api_response: nil,
-            current_round: 0,
+            completed_round: 0,
             view_screen_changed: false,
             turn_advanced: false
 
@@ -72,7 +72,7 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Hydrates all DB-backed fields on the given struct from the database.
-  Loads turns, view screen snapshots, history responses, and `current_round`.
+  Loads turns, view screen snapshots, history responses, and `completed_round`.
   Preserves transient dispatch flags (`view_screen_changed`, `turn_advanced`).
 
   Call this on startup or after a crash restart. For ongoing updates, use the
@@ -89,7 +89,7 @@ defmodule Spitegear.LiveGameState do
         prev_view_screen: ViewScreens.get_prev(game_id),
         current_api_response: HistoryResponses.get_latest(game_id),
         prev_api_response: HistoryResponses.get_prev(game_id),
-        current_round: Turns.completed_rounds(game_id)
+        completed_round: Turns.completed_rounds(game_id)
     }
   end
 
@@ -197,8 +197,8 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Queries `Turns.completed_rounds/1` and, when the result exceeds
-  `current_round`, publishes a round-complete message to `:spitegear_test` and
-  updates `current_round` on the struct.
+  `completed_round`, publishes a round-complete message to `:spitegear_test` and
+  updates `completed_round` on the struct.
 
   This is the only pipeline step that reads from the database.
 
@@ -210,9 +210,9 @@ defmodule Spitegear.LiveGameState do
   def announce_next_round(%__MODULE__{} = state) do
     rounds = Turns.completed_rounds(state.game_id)
 
-    if rounds > state.current_round do
+    if rounds > state.completed_round do
       PubSub.msg(:spitegear_test, "Round #{rounds} complete in game #{state.game_id}")
-      %{state | current_round: rounds}
+      %{state | completed_round: rounds}
     else
       state
     end

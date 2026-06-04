@@ -71,7 +71,15 @@ defmodule Spitegear.Worker.GamePollerNew do
   end
 
   def handle_cast({:view_screen_fetched, view_screen}, %{game_state: game_state} = state) do
-    {:noreply, %{state | game_state: LiveGameState.dispatch_view_screen(game_state, view_screen)}}
+    game_state =
+      game_state
+      |> LiveGameState.record_changed_view_screen_db(view_screen)
+      |> LiveGameState.replace_current_view_screen()
+      |> LiveGameState.advance_turn()
+      |> LiveGameState.announce_next_round()
+      |> LiveGameState.announce_next_turn()
+
+    {:noreply, %{state | game_state: game_state}}
   end
 
   @impl true

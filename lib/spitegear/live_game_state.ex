@@ -9,10 +9,19 @@ defmodule Spitegear.LiveGameState do
   Use `new/1` to build an initial struct for a game, or `hydrate/1` to
   refresh an existing struct's fields (e.g. after restart).
 
-  Use `dispatch_history_response/2` and `dispatch_view_screen/2` to process incoming
-  data from the legacy poller. Each function checks whether the incoming data
-  represents a change, persists it if so, and returns an updated struct with
-  the current/prev fields shifted in-memory — no extra DB read needed.
+  Use `dispatch_history_response/2` to process incoming history API data.
+
+  For view screen updates, call the five pipeline steps in order:
+
+      state
+      |> LiveGameState.record_changed_view_screen_db(view_screen)
+      |> LiveGameState.replace_current_view_screen()
+      |> LiveGameState.advance_turn()
+      |> LiveGameState.announce_next_round()
+      |> LiveGameState.announce_next_turn()
+
+  Each step is a no-op when its precondition is not met, so the pipeline
+  always returns a valid struct.
   """
 
   require Logger
@@ -69,9 +78,9 @@ defmodule Spitegear.LiveGameState do
   Preserves transient dispatch flags (`view_screen_changed`, `turn_advanced`,
   `incoming_view_screen`).
 
-  Call this on startup or after a crash restart. For ongoing updates, prefer
-  `dispatch_history_response/2` and `dispatch_view_screen/2`, which update the
-  struct in-memory without an extra DB read.
+  Call this on startup or after a crash restart. For ongoing updates, use the
+  individual pipeline steps, which update the struct in-memory without an extra
+  DB read.
   """
   @spec hydrate(t()) :: t()
   def hydrate(%__MODULE__{game_id: game_id} = state) do
@@ -115,30 +124,16 @@ defmodule Spitegear.LiveGameState do
   end
 
   @doc """
-  Processes a raw ViewScreen through a pipeline:
+  Persists the view screen if it differs from the latest stored snapshot.
 
-  1. Persists it to the DB if it has changed (`record_changed_view_screen_db/2`)
-  2. Swaps `current_view_screen` ← new snapshot, `prev_view_screen` ← old (`replace_current_view_screen/1`)
-  3. Records a new turn if the active player changed (`advance_turn/1`)
-  4. Announces a completed round to Slack if applicable (`announce_next_round/1`)
-  5. Announces the next turn to Slack if a turn was recorded (`announce_next_turn/1`)
+  Sets `incoming_view_screen` to the newly-inserted `WargearViewScreenDb`
+  record and `view_screen_changed: true` when a change is detected. Sets both
+  to their zero values when the screen is unchanged or the insert fails.
 
-  Each step is a no-op when its precondition is not met.
+  Always follow this with `replace_current_view_screen/1`.
   """
-  @spec dispatch_view_screen(t(), HTTPViewScreen.t()) :: t()
-  def dispatch_view_screen(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
-    state
-    |> record_changed_view_screen_db(view_screen)
-    |> replace_current_view_screen()
-    |> advance_turn()
-    |> announce_next_round()
-    |> announce_next_turn()
-  end
-
-  # Persists the view screen if it differs from the latest stored snapshot.
-  # Stores the newly-inserted record in `incoming_view_screen` and sets
-  # `view_screen_changed` so downstream steps know whether to act.
-  defp record_changed_view_screen_db(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
+  @spec record_changed_view_screen_db(t(), HTTPViewScreen.t()) :: t()
+  def record_changed_view_screen_db(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
     case ViewScreens.record_if_changed(view_screen) do
       {:ok, :unchanged} ->
         %{state | incoming_view_screen: nil, view_screen_changed: false}
@@ -152,11 +147,17 @@ defmodule Spitegear.LiveGameState do
     end
   end
 
-  # Shifts current_view_screen → prev_view_screen and sets current_view_screen
-  # to the newly-persisted snapshot. No-op when nothing changed.
-  defp replace_current_view_screen(%__MODULE__{view_screen_changed: false} = state), do: state
+  @doc """
+  Swaps `current_view_screen` ← `incoming_view_screen` and shifts the
+  previous `current_view_screen` into `prev_view_screen`. Clears
+  `incoming_view_screen` after the swap.
 
-  defp replace_current_view_screen(%__MODULE__{incoming_view_screen: snapshot} = state) do
+  No-op when `view_screen_changed` is `false`.
+  """
+  @spec replace_current_view_screen(t()) :: t()
+  def replace_current_view_screen(%__MODULE__{view_screen_changed: false} = state), do: state
+
+  def replace_current_view_screen(%__MODULE__{incoming_view_screen: snapshot} = state) do
     %{
       state
       | prev_view_screen: state.current_view_screen,
@@ -165,16 +166,26 @@ defmodule Spitegear.LiveGameState do
     }
   end
 
-  # Records a new turn start if the active player changed. Shifts
-  # current_turn → prev_turn and sets turn_advanced. No-op when the view screen
-  # was unchanged or the player is the same.
-  defp advance_turn(%__MODULE__{view_screen_changed: false} = state),
+  @doc """
+  Records a new turn start when the active player in `current_view_screen`
+  differs from the player in `current_turn`.
+
+  On a player change, closes the open turn, inserts a new one via
+  `Turns.record_turn_start/2`, shifts `current_turn` → `prev_turn` (with
+  `ended_at` set to the new turn's `started_at`), and sets
+  `turn_advanced: true`.
+
+  No-op — setting `turn_advanced: false` — when the view screen was unchanged,
+  `current_view_screen` is nil, or the active player is the same.
+  """
+  @spec advance_turn(t()) :: t()
+  def advance_turn(%__MODULE__{view_screen_changed: false} = state),
     do: %{state | turn_advanced: false}
 
-  defp advance_turn(%__MODULE__{current_view_screen: nil} = state),
+  def advance_turn(%__MODULE__{current_view_screen: nil} = state),
     do: %{state | turn_advanced: false}
 
-  defp advance_turn(%__MODULE__{} = state) do
+  def advance_turn(%__MODULE__{} = state) do
     new_player = state.current_view_screen.current_player_name
     current = state.current_turn && state.current_turn.player_name
 
@@ -195,11 +206,17 @@ defmodule Spitegear.LiveGameState do
     end
   end
 
-  # Publishes a round-complete message when the completed round count exceeds
-  # the last recorded round. Updates last_round. No-op when no turn advanced.
-  defp announce_next_round(%__MODULE__{turn_advanced: false} = state), do: state
+  @doc """
+  Publishes a round-complete message to `:spitegear_test` when
+  `Turns.completed_rounds/1` exceeds `last_round`. Updates `last_round` on
+  the struct.
 
-  defp announce_next_round(%__MODULE__{} = state) do
+  No-op when `turn_advanced` is `false`.
+  """
+  @spec announce_next_round(t()) :: t()
+  def announce_next_round(%__MODULE__{turn_advanced: false} = state), do: state
+
+  def announce_next_round(%__MODULE__{} = state) do
     rounds = Turns.completed_rounds(state.game_id)
 
     if rounds > state.last_round do
@@ -210,11 +227,17 @@ defmodule Spitegear.LiveGameState do
     end
   end
 
-  # Publishes a next-turn message. No-op when no turn advanced or no current turn.
-  defp announce_next_turn(%__MODULE__{turn_advanced: false} = state), do: state
-  defp announce_next_turn(%__MODULE__{current_turn: nil} = state), do: state
+  @doc """
+  Publishes a next-turn message for `current_turn.player_name` to
+  `:spitegear_test`.
 
-  defp announce_next_turn(%__MODULE__{} = state) do
+  No-op when `turn_advanced` is `false` or `current_turn` is `nil`.
+  """
+  @spec announce_next_turn(t()) :: t()
+  def announce_next_turn(%__MODULE__{turn_advanced: false} = state), do: state
+  def announce_next_turn(%__MODULE__{current_turn: nil} = state), do: state
+
+  def announce_next_turn(%__MODULE__{} = state) do
     PubSub.msg(
       :spitegear_test,
       "#{state.current_turn.player_name}'s turn in game #{state.game_id}"

@@ -72,6 +72,7 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Hydrates all DB-backed fields on the given struct from the database.
+  Loads turns, view screen snapshots, history responses, and `current_round`.
   Preserves transient dispatch flags (`view_screen_changed`, `turn_advanced`).
 
   Call this on startup or after a crash restart. For ongoing updates, use the
@@ -157,8 +158,10 @@ defmodule Spitegear.LiveGameState do
   2. Starts a new turn via `Turns.start_turn/2` and sets it as `current_turn`.
   3. Sets `turn_advanced: true`.
 
-  No-op — setting `turn_advanced: false` — when the view screen was unchanged,
-  `current_view_screen` is nil, or the active player is the same.
+  No-op — setting `turn_advanced: false` — when the view screen was unchanged
+  or `current_view_screen` is nil. When `current_turn` is nil (no prior turn),
+  skips the finish step and starts a new turn directly. When the active player
+  matches `current_turn.player_name`, no transition is recorded.
   """
   @spec advance_turn(t()) :: t()
   def advance_turn(%__MODULE__{view_screen_changed: false} = state),
@@ -193,9 +196,11 @@ defmodule Spitegear.LiveGameState do
   defp finish_prev_turn(turn), do: Turns.finish_turn(turn)
 
   @doc """
-  Publishes a round-complete message to `:spitegear_test` when
-  `Turns.completed_rounds/1` exceeds `current_round`. Updates `current_round` on
-  the struct.
+  Queries `Turns.completed_rounds/1` and, when the result exceeds
+  `current_round`, publishes a round-complete message to `:spitegear_test` and
+  updates `current_round` on the struct.
+
+  This is the only pipeline step that reads from the database.
 
   No-op when `turn_advanced` is `false`.
   """

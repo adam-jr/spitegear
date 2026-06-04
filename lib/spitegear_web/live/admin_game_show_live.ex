@@ -373,7 +373,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
         </section>
       <% end %>
 
-<%= if Enum.any?(@history) do %>
+      <%= if Enum.any?(@history) do %>
         <section>
           <h2 class="text-lg font-semibold mb-3">Recent Turns</h2>
           <table class="w-full text-sm border-collapse">

@@ -12,7 +12,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
       game ->
         log_summary = Stats.game_log_summary(game_id)
-        net_units_series = Stats.net_units_over_time(game_id)
+        net_units_series = Stats.enriched_net_units_series(game_id)
         placement_scores = Stats.placement_scores(game_id)
         days = game_duration_days(game)
         view_screen = ViewScreens.get_latest(game_id)

@@ -71,7 +71,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
         <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
           <aside class="w-44 shrink-0 flex flex-col gap-1">
             <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
-              Current Turn
+              Turn Order
             </h2>
             <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
               <% name = player["name"] %>
@@ -80,31 +80,31 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <div class={[
                 "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
                 cond do
-                  active -> "bg-blue-50 border border-blue-200"
+                  active -> "bg-orange-50 border border-orange-200"
                   eliminated -> "opacity-40"
                   true -> ""
                 end
               ]}>
                 <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">{idx}</span>
-                <span class={[
-                  "truncate",
-                  if(active, do: "font-semibold text-blue-700", else: "text-gray-700"),
-                  if(eliminated, do: "line-through", else: "")
-                ]}>
-                  {name}
-                </span>
+                <div class="flex-1 min-w-0">
+                  <span class={[
+                    "block truncate",
+                    if(active, do: "font-semibold text-orange-900", else: "text-gray-700"),
+                    if(eliminated, do: "line-through", else: "")
+                  ]}>
+                    {name}
+                  </span>
+                  <%= if active && @current_turn && @current_turn.started_at do %>
+                    <span class="text-xs text-orange-400">{elapsed(@current_turn.started_at)}</span>
+                  <% end %>
+                </div>
                 <%= if eliminated do %>
                   <span class="text-gray-400 shrink-0">✕</span>
                 <% end %>
                 <%= if active do %>
-                  <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 ml-auto"></span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
                 <% end %>
               </div>
-              <%= if active && @current_turn && @current_turn.started_at do %>
-                <p class="text-xs text-gray-400 px-3 pb-1">
-                  {elapsed(@current_turn.started_at)}
-                </p>
-              <% end %>
             <% end %>
           </aside>
         <% end %>
@@ -195,7 +195,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 <div class="mt-4 bg-white border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-100">
                   <div class="px-5 py-3">
                     <h3 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                      Placement
+                      Leaderboard
                     </h3>
                     <p class="text-xs text-gray-400 mt-0.5">
                       Area under the units curve — higher = more units held longer.

@@ -71,7 +71,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
         <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
           <aside class="w-44 shrink-0 flex flex-col gap-1">
             <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
-              Turn Order
+              Current Turn
             </h2>
             <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
               <% name = player["name"] %>

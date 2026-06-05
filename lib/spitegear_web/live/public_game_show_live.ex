@@ -15,6 +15,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
         net_units_series = Stats.enriched_net_units_series(game_id)
         units_received_series = Stats.units_received_series(game_id)
         units_killed_series = Stats.units_killed_series(game_id)
+        luck_ratio_series = Stats.luck_ratio_series(game_id)
+        attacks_received_series = Stats.attacks_received_series(game_id)
         placement_scores = Stats.placement_scores(game_id)
         days = game_duration_days(game)
         view_screen = ViewScreens.get_latest(game_id)
@@ -28,6 +30,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
            net_units_series: net_units_series,
            units_received_series: units_received_series,
            units_killed_series: units_killed_series,
+           luck_ratio_series: luck_ratio_series,
+           attacks_received_series: attacks_received_series,
            placement_scores: placement_scores,
            days: days,
            timezone: "America/New_York",
@@ -269,6 +273,64 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   id="units-killed-chart"
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@units_killed_series)}
+                  data-colors={Jason.encode!(@game.player_colors || %{})}
+                >
+                </canvas>
+              </div>
+            </section>
+          <% end %>
+
+          <%!-- Luck Ratio Chart --%>
+          <%= if map_size(@luck_ratio_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Luck Ratio Over Time
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#luck-ratio-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">
+                Cumulative (defender losses − attacker losses) per attacker. Positive = lucky, negative = unlucky. Drag to zoom, double-click to reset.
+              </p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+                <canvas
+                  id="luck-ratio-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@luck_ratio_series)}
+                  data-colors={Jason.encode!(@game.player_colors || %{})}
+                >
+                </canvas>
+              </div>
+            </section>
+          <% end %>
+
+          <%!-- Attacks Received Chart --%>
+          <%= if map_size(@attacks_received_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Attacks Received Over Time
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#attacks-received-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">
+                Cumulative attacker dice directed at each player — a proxy for attacking pressure received. Drag to zoom, double-click to reset.
+              </p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+                <canvas
+                  id="attacks-received-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@attacks_received_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
                 >
                 </canvas>

@@ -213,6 +213,44 @@ defmodule Spitegear.GameLog.Stats do
     |> build_series()
   end
 
+  @doc """
+  Returns a per-player cumulative luck ratio series, keyed by player name.
+  Same point shape as `enriched_net_units_series/1`.
+
+  For each attack a player makes, the delta is `defender_losses - attacker_losses`.
+  A positive cumulative value means the player has lost fewer units than they've
+  inflicted overall; negative means the reverse. Can go below zero.
+  """
+  def luck_ratio_series(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+    |> Enum.flat_map(&luck_delta/1)
+    |> build_series()
+  end
+
+  @doc """
+  Returns a per-player cumulative series of attacker dice received, keyed by
+  player name. Same point shape as `enriched_net_units_series/1`.
+
+  For each attack directed at a player, the delta is the number of dice the
+  attacker rolled (parsed from the `attacker_dice` field), used as a proxy
+  for attacking force size.
+  """
+  def attacks_received_series(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+    |> Enum.flat_map(&attacks_received_delta/1)
+    |> build_series()
+  end
+
   # --- Private ---
 
   # The "setup" event ("Initial board setup complete") marks the end of the setup
@@ -397,6 +435,46 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp kills_delta(_), do: []
+
+  # Luck ratio: (defender_losses - attacker_losses) per attack, attributed to attacker.
+  defp luck_delta(%GameLogEvent{
+         event_type: "attacked",
+         player: p,
+         defender: d,
+         attacker_losses: al,
+         defender_losses: dl,
+         log_seq: s
+       })
+       when not is_nil(p) and not is_nil(al) and not is_nil(dl) do
+    [%{player: p, seq: s, delta: dl - al, event_type: "attacked", source_player: p, defender: d}]
+  end
+
+  defp luck_delta(_), do: []
+
+  # Attacks received: attacker dice count directed at the defender per attack event.
+  defp attacks_received_delta(%GameLogEvent{
+         event_type: "attacked",
+         player: p,
+         defender: d,
+         attacker_dice: ad,
+         log_seq: s
+       })
+       when not is_nil(d) do
+    dice_count = if is_nil(ad) or ad == "", do: 1, else: length(String.split(ad, ","))
+
+    [
+      %{
+        player: d,
+        seq: s,
+        delta: dice_count,
+        event_type: "attacked",
+        source_player: p,
+        defender: d
+      }
+    ]
+  end
+
+  defp attacks_received_delta(_), do: []
 
   # Compute the area under a step-function series.
   # Each point holds net_units from its seq until the next point's seq;

@@ -13,6 +13,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
       game ->
         log_summary = Stats.game_log_summary(game_id)
         net_units_series = Stats.enriched_net_units_series(game_id)
+        units_received_series = Stats.units_received_series(game_id)
+        units_killed_series = Stats.units_killed_series(game_id)
         placement_scores = Stats.placement_scores(game_id)
         days = game_duration_days(game)
         view_screen = ViewScreens.get_latest(game_id)
@@ -24,6 +26,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
            game: game,
            log_summary: log_summary,
            net_units_series: net_units_series,
+           units_received_series: units_received_series,
+           units_killed_series: units_killed_series,
            placement_scores: placement_scores,
            days: days,
            timezone: "America/New_York",
@@ -215,6 +219,60 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   <% end %>
                 </div>
               <% end %>
+            </section>
+          <% end %>
+
+          <%!-- Units Received Chart --%>
+          <%= if map_size(@units_received_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Units Received Over Time
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#units-received-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+                <canvas
+                  id="units-received-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@units_received_series)}
+                  data-colors={Jason.encode!(@game.player_colors || %{})}
+                >
+                </canvas>
+              </div>
+            </section>
+          <% end %>
+
+          <%!-- Units Killed Chart --%>
+          <%= if map_size(@units_killed_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Units Killed Over Time
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#units-killed-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+                <canvas
+                  id="units-killed-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@units_killed_series)}
+                  data-colors={Jason.encode!(@game.player_colors || %{})}
+                >
+                </canvas>
+              </div>
             </section>
           <% end %>
         </div>

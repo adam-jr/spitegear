@@ -146,6 +146,73 @@ defmodule Spitegear.GameLog.Stats do
     end
   end
 
+  @doc """
+  Returns a per-player cumulative series of units received (gains only), keyed
+  by player name. Same point shape as `enriched_net_units_series/1`.
+
+  Includes setup `placed_units` aggregated at the cutoff seq plus all
+  post-setup positive unit events (bonuses, production, card trades, etc.).
+  """
+  def units_received_series(game_id) do
+    events =
+      Repo.all(
+        from(e in GameLogEvent,
+          where: e.game_id == ^game_id,
+          order_by: [asc: e.log_seq]
+        )
+      )
+
+    cutoff = setup_cutoff(events)
+
+    setup_deltas =
+      if cutoff > 0 do
+        events
+        |> Enum.take_while(&(&1.log_seq < cutoff))
+        |> Enum.flat_map(&setup_placed_delta/1)
+        |> Enum.group_by(& &1.player)
+        |> Enum.map(fn {player, deltas} ->
+          total = Enum.sum(Enum.map(deltas, & &1.delta))
+
+          %{
+            player: player,
+            seq: cutoff,
+            delta: total,
+            event_type: "setup",
+            source_player: nil,
+            defender: nil
+          }
+        end)
+      else
+        []
+      end
+
+    game_deltas =
+      events
+      |> Enum.drop_while(&(&1.log_seq < cutoff))
+      |> Enum.flat_map(&received_delta/1)
+
+    (setup_deltas ++ game_deltas)
+    |> build_series()
+  end
+
+  @doc """
+  Returns a per-player cumulative series of enemy units killed, keyed by player
+  name. Same point shape as `enriched_net_units_series/1`.
+
+  A "kill" is counted whenever a player's attack causes `defender_losses` on
+  the opposing player.
+  """
+  def units_killed_series(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+    |> Enum.flat_map(&kills_delta/1)
+    |> build_series()
+  end
+
   # --- Private ---
 
   # The "setup" event ("Initial board setup complete") marks the end of the setup
@@ -308,6 +375,28 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp event_to_deltas(_), do: []
+
+  # Positive unit events only (for units_received_series).
+  defp received_delta(%GameLogEvent{event_type: t, player: p, units: u, log_seq: s})
+       when t in @positive_unit_events and not is_nil(p) and not is_nil(u) do
+    [%{player: p, seq: s, delta: u, event_type: t, source_player: p, defender: nil}]
+  end
+
+  defp received_delta(_), do: []
+
+  # Kills: defender_losses attributed to the attacker (for units_killed_series).
+  defp kills_delta(%GameLogEvent{
+         event_type: "attacked",
+         player: p,
+         defender: d,
+         defender_losses: dl,
+         log_seq: s
+       })
+       when not is_nil(p) and not is_nil(dl) and dl > 0 do
+    [%{player: p, seq: s, delta: dl, event_type: "attacked", source_player: p, defender: d}]
+  end
+
+  defp kills_delta(_), do: []
 
   # Compute the area under a step-function series.
   # Each point holds net_units from its seq until the next point's seq;

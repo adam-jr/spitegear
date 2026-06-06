@@ -115,14 +115,12 @@ defmodule SpitegearWeb.PublicGameShowLive do
                     {name}
                   </span>
                   <%= if active && @current_round && @turn_within_round do %>
-                    <span class="block text-xs text-orange-600 font-medium">
+                    <span class="text-xs text-orange-600 font-medium">
                       Turn {@current_round}.{@turn_within_round}
                     </span>
                   <% end %>
                   <%= if active && @current_turn && @current_turn.started_at do %>
-                    <span class="block text-xs text-orange-400">
-                      {elapsed(@current_turn.started_at)}
-                    </span>
+                    <span class="text-xs text-orange-400">{elapsed(@current_turn.started_at)}</span>
                   <% end %>
                 </div>
                 <%= if eliminated do %>

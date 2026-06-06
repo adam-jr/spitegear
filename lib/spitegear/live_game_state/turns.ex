@@ -94,10 +94,17 @@ defmodule Spitegear.LiveGameState.Turns do
   `new_round_starting?` is true when exactly one player is at that maximum,
   meaning they are the only one who has started the new round so far.
 
-  Returns `%{max_played_round: 0, new_round_starting?: false}` when no
+  Returns `%{max_played_round: 0, new_round_starting?: false, turn_counts: %{}}` when no
   completed turns exist.
+
+  `turn_counts` is a map of player name → completed turn count, useful for
+  computing a player's current round number and their position within that round.
   """
-  @type round_info :: %{max_played_round: non_neg_integer(), new_round_starting?: boolean()}
+  @type round_info :: %{
+          max_played_round: non_neg_integer(),
+          new_round_starting?: boolean(),
+          turn_counts: %{optional(String.t()) => pos_integer()}
+        }
 
   @spec round_info(game_id()) :: round_info()
   def round_info(game_id) do
@@ -111,7 +118,7 @@ defmodule Spitegear.LiveGameState.Turns do
       |> Enum.frequencies()
 
     if map_size(turn_counts) == 0 do
-      %{max_played_round: 0, new_round_starting?: false}
+      %{max_played_round: 0, new_round_starting?: false, turn_counts: %{}}
     else
       max_played_round = turn_counts |> Map.values() |> Enum.max()
 
@@ -121,7 +128,11 @@ defmodule Spitegear.LiveGameState.Turns do
         |> Enum.count(&(&1 == max_played_round))
         |> Kernel.==(1)
 
-      %{max_played_round: max_played_round, new_round_starting?: new_round_starting?}
+      %{
+        max_played_round: max_played_round,
+        new_round_starting?: new_round_starting?,
+        turn_counts: turn_counts
+      }
     end
   end
 

@@ -21,6 +21,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
         days = game_duration_days(game)
         view_screen = ViewScreens.get_latest(game_id)
         current_turn = Turns.get_open_turn(game_id)
+        round_info = Turns.round_info(game_id)
 
         {:ok,
          assign(socket,
@@ -36,7 +37,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
            days: days,
            timezone: "America/New_York",
            view_screen: view_screen,
-           current_turn: current_turn
+           current_turn: current_turn,
+           round_info: round_info
          ), layout: false}
     end
   end
@@ -140,8 +142,24 @@ defmodule SpitegearWeb.PublicGameShowLive do
               Game Summary
             </h2>
             <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+              <%= if @current_turn do %>
+                <% k = Map.get(@round_info.turn_counts, @current_turn.player_name, 0) %>
+                <% current_round = k + 1 %>
+                <% turn_within_round = Enum.count(@round_info.turn_counts, fn {_, v} -> v > k end) + 1 %>
+                <% turn_day =
+                  div(DateTime.diff(DateTime.utc_now(), @current_turn.started_at, :second), 86400) %>
+                <div class="col-span-2 sm:col-span-3">
+                  <dt class="text-xs text-gray-400 mb-0.5">Current Turn</dt>
+                  <dd class="font-semibold text-gray-900">
+                    {@current_turn.player_name}
+                    <span class="font-normal text-gray-500">
+                      · Round {current_round} · Turn {turn_within_round} · Day {turn_day}
+                    </span>
+                  </dd>
+                </div>
+              <% end %>
               <div>
-                <dt class="text-xs text-gray-400 mb-0.5">Turns (log)</dt>
+                <dt class="text-xs text-gray-400 mb-0.5">Total turns</dt>
                 <dd class="font-semibold text-gray-900 tabular-nums">
                   {@log_summary.turn_count}
                 </dd>
@@ -159,13 +177,13 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <%= if @game.created do %>
                 <div>
                   <dt class="text-xs text-gray-400 mb-0.5">Started</dt>
-                  <dd class="text-gray-700">{format_wargear_date(@game.created, @timezone)}</dd>
+                  <dd class="text-gray-700">{format_game_date(@game.created)}</dd>
                 </div>
               <% end %>
               <%= if @game.finished do %>
                 <div>
                   <dt class="text-xs text-gray-400 mb-0.5">Finished</dt>
-                  <dd class="text-gray-700">{format_wargear_date(@game.finished, @timezone)}</dd>
+                  <dd class="text-gray-700">{format_game_date(@game.finished)}</dd>
                 </div>
               <% end %>
             </dl>
@@ -357,14 +375,11 @@ defmodule SpitegearWeb.PublicGameShowLive do
     end
   end
 
-  defp format_wargear_date(nil, _tz), do: nil
+  defp format_game_date(nil), do: nil
 
-  defp format_wargear_date(date_str, tz) do
-    with %NaiveDateTime{} = ndt <- Games.parse_game_date(date_str),
-         {:ok, et_dt} <- DateTime.from_naive(ndt, "America/New_York"),
-         {:ok, local} <- DateTime.shift_zone(et_dt, tz) do
-      Calendar.strftime(local, "%b %d, %Y %I:%M %p") <> " #{local.zone_abbr}"
-    else
+  defp format_game_date(date_str) do
+    case Games.parse_game_date(date_str) do
+      %NaiveDateTime{} = ndt -> Calendar.strftime(ndt, "%b %d, %Y")
       _ -> date_str
     end
   end

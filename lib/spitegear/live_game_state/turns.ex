@@ -86,42 +86,42 @@ defmodule Spitegear.LiveGameState.Turns do
   end
 
   @doc """
-  Returns the number of completed rounds for `game_id` based on the
-  `live_game_state_turns` table.
+  Returns round info for `game_id` based on completed turns in
+  `live_game_state_turns`.
 
-  A round is complete when every active player has taken at least one turn.
-  The algorithm walks closed turns in chronological order and counts a new round
-  each time a player reappears, so it handles eliminations without a separate
-  deaths table.
+  `max_played_round` is the highest number of completed turns held by any
+  single player — equivalent to the round number that player is currently on.
+  `new_round_starting?` is true when exactly one player is at that maximum,
+  meaning they are the only one who has started the new round so far.
+
+  Returns `%{max_played_round: 0, new_round_starting?: false}` when no
+  completed turns exist.
   """
-  @spec completed_rounds(game_id()) :: non_neg_integer()
-  def completed_rounds(game_id) do
-    Repo.all(
-      from(t in Turn,
-        where: t.game_id == ^game_id and not is_nil(t.ended_at),
-        order_by: [asc: t.started_at],
-        select: t.player_name
+  @type round_info :: %{max_played_round: non_neg_integer(), new_round_starting?: boolean()}
+
+  @spec round_info(game_id()) :: round_info()
+  def round_info(game_id) do
+    turn_counts =
+      Repo.all(
+        from(t in Turn,
+          where: t.game_id == ^game_id and not is_nil(t.ended_at),
+          select: t.player_name
+        )
       )
-    )
-    |> count_completed_rounds()
-  end
+      |> Enum.frequencies()
 
-  defp count_completed_rounds([]), do: 0
-
-  defp count_completed_rounds(turns) do
-    {rounds, current_cycle, last_complete_cycle} =
-      Enum.reduce(turns, {0, [], []}, fn player, {rounds, cycle, last_complete} ->
-        if player in cycle do
-          {rounds + 1, [player], cycle}
-        else
-          {rounds, [player | cycle], last_complete}
-        end
-      end)
-
-    if MapSet.equal?(MapSet.new(current_cycle), MapSet.new(last_complete_cycle)) do
-      rounds + 1
+    if map_size(turn_counts) == 0 do
+      %{max_played_round: 0, new_round_starting?: false}
     else
-      rounds
+      max_played_round = turn_counts |> Map.values() |> Enum.max()
+
+      new_round_starting? =
+        turn_counts
+        |> Map.values()
+        |> Enum.count(&(&1 == max_played_round))
+        |> Kernel.==(1)
+
+      %{max_played_round: max_played_round, new_round_starting?: new_round_starting?}
     end
   end
 

@@ -77,7 +77,6 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.prev_view_screen == nil
       assert state.current_api_response == nil
       assert state.prev_api_response == nil
-      assert state.completed_round == 0
     end
   end
 
@@ -140,31 +139,11 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.prev_api_response.turn_data["turnid"] == "4"
     end
 
-    test "hydrates completed_round from completed turns" do
-      insert_turn(player_name: "adam", started_at: @base, ended_at: DateTime.add(@base, 3600))
-
-      insert_turn(
-        player_name: "bob",
-        started_at: DateTime.add(@base, 3600),
-        ended_at: DateTime.add(@base, 7200)
-      )
-
-      insert_turn(
-        player_name: "adam",
-        started_at: DateTime.add(@base, 7200),
-        ended_at: DateTime.add(@base, 10_800)
-      )
-
-      state = blank_state() |> LiveGameState.hydrate()
-      assert state.completed_round == 1
-    end
-
     test "sets nil/defaults for all fields when DB is empty" do
       state = blank_state() |> LiveGameState.hydrate()
       assert state.current_turn == nil
       assert state.current_view_screen == nil
       assert state.current_api_response == nil
-      assert state.completed_round == 0
     end
   end
 
@@ -316,38 +295,45 @@ defmodule Spitegear.LiveGameStateTest do
 
   describe "announce_next_round/1" do
     test "no-op when turn_advanced is false" do
-      state = %LiveGameState{game_id: "11111", turn_advanced: false, completed_round: 0}
-      assert LiveGameState.announce_next_round(state).completed_round == 0
+      state = %LiveGameState{game_id: "11111", turn_advanced: false}
+      assert LiveGameState.announce_next_round(state) == state
     end
 
-    test "no-op when no new round has completed" do
-      state = %LiveGameState{game_id: "11111", turn_advanced: true, completed_round: 0}
-      assert LiveGameState.announce_next_round(state).completed_round == 0
-    end
-
-    test "updates completed_round and publishes message when a round completes" do
-      Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
-
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      insert_turn(player_name: "adam", started_at: now, ended_at: DateTime.add(now, 3600))
+    test "no-op when new_round_starting? is false" do
+      # adam and bob both on their first turn — no one is ahead, no new round starting
+      insert_turn(player_name: "adam", started_at: @base, ended_at: DateTime.add(@base, 3600))
 
       insert_turn(
         player_name: "bob",
-        started_at: DateTime.add(now, 3600),
-        ended_at: DateTime.add(now, 7200)
+        started_at: DateTime.add(@base, 3600),
+        ended_at: DateTime.add(@base, 7200)
+      )
+
+      state = %LiveGameState{game_id: "11111", turn_advanced: true}
+      assert LiveGameState.announce_next_round(state) == state
+    end
+
+    test "publishes message when new round is starting" do
+      Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
+
+      # adam completes two turns, bob one — adam alone is at max_played_round 2
+      insert_turn(player_name: "adam", started_at: @base, ended_at: DateTime.add(@base, 3600))
+
+      insert_turn(
+        player_name: "bob",
+        started_at: DateTime.add(@base, 3600),
+        ended_at: DateTime.add(@base, 7200)
       )
 
       insert_turn(
         player_name: "adam",
-        started_at: DateTime.add(now, 7200),
-        ended_at: DateTime.add(now, 10_800)
+        started_at: DateTime.add(@base, 7200),
+        ended_at: DateTime.add(@base, 10_800)
       )
 
-      state = %LiveGameState{game_id: "11111", turn_advanced: true, completed_round: 0}
-      result = LiveGameState.announce_next_round(state)
-
-      assert result.completed_round == 1
-      assert_receive {:message, :spitegear_test, "Round 1 complete in game 11111"}, 500
+      state = %LiveGameState{game_id: "11111", turn_advanced: true}
+      assert LiveGameState.announce_next_round(state) == state
+      assert_receive {:message, :spitegear_test, "Round 2 starting in game 11111"}, 500
     end
   end
 

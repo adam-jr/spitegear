@@ -115,12 +115,14 @@ defmodule SpitegearWeb.PublicGameShowLive do
                     {name}
                   </span>
                   <%= if active && @current_round && @turn_within_round do %>
-                    <span class="text-xs text-orange-600 font-medium">
+                    <span class="block text-xs text-orange-600 font-medium">
                       Turn {@current_round}.{@turn_within_round}
                     </span>
                   <% end %>
                   <%= if active && @current_turn && @current_turn.started_at do %>
-                    <span class="text-xs text-orange-400">{elapsed(@current_turn.started_at)}</span>
+                    <span class="block text-xs text-orange-400">
+                      {elapsed(@current_turn.started_at)}
+                    </span>
                   <% end %>
                 </div>
                 <%= if eliminated do %>
@@ -164,7 +166,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm">
               <%= if @current_turn do %>
                 <div>
-                  <dt class="text-xs text-gray-400 mb-0.5">Day</dt>
+                  <dt class="text-xs text-gray-400 mb-0.5">Days</dt>
                   <dd class="font-semibold text-gray-900 tabular-nums">
                     {game_day(@game.created)}
                   </dd>

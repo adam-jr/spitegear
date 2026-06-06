@@ -131,6 +131,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
     units_killed_series = Stats.units_killed_series(game_id)
     luck_ratio_series = Stats.luck_ratio_series(game_id)
     attacks_received_series = Stats.attacks_received_series(game_id)
+    jormp_jomps_received_series = Stats.jormp_jomps_received_series(game_id)
+    jormp_jomps_delivered_series = Stats.jormp_jomps_delivered_series(game_id)
     placement_scores = Stats.placement_scores(game_id)
     view_screen = ViewScreens.get_latest(game_id)
 
@@ -151,6 +153,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
       units_killed_series: units_killed_series,
       luck_ratio_series: luck_ratio_series,
       attacks_received_series: attacks_received_series,
+      jormp_jomps_received_series: jormp_jomps_received_series,
+      jormp_jomps_delivered_series: jormp_jomps_delivered_series,
       placement_scores: placement_scores,
       view_screen: view_screen
     }
@@ -535,6 +539,60 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 id="attacks-received-chart"
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@attacks_received_series)}
+                data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+              >
+              </canvas>
+            </div>
+          </section>
+        <% end %>
+
+        <%!-- Jormp Jomps Received Chart --%>
+        <%= if map_size(@jormp_jomps_received_series) > 0 do %>
+          <section>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-lg font-semibold">Cumulative Jormp Jomps Received</h2>
+              <button
+                phx-click={JS.dispatch("reset-zoom", to: "#jormp-jomps-received-chart")}
+                class="text-sm text-gray-500 hover:text-gray-800"
+              >
+                Reset Zoom
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mb-2">
+              3-dice attack → 2 attacker losses, 0 defender losses. The attacker got jormp jomped. Drag to zoom · double-click to reset
+            </p>
+            <div class="relative h-[500px] border border-gray-200 rounded p-2">
+              <canvas
+                id="jormp-jomps-received-chart"
+                phx-hook="NetUnitsChart"
+                data-series={Jason.encode!(@jormp_jomps_received_series)}
+                data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+              >
+              </canvas>
+            </div>
+          </section>
+        <% end %>
+
+        <%!-- Jormp Jomps Delivered Chart --%>
+        <%= if map_size(@jormp_jomps_delivered_series) > 0 do %>
+          <section>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-lg font-semibold">Cumulative Jormp Jomps Delivered</h2>
+              <button
+                phx-click={JS.dispatch("reset-zoom", to: "#jormp-jomps-delivered-chart")}
+                class="text-sm text-gray-500 hover:text-gray-800"
+              >
+                Reset Zoom
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mb-2">
+              Times this player's defense caused 2 attacker losses with 0 defender losses on a 3-dice attack. Drag to zoom · double-click to reset
+            </p>
+            <div class="relative h-[500px] border border-gray-200 rounded p-2">
+              <canvas
+                id="jormp-jomps-delivered-chart"
+                phx-hook="NetUnitsChart"
+                data-series={Jason.encode!(@jormp_jomps_delivered_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
               >
               </canvas>

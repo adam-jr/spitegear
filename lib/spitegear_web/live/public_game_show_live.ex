@@ -17,6 +17,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
         units_killed_series = Stats.units_killed_series(game_id)
         luck_ratio_series = Stats.luck_ratio_series(game_id)
         attacks_received_series = Stats.attacks_received_series(game_id)
+        jormp_jomps_received_series = Stats.jormp_jomps_received_series(game_id)
+        jormp_jomps_delivered_series = Stats.jormp_jomps_delivered_series(game_id)
         placement_scores = Stats.placement_scores(game_id)
         days = game_duration_days(game)
         view_screen = ViewScreens.get_latest(game_id)
@@ -41,6 +43,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
            units_killed_series: units_killed_series,
            luck_ratio_series: luck_ratio_series,
            attacks_received_series: attacks_received_series,
+           jormp_jomps_received_series: jormp_jomps_received_series,
+           jormp_jomps_delivered_series: jormp_jomps_delivered_series,
            placement_scores: placement_scores,
            days: days,
            timezone: "America/New_York",
@@ -363,6 +367,64 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   id="attacks-received-chart"
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@attacks_received_series)}
+                  data-colors={Jason.encode!(@game.player_colors || %{})}
+                >
+                </canvas>
+              </div>
+            </section>
+          <% end %>
+
+          <%!-- Jormp Jomps Received Chart --%>
+          <%= if map_size(@jormp_jomps_received_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Cumulative Jormp Jomps Received
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#jormp-jomps-received-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">
+                3-dice attack → 2 attacker losses, 0 defender losses. The attacker got jormp jomped.
+              </p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+                <canvas
+                  id="jormp-jomps-received-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@jormp_jomps_received_series)}
+                  data-colors={Jason.encode!(@game.player_colors || %{})}
+                >
+                </canvas>
+              </div>
+            </section>
+          <% end %>
+
+          <%!-- Jormp Jomps Delivered Chart --%>
+          <%= if map_size(@jormp_jomps_delivered_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Cumulative Jormp Jomps Delivered
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#jormp-jomps-delivered-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">
+                Times this player's defense caused 2 attacker losses with 0 defender losses on a 3-dice attack.
+              </p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+                <canvas
+                  id="jormp-jomps-delivered-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@jormp_jomps_delivered_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
                 >
                 </canvas>

@@ -103,7 +103,7 @@ defmodule Spitegear.LiveGameState.Turns do
         order_by: [asc: t.started_at]
       )
     )
-    |> RoundData.build_round_data()
+    |> RoundData.build_round_data(nil)
     |> Map.fetch!(:completed_rounds)
   end
 

@@ -7,23 +7,10 @@ defmodule Spitegear.LiveGameState.RoundData do
   elimination data is required. A new round begins the first time a player
   appears a second time within the current round.
 
-  ## Example
-
-      iex> turns = [
-      ...>   %Turn{player_name: "Alice"},
-      ...>   %Turn{player_name: "Bob"},
-      ...>   %Turn{player_name: "Charlie"},
-      ...>   %Turn{player_name: "Alice"}
-      ...> ]
-      iex> RoundData.build_round_data(turns)
-      %RoundData{
-        current_round: 2,
-        completed_rounds: 1,
-        rounds: [
-          %Round{round_number: 1, turns: [Alice, Bob, Charlie]},
-          %Round{round_number: 2, turns: [Alice]}
-        ]
-      }
+  The caller must supply the `WargearViewScreenDb` for the game. It is stored
+  on the struct for downstream use (e.g. knowing the full player roster) and
+  will eventually participate in round-detection logic. Pass `nil` when no
+  view screen is available.
 
   ## Derived helpers
 
@@ -32,24 +19,27 @@ defmodule Spitegear.LiveGameState.RoundData do
 
   alias Spitegear.LiveGameState.Round
   alias Spitegear.LiveGameState.Turn
+  alias Spitegear.LiveGameState.WargearViewScreenDb
 
   @type t :: %__MODULE__{
           rounds: [Round.t()],
           current_round: pos_integer() | nil,
-          completed_rounds: non_neg_integer()
+          completed_rounds: non_neg_integer(),
+          view_screen: WargearViewScreenDb.t() | nil
         }
 
-  defstruct rounds: [], current_round: nil, completed_rounds: 0
+  defstruct rounds: [], current_round: nil, completed_rounds: 0, view_screen: nil
 
   @doc """
-  Builds a `RoundData` from a chronological list of turns.
+  Builds a `RoundData` from a chronological list of turns and the game's
+  `WargearViewScreenDb`. Pass `nil` for `view_screen` when unavailable.
 
-  Returns an empty struct when `turns` is empty.
+  Returns an empty struct (with `view_screen` set) when `turns` is empty.
   """
-  @spec build_round_data([Turn.t()]) :: t()
-  def build_round_data([]), do: %__MODULE__{}
+  @spec build_round_data([Turn.t()], WargearViewScreenDb.t() | nil) :: t()
+  def build_round_data([], view_screen), do: %__MODULE__{view_screen: view_screen}
 
-  def build_round_data(turns) do
+  def build_round_data(turns, view_screen) do
     initial = %{
       completed: [],
       current_turns: [],
@@ -86,12 +76,11 @@ defmodule Spitegear.LiveGameState.RoundData do
       turns: Enum.reverse(current_turns)
     }
 
-    all_rounds = Enum.reverse([last_round | completed])
-
     %__MODULE__{
-      rounds: all_rounds,
+      rounds: Enum.reverse([last_round | completed]),
       current_round: round_number,
-      completed_rounds: round_number - 1
+      completed_rounds: round_number - 1,
+      view_screen: view_screen
     }
   end
 

@@ -5,6 +5,7 @@ defmodule Spitegear.LiveGameState.Turns do
 
   import Ecto.Query
 
+  alias Spitegear.LiveGameState.RoundData
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.Repo
   alias Spitegear.TurnHistory
@@ -99,30 +100,11 @@ defmodule Spitegear.LiveGameState.Turns do
     Repo.all(
       from(t in Turn,
         where: t.game_id == ^game_id and not is_nil(t.ended_at),
-        order_by: [asc: t.started_at],
-        select: t.player_name
+        order_by: [asc: t.started_at]
       )
     )
-    |> count_completed_rounds()
-  end
-
-  defp count_completed_rounds([]), do: 0
-
-  defp count_completed_rounds(turns) do
-    {rounds, current_cycle, last_complete_cycle} =
-      Enum.reduce(turns, {0, [], []}, fn player, {rounds, cycle, last_complete} ->
-        if player in cycle do
-          {rounds + 1, [player], cycle}
-        else
-          {rounds, [player | cycle], last_complete}
-        end
-      end)
-
-    if MapSet.equal?(MapSet.new(current_cycle), MapSet.new(last_complete_cycle)) do
-      rounds + 1
-    else
-      rounds
-    end
+    |> RoundData.build_round_data()
+    |> Map.fetch!(:completed_rounds)
   end
 
   @doc """

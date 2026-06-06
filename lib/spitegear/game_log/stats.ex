@@ -251,6 +251,44 @@ defmodule Spitegear.GameLog.Stats do
     |> build_series()
   end
 
+  @doc """
+  Returns a per-player cumulative count of "jormp jomps" received, keyed by
+  player name. Same point shape as `enriched_net_units_series/1`.
+
+  A jormp jomp occurs when an attacker rolls 3 dice and suffers 2 losses while
+  the defender loses 0. The attacking player receives the jormp jomp — they got
+  the short end of the stick.
+  """
+  def jormp_jomps_received_series(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+    |> Enum.flat_map(&jormp_received_delta/1)
+    |> build_series()
+  end
+
+  @doc """
+  Returns a per-player cumulative count of "jormp jomps" delivered, keyed by
+  player name. Same point shape as `enriched_net_units_series/1`.
+
+  A jormp jomp is delivered by the defending player when the attacker rolls
+  3 dice and suffers 2 losses with 0 defender losses. The defender gets credit
+  for delivering the jormp jomp.
+  """
+  def jormp_jomps_delivered_series(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+    |> Enum.flat_map(&jormp_delivered_delta/1)
+    |> build_series()
+  end
+
   # --- Private ---
 
   # The "setup" event ("Initial board setup complete") marks the end of the setup
@@ -475,6 +513,39 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp attacks_received_delta(_), do: []
+
+  # True when an attack with exactly 3 dice results in 2 attacker losses and 0 defender losses.
+  defp jormp_jomp?(%GameLogEvent{
+         event_type: "attacked",
+         attacker_dice: ad,
+         attacker_losses: 2,
+         defender_losses: 0
+       })
+       when not is_nil(ad) do
+    length(String.split(ad, ",")) == 3
+  end
+
+  defp jormp_jomp?(_), do: false
+
+  # Jormp jomp received: the attacker is the one who got jormp jomped.
+  defp jormp_received_delta(%GameLogEvent{player: p, defender: d, log_seq: s} = event)
+       when not is_nil(p) do
+    if jormp_jomp?(event),
+      do: [%{player: p, seq: s, delta: 1, event_type: "attacked", source_player: p, defender: d}],
+      else: []
+  end
+
+  defp jormp_received_delta(_), do: []
+
+  # Jormp jomp delivered: the defender is the one who delivered it.
+  defp jormp_delivered_delta(%GameLogEvent{player: p, defender: d, log_seq: s} = event)
+       when not is_nil(d) do
+    if jormp_jomp?(event),
+      do: [%{player: d, seq: s, delta: 1, event_type: "attacked", source_player: p, defender: d}],
+      else: []
+  end
+
+  defp jormp_delivered_delta(_), do: []
 
   # Compute the area under a step-function series.
   # Each point holds net_units from its seq until the next point's seq;

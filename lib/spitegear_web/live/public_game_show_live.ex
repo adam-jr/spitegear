@@ -23,6 +23,14 @@ defmodule SpitegearWeb.PublicGameShowLive do
         current_turn = Turns.get_open_turn(game_id)
         round_info = Turns.round_info(game_id)
 
+        {current_round, turn_within_round} =
+          if current_turn do
+            k = Map.get(round_info.turn_counts, current_turn.player_name, 0)
+            {k + 1, Enum.count(round_info.turn_counts, fn {_, v} -> v > k end) + 1}
+          else
+            {nil, nil}
+          end
+
         {:ok,
          assign(socket,
            game_id: game_id,
@@ -38,7 +46,9 @@ defmodule SpitegearWeb.PublicGameShowLive do
            timezone: "America/New_York",
            view_screen: view_screen,
            current_turn: current_turn,
-           round_info: round_info
+           round_info: round_info,
+           current_round: current_round,
+           turn_within_round: turn_within_round
          ), layout: false}
     end
   end
@@ -104,6 +114,11 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   ]}>
                     {name}
                   </span>
+                  <%= if active && @current_round && @turn_within_round do %>
+                    <span class="text-xs text-orange-600 font-medium">
+                      Turn {@current_round}.{@turn_within_round}
+                    </span>
+                  <% end %>
                   <%= if active && @current_turn && @current_turn.started_at do %>
                     <span class="text-xs text-orange-400">{elapsed(@current_turn.started_at)}</span>
                   <% end %>
@@ -138,24 +153,29 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
           <%!-- Game stats row --%>
           <section class="bg-white border border-gray-200 rounded-xl shadow-sm px-6 py-5">
-            <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
-              Game Summary
-            </h2>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                Game Summary
+              </h2>
+              <%= if @game.created do %>
+                <span class="text-xs text-gray-400">{format_game_date(@game.created)}</span>
+              <% end %>
+            </div>
             <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 text-sm">
               <%= if @current_turn do %>
-                <% k = Map.get(@round_info.turn_counts, @current_turn.player_name, 0) %>
-                <% current_round = k + 1 %>
-                <% turn_within_round = Enum.count(@round_info.turn_counts, fn {_, v} -> v > k end) + 1 %>
-                <% turn_day =
-                  div(DateTime.diff(DateTime.utc_now(), @current_turn.started_at, :second), 86400) %>
-                <div class="col-span-2 sm:col-span-3">
-                  <dt class="text-xs text-gray-400 mb-0.5">Current Turn</dt>
-                  <dd class="font-semibold text-gray-900">
-                    {@current_turn.player_name}
-                    <span class="font-normal text-gray-500">
-                      · Round {current_round} · Turn {turn_within_round} · Day {turn_day}
-                    </span>
+                <div>
+                  <dt class="text-xs text-gray-400 mb-0.5">Day</dt>
+                  <dd class="font-semibold text-gray-900 tabular-nums">
+                    {game_day(@game.created)}
                   </dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-gray-400 mb-0.5">Round</dt>
+                  <dd class="font-semibold text-gray-900 tabular-nums">{@current_round}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-gray-400 mb-0.5">Turn</dt>
+                  <dd class="font-semibold text-gray-900 tabular-nums">{@turn_within_round}</dd>
                 </div>
               <% end %>
               <div>
@@ -172,12 +192,6 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 <div>
                   <dt class="text-xs text-gray-400 mb-0.5">Duration</dt>
                   <dd class="font-semibold text-gray-900 tabular-nums">{@days} days</dd>
-                </div>
-              <% end %>
-              <%= if @game.created do %>
-                <div>
-                  <dt class="text-xs text-gray-400 mb-0.5">Started</dt>
-                  <dd class="text-gray-700">{format_game_date(@game.created)}</dd>
                 </div>
               <% end %>
               <%= if @game.finished do %>
@@ -372,6 +386,19 @@ defmodule SpitegearWeb.PublicGameShowLive do
       NaiveDateTime.diff(end_dt, start_dt, :day)
     else
       _ -> nil
+    end
+  end
+
+  defp game_day(nil), do: nil
+
+  defp game_day(created_str) do
+    case Games.parse_game_date(created_str) do
+      %NaiveDateTime{} = ndt ->
+        start = DateTime.from_naive!(ndt, "Etc/UTC")
+        div(DateTime.diff(DateTime.utc_now(), start, :second), 86_400) + 1
+
+      _ ->
+        nil
     end
   end
 

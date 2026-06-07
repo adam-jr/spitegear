@@ -111,7 +111,7 @@ defmodule Spitegear.LiveGameState.Turns do
     turn_counts =
       Repo.all(
         from(t in Turn,
-          where: t.game_id == ^game_id and not is_nil(t.ended_at),
+          where: t.game_id == ^game_id,
           select: t.player_name
         )
       )

@@ -1,5 +1,17 @@
 import Chart from "../../vendor/chart.umd.min.js"
 
+// Abbreviates a player name for compact mobile legend labels.
+// Multi-word: first word ("adam jormp jomp" → "adam", "pants off vant hof" → "pants")
+// CamelCase:  initials  ("ZachClash" → "ZC")
+// Single word: first 4 chars lowercase ("Tallness" → "tall", "dandodd" → "dand")
+function abbreviate(name) {
+  const words = name.trim().split(/\s+/)
+  if (words.length > 1) return words[0]
+  const parts = name.match(/[A-Z][a-z]*/g)
+  if (parts && parts.length > 1) return parts.map(p => p[0]).join('')
+  return name.slice(0, 4).toLowerCase()
+}
+
 // Parses a hex color string (#rrggbb) and returns [r, g, b].
 function parseHex(hex) {
   const h = hex.replace('#', '')
@@ -66,6 +78,7 @@ const NetUnitsChart = {
     const series = JSON.parse(this.el.dataset.series)
     const gameColors = this.el.dataset.colors ? JSON.parse(this.el.dataset.colors) : {}
     const order = this.el.dataset.order ? JSON.parse(this.el.dataset.order) : []
+    const mobile = window.innerWidth < 640
     const datasets = Object.entries(series)
       .sort(([a], [b]) => {
         const ai = order.indexOf(a), bi = order.indexOf(b)
@@ -77,7 +90,8 @@ const NetUnitsChart = {
       .map(([player, points], i) => {
         const color = sanitizeColor(gameColors[player]) || COLORS[i % COLORS.length]
         return {
-          label: player,
+          label: mobile ? abbreviate(player) : player,
+          fullName: player,
           data: points.map(p => ({ x: p.seq, y: p.net_units, event_type: p.event_type, source_player: p.source_player, defender: p.defender })),
           borderColor: color,
           backgroundColor: color,
@@ -100,12 +114,12 @@ const NetUnitsChart = {
           y: { title: { display: true, text: "Net Units" } },
         },
         plugins: {
-          legend: { position: "right" },
+          legend: { position: mobile ? "top" : "right" },
           tooltip: {
             callbacks: {
               label: (context) => {
                 const d = context.raw
-                const player = context.dataset.label
+                const player = context.dataset.fullName || context.dataset.label
                 let action
                 if (d.event_type === "attacked" && d.source_player && d.defender) {
                   action = `${d.source_player} attacked ${d.defender}`

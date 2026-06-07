@@ -65,7 +65,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
     ~H"""
     <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-gray-50 text-gray-900">
       <header class="bg-white border-b border-gray-200">
-        <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-3 min-w-0">
             <a href="/" class="text-sm text-gray-400 hover:text-gray-600 shrink-0 transition-colors">
               ← Games
@@ -90,56 +90,92 @@ defmodule SpitegearWeb.PublicGameShowLive do
         </div>
       </header>
 
-      <main class="max-w-5xl mx-auto px-6 py-8 flex gap-8 items-start">
+      <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 md:flex-row md:gap-8 md:items-start">
         <%!-- Sidebar: turn order --%>
         <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
-          <aside class="w-44 shrink-0 flex flex-col gap-1">
+          <aside class="w-full md:w-44 md:shrink-0">
             <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
               Turn Order
             </h2>
-            <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
-              <div class={[
-                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
-                cond do
-                  player.current_turn? -> "bg-orange-50 border border-orange-200"
-                  player.eliminated? -> "opacity-40"
-                  true -> ""
-                end
-              ]}>
-                <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">{idx}</span>
-                <div class="flex-1 min-w-0">
-                  <span class={[
-                    "block truncate",
-                    if(player.current_turn?,
-                      do: "font-semibold text-orange-900",
-                      else: "text-gray-700"
-                    ),
-                    if(player.eliminated?, do: "line-through", else: "")
-                  ]}>
-                    {player.name}
-                  </span>
+
+            <%!-- Mobile: horizontal scrolling chips --%>
+            <div class="flex gap-2 overflow-x-auto pb-1 md:hidden">
+              <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
+                <div class={[
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap border shrink-0",
+                  cond do
+                    player.current_turn? ->
+                      "bg-orange-50 border-orange-200 text-orange-900 font-semibold"
+
+                    player.eliminated? ->
+                      "border-gray-100 text-gray-400 line-through opacity-50"
+
+                    true ->
+                      "border-gray-200 text-gray-600"
+                  end
+                ]}>
+                  <span class="text-gray-400 tabular-nums">{idx}</span>
+                  <span>{player.name}</span>
                   <%= if player.current_turn? && @current_round && @turn_within_round do %>
-                    <span class="text-xs text-orange-600 font-medium">
-                      Turn {@current_round}.{@turn_within_round}
+                    <span class="text-orange-400">
+                      {@current_round}.{@turn_within_round}
                     </span>
                   <% end %>
-                  <%= if player.current_turn? && @current_turn && @current_turn.started_at do %>
-                    <span class="text-xs text-orange-400">{elapsed(@current_turn.started_at)}</span>
+                  <%= if player.current_turn? do %>
+                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
                   <% end %>
                 </div>
-                <%= if player.eliminated? do %>
-                  <span class="text-gray-400 shrink-0">✕</span>
-                <% end %>
-                <%= if player.current_turn? do %>
-                  <span class="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
-                <% end %>
-              </div>
-            <% end %>
+              <% end %>
+            </div>
+
+            <%!-- Desktop: vertical list --%>
+            <div class="hidden md:flex flex-col gap-1">
+              <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
+                <div class={[
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
+                  cond do
+                    player.current_turn? -> "bg-orange-50 border border-orange-200"
+                    player.eliminated? -> "opacity-40"
+                    true -> ""
+                  end
+                ]}>
+                  <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">{idx}</span>
+                  <div class="flex-1 min-w-0">
+                    <span class={[
+                      "block truncate",
+                      if(player.current_turn?,
+                        do: "font-semibold text-orange-900",
+                        else: "text-gray-700"
+                      ),
+                      if(player.eliminated?, do: "line-through", else: "")
+                    ]}>
+                      {player.name}
+                    </span>
+                    <%= if player.current_turn? && @current_round && @turn_within_round do %>
+                      <span class="text-xs text-orange-600 font-medium">
+                        Turn {@current_round}.{@turn_within_round}
+                      </span>
+                    <% end %>
+                    <%= if player.current_turn? && @current_turn && @current_turn.started_at do %>
+                      <span class="text-xs text-orange-400">
+                        {elapsed(@current_turn.started_at)}
+                      </span>
+                    <% end %>
+                  </div>
+                  <%= if player.eliminated? do %>
+                    <span class="text-gray-400 shrink-0">✕</span>
+                  <% end %>
+                  <%= if player.current_turn? do %>
+                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
           </aside>
         <% end %>
 
         <%!-- Main content --%>
-        <div class="flex-1 flex flex-col gap-8 min-w-0">
+        <div class="flex-1 flex flex-col gap-6 sm:gap-8 min-w-0">
           <%!-- Winner banner --%>
           <%= if @game.finished && Enum.any?(@game.winners) do %>
             <div class="bg-amber-50 border border-amber-200 rounded-xl px-6 py-5 flex items-center gap-4">
@@ -224,7 +260,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Each player's unit count after gains and losses — drag to zoom, double-click to reset.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="net-units-chart"
                   phx-hook="NetUnitsChart"
@@ -277,7 +313,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </button>
               </div>
               <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="units-received-chart"
                   phx-hook="NetUnitsChart"
@@ -304,7 +340,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </button>
               </div>
               <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="units-killed-chart"
                   phx-hook="NetUnitsChart"
@@ -333,7 +369,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Cumulative (defender losses − attacker losses) per attacker. Positive = lucky, negative = unlucky. Drag to zoom, double-click to reset.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="luck-ratio-chart"
                   phx-hook="NetUnitsChart"
@@ -362,7 +398,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Cumulative attacker dice directed at each player — a proxy for attacking pressure received. Drag to zoom, double-click to reset.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="attacks-received-chart"
                   phx-hook="NetUnitsChart"
@@ -391,7 +427,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 3-dice attack → 2 attacker losses, 0 defender losses. The attacker got jormp jomped.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="jormp-jomps-received-chart"
                   phx-hook="NetUnitsChart"
@@ -420,7 +456,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Times this player's defense caused 2 attacker losses with 0 defender losses on a 3-dice attack.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="jormp-jomps-delivered-chart"
                   phx-hook="NetUnitsChart"

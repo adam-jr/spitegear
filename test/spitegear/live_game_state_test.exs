@@ -11,7 +11,7 @@ defmodule Spitegear.LiveGameStateTest do
 
   @base ~U[2024-01-01 12:00:00Z]
 
-  defp player(name), do: %{name: name, slack_name: "@#{name}"}
+  defp player(name), do: %{name: name, slack_name: "@#{name}", color: nil}
 
   defp insert_turn(attrs) do
     Repo.insert!(%Turn{

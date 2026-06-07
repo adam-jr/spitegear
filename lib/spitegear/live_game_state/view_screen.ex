@@ -53,6 +53,7 @@ defmodule Spitegear.LiveGameState.ViewScreen do
         %Player{
           name: name,
           slack_name: p["slack_name"],
+          color: p["color"],
           current_turn?: name == db.current_player_name,
           eliminated?: MapSet.member?(eliminated_names, name),
           winner?: MapSet.member?(winner_names, name),

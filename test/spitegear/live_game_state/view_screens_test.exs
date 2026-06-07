@@ -7,7 +7,7 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
   alias Spitegear.Repo
   alias Spitegear.Wargear.HTTP.ViewScreen, as: RawViewScreen
 
-  defp player(name), do: %{name: name, slack_name: "@#{name}"}
+  defp player(name), do: %{name: name, slack_name: "@#{name}", color: nil}
 
   defp build_raw(attrs \\ []) do
     %RawViewScreen{
@@ -167,13 +167,13 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
     end
 
-    test "stores player name and slack_name in players list" do
+    test "stores player name, slack_name, and color in players list" do
       ViewScreens.record_if_changed(build_raw())
       [snapshot] = Repo.all(WargearViewScreenDb)
 
       assert snapshot.players == [
-               %{"name" => "adam", "slack_name" => "@adam"},
-               %{"name" => "bob", "slack_name" => "@bob"}
+               %{"name" => "adam", "slack_name" => "@adam", "color" => nil},
+               %{"name" => "bob", "slack_name" => "@bob", "color" => nil}
              ]
     end
   end

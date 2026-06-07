@@ -29,9 +29,9 @@ defmodule Spitegear.LiveGameState do
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
+  alias Spitegear.LiveGameState.ViewScreen
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
-  alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.PubSub
   alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen
 
@@ -39,8 +39,8 @@ defmodule Spitegear.LiveGameState do
           game_id: String.t() | nil,
           current_turn: Turn.t() | nil,
           prev_turn: Turn.t() | nil,
-          current_view_screen: WargearViewScreenDb.t() | nil,
-          prev_view_screen: WargearViewScreenDb.t() | nil,
+          current_view_screen: ViewScreen.t() | nil,
+          prev_view_screen: ViewScreen.t() | nil,
           current_api_response: WargearHistoryApiResponseDb.t() | nil,
           prev_api_response: WargearHistoryApiResponseDb.t() | nil,
           view_screen_changed: boolean(),
@@ -170,7 +170,7 @@ defmodule Spitegear.LiveGameState do
 
   def advance_turn(
         %__MODULE__{
-          current_view_screen: %WargearViewScreenDb{current_player_name: player_name},
+          current_view_screen: %ViewScreen{current_player_name: player_name},
           current_turn: %Turn{player_name: player_name}
         } =
           state
@@ -202,7 +202,7 @@ defmodule Spitegear.LiveGameState do
   """
   @spec fetch_log_if_unfogged(t()) :: t()
   def fetch_log_if_unfogged(%__MODULE__{turn_advanced: false} = state), do: state
-  def fetch_log_if_unfogged(%__MODULE__{current_view_screen: %{fogged: true}} = state), do: state
+  def fetch_log_if_unfogged(%__MODULE__{current_view_screen: %{fogged?: true}} = state), do: state
 
   def fetch_log_if_unfogged(%__MODULE__{} = state) do
     GenServer.cast(self(), :fetch_log)

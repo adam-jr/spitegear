@@ -114,7 +114,10 @@ const NetUnitsChart = {
           y: { title: { display: true, text: "Net Units" } },
         },
         plugins: {
-          legend: { position: mobile ? "top" : "right" },
+          legend: {
+            position: mobile ? "top" : "right",
+            labels: mobile ? { boxWidth: 12, boxHeight: 12, padding: 8, font: { size: 11 } } : {},
+          },
           tooltip: {
             callbacks: {
               label: (context) => {

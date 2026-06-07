@@ -98,13 +98,12 @@ defmodule SpitegearWeb.PublicGameShowLive do
               Turn Order
             </h2>
 
-            <%!-- Mobile: horizontal scrolling chips, current player first --%>
-            <% {active, rest} =
-              Enum.split_with(Enum.with_index(@view_screen.players, 1), fn {p, _} ->
-                p.current_turn?
-              end) %>
+            <%!-- Mobile: horizontal scrolling chips, rotated so current player is first --%>
+            <% indexed = Enum.with_index(@view_screen.players, 1) %>
+            <% split_at = Enum.find_index(indexed, fn {p, _} -> p.current_turn? end) || 0 %>
+            <% {before, from_current} = Enum.split(indexed, split_at) %>
             <div class="flex gap-2 overflow-x-auto pb-1 md:hidden">
-              <%= for {player, idx} <- active ++ rest do %>
+              <%= for {player, idx} <- from_current ++ before do %>
                 <div class={[
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap border shrink-0",
                   cond do

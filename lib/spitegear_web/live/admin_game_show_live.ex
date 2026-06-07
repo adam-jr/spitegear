@@ -410,6 +410,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@net_units_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+                data-order={
+                  Jason.encode!(
+                    if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                  )
+                }
               >
               </canvas>
             </div>
@@ -458,6 +463,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@units_received_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+                data-order={
+                  Jason.encode!(
+                    if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                  )
+                }
               >
               </canvas>
             </div>
@@ -483,6 +493,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@units_killed_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+                data-order={
+                  Jason.encode!(
+                    if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                  )
+                }
               >
               </canvas>
             </div>
@@ -510,6 +525,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@luck_ratio_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+                data-order={
+                  Jason.encode!(
+                    if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                  )
+                }
               >
               </canvas>
             </div>
@@ -537,6 +557,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@attacks_received_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+                data-order={
+                  Jason.encode!(
+                    if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                  )
+                }
               >
               </canvas>
             </div>
@@ -564,6 +589,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@jormp_jomps_received_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+                data-order={
+                  Jason.encode!(
+                    if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                  )
+                }
               >
               </canvas>
             </div>
@@ -591,6 +621,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 phx-hook="NetUnitsChart"
                 data-series={Jason.encode!(@jormp_jomps_delivered_series)}
                 data-colors={Jason.encode!((@game && @game.player_colors) || %{})}
+                data-order={
+                  Jason.encode!(
+                    if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                  )
+                }
               >
               </canvas>
             </div>

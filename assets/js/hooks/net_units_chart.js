@@ -65,8 +65,15 @@ const NetUnitsChart = {
   renderChart() {
     const series = JSON.parse(this.el.dataset.series)
     const gameColors = this.el.dataset.colors ? JSON.parse(this.el.dataset.colors) : {}
+    const order = this.el.dataset.order ? JSON.parse(this.el.dataset.order) : []
     const datasets = Object.entries(series)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => {
+        const ai = order.indexOf(a), bi = order.indexOf(b)
+        if (ai === -1 && bi === -1) return a.localeCompare(b)
+        if (ai === -1) return 1
+        if (bi === -1) return -1
+        return ai - bi
+      })
       .map(([player, points], i) => {
         const color = sanitizeColor(gameColors[player]) || COLORS[i % COLORS.length]
         return {

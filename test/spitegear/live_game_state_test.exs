@@ -3,6 +3,7 @@ defmodule Spitegear.LiveGameStateTest do
 
   alias Spitegear.LiveGameState
   alias Spitegear.LiveGameState.Turn
+  alias Spitegear.LiveGameState.ViewScreen
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
   alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.Repo
@@ -10,7 +11,7 @@ defmodule Spitegear.LiveGameStateTest do
 
   @base ~U[2024-01-01 12:00:00Z]
 
-  defp player(name), do: %{name: name, slack_name: "@#{name}"}
+  defp player(name), do: %{name: name, slack_name: "@#{name}", color: nil}
 
   defp insert_turn(attrs) do
     Repo.insert!(%Turn{
@@ -175,7 +176,7 @@ defmodule Spitegear.LiveGameStateTest do
     test "sets view_screen_changed: true and updates current/prev on first call" do
       state = blank_state() |> LiveGameState.record_changed_view_screen_db(build_view_screen())
       assert state.view_screen_changed == true
-      assert %WargearViewScreenDb{} = state.current_view_screen
+      assert %ViewScreen{} = state.current_view_screen
       assert state.current_view_screen.current_player_name == "adam"
       assert state.prev_view_screen == nil
     end
@@ -224,13 +225,13 @@ defmodule Spitegear.LiveGameStateTest do
     test "no-op when active player is unchanged" do
       open_turn = insert_turn(player_name: "adam", ended_at: nil)
 
-      vs = %WargearViewScreenDb{
+      vs = %ViewScreen{
         game_id: "11111",
         current_player_name: "adam",
         players: [],
         eliminated: [],
         winners: [],
-        fogged: false
+        fogged?: false
       }
 
       state = %LiveGameState{
@@ -248,13 +249,13 @@ defmodule Spitegear.LiveGameStateTest do
     test "finishes prev turn and starts new turn when player changes" do
       old_turn = insert_turn(player_name: "adam", ended_at: nil)
 
-      vs = %WargearViewScreenDb{
+      vs = %ViewScreen{
         game_id: "11111",
         current_player_name: "bob",
         players: [],
         eliminated: [],
         winners: [],
-        fogged: false
+        fogged?: false
       }
 
       state = %LiveGameState{
@@ -275,13 +276,13 @@ defmodule Spitegear.LiveGameStateTest do
     end
 
     test "starts a new turn with no prior turn" do
-      vs = %WargearViewScreenDb{
+      vs = %ViewScreen{
         game_id: "11111",
         current_player_name: "adam",
         players: [],
         eliminated: [],
         winners: [],
-        fogged: false
+        fogged?: false
       }
 
       state = %LiveGameState{game_id: "11111", current_view_screen: vs, view_screen_changed: true}

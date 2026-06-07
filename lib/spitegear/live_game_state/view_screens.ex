@@ -5,6 +5,7 @@ defmodule Spitegear.LiveGameState.ViewScreens do
 
   import Ecto.Query
 
+  alias Spitegear.LiveGameState.ViewScreen
   alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.Repo
   alias Spitegear.Wargear.HTTP.ViewScreen, as: RawViewScreen
@@ -12,25 +13,21 @@ defmodule Spitegear.LiveGameState.ViewScreens do
   @type game_id :: String.t()
 
   @doc """
-  Returns the most recent `WargearViewScreenDb` snapshot for `game_id`, or
+  Returns the most recent snapshot for `game_id` as a `ViewScreen`, or
   `nil` if none exists.
   """
-  @spec get_latest(game_id()) :: WargearViewScreenDb.t() | nil
+  @spec get_latest(game_id()) :: ViewScreen.t() | nil
   def get_latest(game_id) do
-    Repo.one(
-      from(v in WargearViewScreenDb,
-        where: v.game_id == ^game_id,
-        order_by: [desc: v.inserted_at],
-        limit: 1
-      )
-    )
+    game_id
+    |> query_latest()
+    |> convert()
   end
 
   @doc """
-  Returns the second most recent `WargearViewScreenDb` snapshot for `game_id`,
+  Returns the second most recent snapshot for `game_id` as a `ViewScreen`,
   or `nil` if fewer than two snapshots exist.
   """
-  @spec get_prev(game_id()) :: WargearViewScreenDb.t() | nil
+  @spec get_prev(game_id()) :: ViewScreen.t() | nil
   def get_prev(game_id) do
     Repo.one(
       from(v in WargearViewScreenDb,
@@ -40,6 +37,7 @@ defmodule Spitegear.LiveGameState.ViewScreens do
         offset: 1
       )
     )
+    |> convert()
   end
 
   @doc """
@@ -51,16 +49,18 @@ defmodule Spitegear.LiveGameState.ViewScreens do
   changed, or `{:error, changeset}` on failure.
   """
   @spec record_if_changed(RawViewScreen.t()) ::
-          {:ok, WargearViewScreenDb.t()} | {:ok, :unchanged} | {:error, Ecto.Changeset.t()}
+          {:ok, ViewScreen.t()} | {:ok, :unchanged} | {:error, Ecto.Changeset.t()}
   def record_if_changed(%RawViewScreen{} = raw) do
     incoming = WargearViewScreenDb.from_view_screen(raw)
+    existing_db = query_latest(incoming.game_id)
 
-    case get_latest(incoming.game_id) do
-      nil ->
-        Repo.insert(incoming)
-
-      existing ->
-        if changed?(existing, incoming), do: Repo.insert(incoming), else: {:ok, :unchanged}
+    if is_nil(existing_db) or changed?(existing_db, incoming) do
+      case Repo.insert(incoming) do
+        {:ok, db} -> {:ok, ViewScreen.from_db(db)}
+        err -> err
+      end
+    else
+      {:ok, :unchanged}
     end
   end
 
@@ -70,6 +70,19 @@ defmodule Spitegear.LiveGameState.ViewScreens do
     cutoff = DateTime.utc_now() |> DateTime.add(-days * 86_400)
     Repo.delete_all(from(v in WargearViewScreenDb, where: v.inserted_at < ^cutoff))
   end
+
+  defp query_latest(game_id) do
+    Repo.one(
+      from(v in WargearViewScreenDb,
+        where: v.game_id == ^game_id,
+        order_by: [desc: v.inserted_at],
+        limit: 1
+      )
+    )
+  end
+
+  defp convert(nil), do: nil
+  defp convert(%WargearViewScreenDb{} = db), do: ViewScreen.from_db(db)
 
   defp changed?(existing, incoming) do
     existing.current_player_name != incoming.current_player_name or

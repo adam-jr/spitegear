@@ -44,7 +44,11 @@ defmodule Spitegear.LiveGameState.WargearViewScreenDb do
       created: vs.created,
       finished: vs.finished,
       current_player_name: vs.current_player && vs.current_player.name,
-      players: Enum.map(vs.players, &%{"name" => &1.name, "slack_name" => &1.slack_name}),
+      players:
+        Enum.map(
+          vs.players,
+          &%{"name" => &1.name, "slack_name" => &1.slack_name, "color" => &1.color}
+        ),
       eliminated: Enum.map(vs.eliminated, & &1.name),
       winners: Enum.map(vs.winners, & &1.name),
       fogged: vs.fogged?

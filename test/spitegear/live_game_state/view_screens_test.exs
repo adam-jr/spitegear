@@ -1,12 +1,13 @@
 defmodule Spitegear.LiveGameState.ViewScreensTest do
   use Spitegear.DataCase, async: true
 
+  alias Spitegear.LiveGameState.ViewScreen
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.Repo
   alias Spitegear.Wargear.HTTP.ViewScreen, as: RawViewScreen
 
-  defp player(name), do: %{name: name, slack_name: "@#{name}"}
+  defp player(name), do: %{name: name, slack_name: "@#{name}", color: nil}
 
   defp build_raw(attrs \\ []) do
     %RawViewScreen{
@@ -110,14 +111,14 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
 
   describe "record_if_changed/1" do
     test "inserts a snapshot when none exists yet" do
-      assert {:ok, %WargearViewScreenDb{}} = ViewScreens.record_if_changed(build_raw())
+      assert {:ok, %ViewScreen{}} = ViewScreens.record_if_changed(build_raw())
       assert Repo.aggregate(WargearViewScreenDb, :count) == 1
     end
 
     test "inserts a new snapshot when current player changes" do
       ViewScreens.record_if_changed(build_raw(current_player: player("adam")))
 
-      assert {:ok, %WargearViewScreenDb{}} =
+      assert {:ok, %ViewScreen{}} =
                ViewScreens.record_if_changed(build_raw(current_player: player("bob")))
 
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
@@ -133,7 +134,7 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
     test "inserts when a player is newly eliminated" do
       ViewScreens.record_if_changed(build_raw(eliminated: []))
 
-      assert {:ok, %WargearViewScreenDb{}} =
+      assert {:ok, %ViewScreen{}} =
                ViewScreens.record_if_changed(build_raw(eliminated: [player("bob")]))
 
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
@@ -142,7 +143,7 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
     test "inserts when winners are set" do
       ViewScreens.record_if_changed(build_raw(winners: []))
 
-      assert {:ok, %WargearViewScreenDb{}} =
+      assert {:ok, %ViewScreen{}} =
                ViewScreens.record_if_changed(build_raw(winners: [player("adam")]))
 
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
@@ -151,7 +152,7 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
     test "inserts when game is finished" do
       ViewScreens.record_if_changed(build_raw(finished: nil))
 
-      assert {:ok, %WargearViewScreenDb{}} =
+      assert {:ok, %ViewScreen{}} =
                ViewScreens.record_if_changed(build_raw(finished: "2024-12-01"))
 
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
@@ -160,19 +161,19 @@ defmodule Spitegear.LiveGameState.ViewScreensTest do
     test "inserts when fogged state changes" do
       ViewScreens.record_if_changed(build_raw(fogged?: false))
 
-      assert {:ok, %WargearViewScreenDb{}} =
+      assert {:ok, %ViewScreen{}} =
                ViewScreens.record_if_changed(build_raw(fogged?: true))
 
       assert Repo.aggregate(WargearViewScreenDb, :count) == 2
     end
 
-    test "stores player name and slack_name in players list" do
+    test "stores player name, slack_name, and color in players list" do
       ViewScreens.record_if_changed(build_raw())
       [snapshot] = Repo.all(WargearViewScreenDb)
 
       assert snapshot.players == [
-               %{"name" => "adam", "slack_name" => "@adam"},
-               %{"name" => "bob", "slack_name" => "@bob"}
+               %{"name" => "adam", "slack_name" => "@adam", "color" => nil},
+               %{"name" => "bob", "slack_name" => "@bob", "color" => nil}
              ]
     end
   end

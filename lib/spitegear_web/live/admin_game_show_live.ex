@@ -170,29 +170,26 @@ defmodule SpitegearWeb.AdminGameShowLive do
             Turn Order
           </h2>
           <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
-            <% name = player["name"] %>
-            <% active = name == @view_screen.current_player_name %>
-            <% eliminated = name in (@view_screen.eliminated || []) %>
             <div class={[
               "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
               cond do
-                active -> "bg-blue-50 border border-blue-200"
-                eliminated -> "opacity-40"
+                player.current_turn? -> "bg-blue-50 border border-blue-200"
+                player.eliminated? -> "opacity-40"
                 true -> ""
               end
             ]}>
               <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">{idx}</span>
               <span class={[
                 "truncate",
-                if(active, do: "font-semibold text-blue-700", else: "text-gray-700"),
-                if(eliminated, do: "line-through", else: "")
+                if(player.current_turn?, do: "font-semibold text-blue-700", else: "text-gray-700"),
+                if(player.eliminated?, do: "line-through", else: "")
               ]}>
-                {name}
+                {player.name}
               </span>
-              <%= if eliminated do %>
+              <%= if player.eliminated? do %>
                 <span class="text-gray-400 shrink-0">✕</span>
               <% end %>
-              <%= if active do %>
+              <%= if player.current_turn? do %>
                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 ml-auto"></span>
               <% end %>
             </div>

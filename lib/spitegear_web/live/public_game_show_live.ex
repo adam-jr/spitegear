@@ -268,7 +268,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Each player's unit count after gains and losses — drag to zoom, double-click to reset.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1.5 relative h-[260px] sm:h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-2 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="net-units-chart"
                   phx-hook="NetUnitsChart"
@@ -326,7 +326,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </button>
               </div>
               <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1.5 relative h-[260px] sm:h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="units-received-chart"
                   phx-hook="NetUnitsChart"
@@ -358,7 +358,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </button>
               </div>
               <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1.5 relative h-[260px] sm:h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="units-killed-chart"
                   phx-hook="NetUnitsChart"
@@ -392,7 +392,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Cumulative (defender losses − attacker losses) per attacker. Positive = lucky, negative = unlucky. Drag to zoom, double-click to reset.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1.5 relative h-[260px] sm:h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="luck-ratio-chart"
                   phx-hook="NetUnitsChart"
@@ -426,7 +426,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Cumulative attacker dice directed at each player — a proxy for attacking pressure received. Drag to zoom, double-click to reset.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1.5 relative h-[260px] sm:h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="attacks-received-chart"
                   phx-hook="NetUnitsChart"
@@ -460,7 +460,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 3-dice attack → 2 attacker losses, 0 defender losses. The attacker got jormp jomped.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1.5 relative h-[260px] sm:h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="jormp-jomps-received-chart"
                   phx-hook="NetUnitsChart"
@@ -494,7 +494,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <p class="text-xs text-gray-400 mb-3">
                 Times this player's defense caused 2 attacker losses with 0 defender losses on a 3-dice attack.
               </p>
-              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1.5 relative h-[260px] sm:h-[420px]">
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
                   id="jormp-jomps-delivered-chart"
                   phx-hook="NetUnitsChart"

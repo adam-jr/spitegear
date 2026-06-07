@@ -116,7 +116,9 @@ const NetUnitsChart = {
         plugins: {
           legend: {
             position: mobile ? "top" : "right",
-            labels: mobile ? { boxWidth: 12, boxHeight: 12, padding: 8, font: { size: 11 } } : {},
+            labels: mobile
+              ? { usePointStyle: true, pointStyle: 'circle', boxWidth: 6, padding: 6, font: { size: 11 } }
+              : {},
           },
           tooltip: {
             callbacks: {

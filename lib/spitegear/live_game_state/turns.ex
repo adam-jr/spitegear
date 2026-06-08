@@ -122,31 +122,25 @@ defmodule Spitegear.LiveGameState.Turns do
         from(t in Turn,
           where: t.game_id == ^game_id,
           group_by: t.player_name,
-          select: {t.player_name, count(t.id), min(t.started_at)}
+          select: {t.player_name, count(t.id)}
         )
       )
 
-    {game_name, player_slack_names} = latest_view_screen_meta(game_id)
+    {game_name, player_slack_names, seat_number} = latest_view_screen_meta(game_id)
 
     if raw == [] do
       %{
         current_round: 0,
         turn_number_within_round: 0,
         overall_turn_number: 0,
-        seat_number: %{},
+        seat_number: seat_number,
         new_round_starting?: false,
         turn_counts: %{},
         game_name: game_name,
         player_slack_names: player_slack_names
       }
     else
-      turn_counts = Map.new(raw, fn {player, cnt, _} -> {player, cnt} end)
-
-      seat_number =
-        raw
-        |> Enum.sort_by(fn {_, _, first_at} -> first_at end)
-        |> Enum.with_index(1)
-        |> Map.new(fn {{player, _, _}, seat} -> {player, seat} end)
+      turn_counts = Map.new(raw, fn {player, cnt} -> {player, cnt} end)
 
       current_round = turn_counts |> Map.values() |> Enum.max()
       turn_number_within_round = turn_counts |> Map.values() |> Enum.count(&(&1 == current_round))
@@ -175,10 +169,12 @@ defmodule Spitegear.LiveGameState.Turns do
            )
          ) do
       {name, players} ->
-        {name, Map.new(players, fn p -> {p["name"], p["slack_name"]} end)}
+        slack_names = Map.new(players, fn p -> {p["name"], p["slack_name"]} end)
+        seat_number = players |> Enum.with_index(1) |> Map.new(fn {p, i} -> {p["name"], i} end)
+        {name, slack_names, seat_number}
 
       nil ->
-        {nil, %{}}
+        {nil, %{}, %{}}
     end
   end
 

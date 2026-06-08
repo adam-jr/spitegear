@@ -3,6 +3,7 @@ defmodule Spitegear.LiveGameState.TurnsTest do
 
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
+  alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.Repo
   alias Spitegear.TurnHistory
 
@@ -214,7 +215,6 @@ defmodule Spitegear.LiveGameState.TurnsTest do
       assert result.current_round == 1
       assert result.turn_number_within_round == 1
       assert result.overall_turn_number == 1
-      assert result.seat_number == %{"adam" => 1}
       assert result.new_round_starting? == true
       assert result.turn_counts == %{"adam" => 1}
     end
@@ -261,19 +261,22 @@ defmodule Spitegear.LiveGameState.TurnsTest do
       assert result.new_round_starting? == true
     end
 
-    test "seat_number reflects chronological order of first turns" do
-      t1 = @base
-      t2 = DateTime.add(@base, 100)
-      t3 = DateTime.add(@base, 200)
+    test "seat_number reflects view screen player list order" do
+      insert_turn(player_name: "charlie", started_at: @base, ended_at: nil)
 
-      # charlie went first, then adam, then bob
-      insert_turn(player_name: "charlie", started_at: t1, ended_at: t2)
-      insert_turn(player_name: "adam", started_at: t2, ended_at: t3)
-      insert_turn(player_name: "bob", started_at: t3, ended_at: nil)
+      Repo.insert!(%WargearViewScreenDb{
+        game_id: "11111",
+        game_name: "Test",
+        players: [
+          %{"name" => "adam", "slack_name" => "@adam"},
+          %{"name" => "bob", "slack_name" => "@bob"},
+          %{"name" => "charlie", "slack_name" => "@charlie"}
+        ]
+      })
 
       result = Turns.round_info("11111")
 
-      assert result.seat_number == %{"charlie" => 1, "adam" => 2, "bob" => 3}
+      assert result.seat_number == %{"adam" => 1, "bob" => 2, "charlie" => 3}
     end
 
     test "overall_turn_number is the sum of all turn counts" do

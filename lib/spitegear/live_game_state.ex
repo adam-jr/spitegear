@@ -244,17 +244,8 @@ defmodule Spitegear.LiveGameState do
 
   def announce_next_turn(%__MODULE__{} = state) do
     player_name = state.current_turn.player_name
-    vs = state.current_view_screen
-
-    player_slack =
-      vs && Enum.find_value(vs.players, &(&1["name"] == player_name && &1["slack_name"]))
-
-    game_name = vs && vs.game_name
     round_info = Turns.round_info(state.game_id)
-
-    text =
-      MessageTemplates.next_turn(player_slack, player_name, state.game_id, round_info, game_name)
-
+    text = MessageTemplates.next_turn(player_name, state.game_id, round_info)
     PubSub.msg(:spitegear, text)
     state
   end

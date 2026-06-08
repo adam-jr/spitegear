@@ -6,6 +6,7 @@ defmodule Spitegear.LiveGameState.Turns do
   import Ecto.Query
 
   alias Spitegear.LiveGameState.Turn
+  alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.Repo
   alias Spitegear.TurnHistory
 
@@ -109,7 +110,9 @@ defmodule Spitegear.LiveGameState.Turns do
           overall_turn_number: non_neg_integer(),
           seat_number: %{optional(String.t()) => pos_integer()},
           new_round_starting?: boolean(),
-          turn_counts: %{optional(String.t()) => pos_integer()}
+          turn_counts: %{optional(String.t()) => pos_integer()},
+          game_name: String.t() | nil,
+          player_slack_names: %{optional(String.t()) => String.t() | nil}
         }
 
   @spec round_info(game_id()) :: round_info()
@@ -123,6 +126,8 @@ defmodule Spitegear.LiveGameState.Turns do
         )
       )
 
+    {game_name, player_slack_names} = latest_view_screen_meta(game_id)
+
     if raw == [] do
       %{
         current_round: 0,
@@ -130,7 +135,9 @@ defmodule Spitegear.LiveGameState.Turns do
         overall_turn_number: 0,
         seat_number: %{},
         new_round_starting?: false,
-        turn_counts: %{}
+        turn_counts: %{},
+        game_name: game_name,
+        player_slack_names: player_slack_names
       }
     else
       turn_counts = Map.new(raw, fn {player, cnt, _} -> {player, cnt} end)
@@ -151,8 +158,27 @@ defmodule Spitegear.LiveGameState.Turns do
         overall_turn_number: overall_turn_number,
         seat_number: seat_number,
         new_round_starting?: turn_number_within_round == 1,
-        turn_counts: turn_counts
+        turn_counts: turn_counts,
+        game_name: game_name,
+        player_slack_names: player_slack_names
       }
+    end
+  end
+
+  defp latest_view_screen_meta(game_id) do
+    case Repo.one(
+           from(vs in WargearViewScreenDb,
+             where: vs.game_id == ^game_id,
+             order_by: [desc: vs.inserted_at],
+             limit: 1,
+             select: {vs.game_name, vs.players}
+           )
+         ) do
+      {name, players} ->
+        {name, Map.new(players, fn p -> {p["name"], p["slack_name"]} end)}
+
+      nil ->
+        {nil, %{}}
     end
   end
 

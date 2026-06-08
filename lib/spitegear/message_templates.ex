@@ -13,7 +13,7 @@ defmodule Spitegear.MessageTemplates do
 
   def default_template(:next_turn),
     do:
-      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
+      "*Turn %{round}.%{turn_number}* • *Overall Turn %{overall_turn}* • *Seat %{seat_number}*  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
 
   def default_template(:kind_reminder_0),
     do: "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> 🎖️"

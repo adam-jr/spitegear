@@ -46,7 +46,8 @@ defmodule Spitegear.MessageTemplates do
   def default_template(:round_complete),
     do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|%{game_name}>"
 
-  def available_vars(:next_turn), do: ~w(player_slack round turn_number overall_turn seat_number game_name game_url)
+  def available_vars(:next_turn),
+    do: ~w(player_slack round turn_number overall_turn seat_number game_name game_url)
 
   def available_vars(key)
       when key in ~w(kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4)a,

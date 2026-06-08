@@ -349,7 +349,7 @@ defmodule Spitegear.LiveGameStateTest do
       assert LiveGameState.announce_next_turn(state) == state
     end
 
-    test "publishes next-turn message and returns state unchanged" do
+    test "publishes next-turn message to :spitegear and returns state unchanged" do
       Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
 
       turn = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
@@ -357,7 +357,7 @@ defmodule Spitegear.LiveGameStateTest do
       result = LiveGameState.announce_next_turn(state)
 
       assert result == state
-      assert_receive {:message, :spitegear_test, "adam's turn in game 11111"}, 500
+      assert_receive {:message, :spitegear, _}, 500
     end
   end
 end

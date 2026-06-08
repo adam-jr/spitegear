@@ -27,13 +27,8 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
         {current_round, turn_within_round} =
           if current_turn do
-            k = Map.get(round_info.turn_counts, current_turn.player_name, 0)
-
-            position =
-              view_screen &&
-                Enum.find_index(view_screen.players, &(&1.name == current_turn.player_name))
-
-            {k + 1, position && position + 1}
+            seat = Map.get(round_info.seat_number, current_turn.player_name)
+            {round_info.current_round, seat}
           else
             {nil, nil}
           end

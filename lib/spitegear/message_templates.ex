@@ -13,7 +13,7 @@ defmodule Spitegear.MessageTemplates do
 
   def default_template(:next_turn),
     do:
-      "*Round %{round}, turn %{turn_number}* — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
+      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
 
   def default_template(:kind_reminder_0),
     do: "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> 🎖️"
@@ -46,7 +46,8 @@ defmodule Spitegear.MessageTemplates do
   def default_template(:round_complete),
     do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|%{game_name}>"
 
-  def available_vars(:next_turn), do: ~w(player_slack round turn_number game_name game_url)
+  def available_vars(:next_turn),
+    do: ~w(player_slack round turn_number overall_turn seat_number game_name game_url)
 
   def available_vars(key)
       when key in ~w(kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4)a,
@@ -60,14 +61,16 @@ defmodule Spitegear.MessageTemplates do
 
   # --- High-level builders (called from GamePoller) ---
 
-  def next_turn(player, game_id, round, turn_number, game_name) do
+  def next_turn(player_name, game_id, round_info) do
     render(
       :next_turn,
       %{
-        player_slack: player.slack_name,
-        round: round,
-        turn_number: turn_number,
-        game_name: game_name,
+        player_slack: Map.get(round_info.player_slack_names, player_name),
+        round: round_info.current_round,
+        turn_number: round_info.turn_number_within_round,
+        overall_turn: round_info.overall_turn_number,
+        seat_number: Map.get(round_info.seat_number, player_name),
+        game_name: round_info.game_name,
         game_url: game_url(game_id)
       },
       game_id
@@ -157,7 +160,9 @@ defmodule Spitegear.MessageTemplates do
     %{
       player_slack: slack_name,
       round: 3,
-      turn_number: 42,
+      turn_number: 2,
+      overall_turn: 8,
+      seat_number: 3,
       game_name: "Test Game",
       game_url: game_url(game_id || "00000000")
     }

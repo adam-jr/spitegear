@@ -32,6 +32,7 @@ defmodule Spitegear.LiveGameState do
   alias Spitegear.LiveGameState.ViewScreen
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
+  alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen
 
@@ -231,8 +232,9 @@ defmodule Spitegear.LiveGameState do
   end
 
   @doc """
-  Publishes a next-turn message for `current_turn.player_name` to
-  `:spitegear_test`.
+  Publishes the next-turn Slack notification to `:spitegear` when a turn just
+  advanced. Reads `round_info` from the DB and resolves the player's slack name
+  from the current view screen's player list.
 
   No-op when `turn_advanced` is `false` or `current_turn` is `nil`.
   """
@@ -241,11 +243,13 @@ defmodule Spitegear.LiveGameState do
   def announce_next_turn(%__MODULE__{current_turn: nil} = state), do: state
 
   def announce_next_turn(%__MODULE__{} = state) do
-    PubSub.msg(
-      :spitegear_test,
-      "#{state.current_turn.player_name}'s turn in game #{state.game_id}"
-    )
-
+    player_name = state.current_turn.player_name
+    vs = state.current_view_screen
+    player_slack = vs && Enum.find_value(vs.players, &(&1["name"] == player_name && &1["slack_name"]))
+    game_name = vs && vs.game_name
+    round_info = Turns.round_info(state.game_id)
+    text = MessageTemplates.next_turn(player_slack, player_name, state.game_id, round_info, game_name)
+    PubSub.msg(:spitegear, text)
     state
   end
 end

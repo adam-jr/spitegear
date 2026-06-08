@@ -116,10 +116,11 @@ defmodule Spitegear.LiveGameState.Turns do
   def round_info(game_id) do
     raw =
       Repo.all(
-        from t in Turn,
+        from(t in Turn,
           where: t.game_id == ^game_id,
           group_by: t.player_name,
           select: {t.player_name, count(t.id), min(t.started_at)}
+        )
       )
 
     if raw == [] do

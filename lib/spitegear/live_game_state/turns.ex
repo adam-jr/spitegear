@@ -86,51 +86,70 @@ defmodule Spitegear.LiveGameState.Turns do
   end
 
   @doc """
-  Returns round info for `game_id` based on completed turns in
-  `live_game_state_turns`.
+  Returns round info for `game_id` based on turns in `live_game_state_turns`.
 
-  `max_played_round` is the highest number of completed turns held by any
-  single player — equivalent to the round number that player is currently on.
-  `new_round_starting?` is true when exactly one player is at that maximum,
-  meaning they are the only one who has started the new round so far.
+  ## Fields
 
-  Returns `%{max_played_round: 0, new_round_starting?: false, turn_counts: %{}}` when no
-  completed turns exist.
+  - `current_round` — the highest turn count held by any player. Equivalent to
+    the round that player is currently playing.
+  - `turn_number_within_round` — how many players have reached `current_round`.
+    When exactly 1, a new round just started (`new_round_starting?` is also `true`).
+  - `overall_turn_number` — total turns across all players and all rounds.
+  - `seat_number` — map of player name → 1-indexed seat position, ordered by
+    each player's first `started_at` in the game (seat 1 goes first each round).
+  - `new_round_starting?` — `true` when exactly one player is at `current_round`,
+    i.e. a new round just started.
+  - `turn_counts` — map of player name → total turn count (open + closed).
 
-  `turn_counts` is a map of player name → completed turn count, useful for
-  computing a player's current round number and their position within that round.
+  Returns all-zero/empty maps when no turns exist for the game.
   """
   @type round_info :: %{
-          max_played_round: non_neg_integer(),
+          current_round: non_neg_integer(),
+          turn_number_within_round: non_neg_integer(),
+          overall_turn_number: non_neg_integer(),
+          seat_number: %{optional(String.t()) => pos_integer()},
           new_round_starting?: boolean(),
           turn_counts: %{optional(String.t()) => pos_integer()}
         }
 
   @spec round_info(game_id()) :: round_info()
   def round_info(game_id) do
-    turn_counts =
+    raw =
       Repo.all(
-        from(t in Turn,
+        from t in Turn,
           where: t.game_id == ^game_id,
-          select: t.player_name
-        )
+          group_by: t.player_name,
+          select: {t.player_name, count(t.id), min(t.started_at)}
       )
-      |> Enum.frequencies()
 
-    if map_size(turn_counts) == 0 do
-      %{max_played_round: 0, new_round_starting?: false, turn_counts: %{}}
+    if raw == [] do
+      %{
+        current_round: 0,
+        turn_number_within_round: 0,
+        overall_turn_number: 0,
+        seat_number: %{},
+        new_round_starting?: false,
+        turn_counts: %{}
+      }
     else
-      max_played_round = turn_counts |> Map.values() |> Enum.max()
+      turn_counts = Map.new(raw, fn {player, cnt, _} -> {player, cnt} end)
 
-      new_round_starting? =
-        turn_counts
-        |> Map.values()
-        |> Enum.count(&(&1 == max_played_round))
-        |> Kernel.==(1)
+      seat_number =
+        raw
+        |> Enum.sort_by(fn {_, _, first_at} -> first_at end)
+        |> Enum.with_index(1)
+        |> Map.new(fn {{player, _, _}, seat} -> {player, seat} end)
+
+      current_round = turn_counts |> Map.values() |> Enum.max()
+      turn_number_within_round = turn_counts |> Map.values() |> Enum.count(&(&1 == current_round))
+      overall_turn_number = turn_counts |> Map.values() |> Enum.sum()
 
       %{
-        max_played_round: max_played_round,
-        new_round_starting?: new_round_starting?,
+        current_round: current_round,
+        turn_number_within_round: turn_number_within_round,
+        overall_turn_number: overall_turn_number,
+        seat_number: seat_number,
+        new_round_starting?: turn_number_within_round == 1,
         turn_counts: turn_counts
       }
     end

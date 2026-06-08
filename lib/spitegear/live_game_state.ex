@@ -221,7 +221,7 @@ defmodule Spitegear.LiveGameState do
   def announce_next_round(%__MODULE__{turn_advanced: false} = state), do: state
 
   def announce_next_round(%__MODULE__{} = state) do
-    %{new_round_starting?: new_round?, max_played_round: round} = Turns.round_info(state.game_id)
+    %{new_round_starting?: new_round?, current_round: round} = Turns.round_info(state.game_id)
 
     if new_round? do
       PubSub.msg(:spitegear_test, "Round #{round} starting in game #{state.game_id}")

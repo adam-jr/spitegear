@@ -195,6 +195,119 @@ defmodule Spitegear.LiveGameState.TurnsTest do
     end
   end
 
+  describe "round_info/1" do
+    test "returns all-zero/empty result when no turns exist" do
+      result = Turns.round_info("11111")
+
+      assert result.current_round == 0
+      assert result.turn_number_within_round == 0
+      assert result.overall_turn_number == 0
+      assert result.seat_number == %{}
+      assert result.new_round_starting? == false
+      assert result.turn_counts == %{}
+    end
+
+    test "single player, single turn" do
+      insert_turn(player_name: "adam", started_at: @base, ended_at: nil)
+      result = Turns.round_info("11111")
+
+      assert result.current_round == 1
+      assert result.turn_number_within_round == 1
+      assert result.overall_turn_number == 1
+      assert result.seat_number == %{"adam" => 1}
+      assert result.new_round_starting? == true
+      assert result.turn_counts == %{"adam" => 1}
+    end
+
+    test "turn_number_within_round counts players at the max, not all players" do
+      t1 = @base
+      t2 = DateTime.add(@base, 100)
+      t3 = DateTime.add(@base, 200)
+      t4 = DateTime.add(@base, 300)
+      t5 = DateTime.add(@base, 400)
+
+      # Round 1: adam, bob, charlie all completed
+      insert_turn(player_name: "adam", started_at: t1, ended_at: t2)
+      insert_turn(player_name: "bob", started_at: t2, ended_at: t3)
+      insert_turn(player_name: "charlie", started_at: t3, ended_at: t4)
+      # Round 2: adam went, now it's bob's turn (open)
+      insert_turn(player_name: "adam", started_at: t4, ended_at: t5)
+      insert_turn(player_name: "bob", started_at: t5, ended_at: nil)
+
+      result = Turns.round_info("11111")
+
+      assert result.current_round == 2
+      assert result.turn_number_within_round == 2
+      assert result.overall_turn_number == 5
+      assert result.new_round_starting? == false
+    end
+
+    test "new_round_starting? is true when exactly one player is at the max" do
+      t1 = @base
+      t2 = DateTime.add(@base, 100)
+      t3 = DateTime.add(@base, 200)
+      t4 = DateTime.add(@base, 300)
+
+      insert_turn(player_name: "adam", started_at: t1, ended_at: t2)
+      insert_turn(player_name: "bob", started_at: t2, ended_at: t3)
+      insert_turn(player_name: "charlie", started_at: t3, ended_at: t4)
+      # Round 2: only adam has started
+      insert_turn(player_name: "adam", started_at: t4, ended_at: nil)
+
+      result = Turns.round_info("11111")
+
+      assert result.current_round == 2
+      assert result.turn_number_within_round == 1
+      assert result.new_round_starting? == true
+    end
+
+    test "seat_number reflects chronological order of first turns" do
+      t1 = @base
+      t2 = DateTime.add(@base, 100)
+      t3 = DateTime.add(@base, 200)
+
+      # charlie went first, then adam, then bob
+      insert_turn(player_name: "charlie", started_at: t1, ended_at: t2)
+      insert_turn(player_name: "adam", started_at: t2, ended_at: t3)
+      insert_turn(player_name: "bob", started_at: t3, ended_at: nil)
+
+      result = Turns.round_info("11111")
+
+      assert result.seat_number == %{"charlie" => 1, "adam" => 2, "bob" => 3}
+    end
+
+    test "overall_turn_number is the sum of all turn counts" do
+      t1 = @base
+      t2 = DateTime.add(@base, 100)
+      t3 = DateTime.add(@base, 200)
+      t4 = DateTime.add(@base, 300)
+      t5 = DateTime.add(@base, 400)
+      t6 = DateTime.add(@base, 500)
+
+      insert_turn(player_name: "adam", started_at: t1, ended_at: t2)
+      insert_turn(player_name: "bob", started_at: t2, ended_at: t3)
+      insert_turn(player_name: "adam", started_at: t3, ended_at: t4)
+      insert_turn(player_name: "bob", started_at: t4, ended_at: t5)
+      insert_turn(player_name: "adam", started_at: t5, ended_at: t6)
+
+      result = Turns.round_info("11111")
+
+      assert result.overall_turn_number == 5
+      assert result.current_round == 3
+      assert result.turn_number_within_round == 1
+    end
+
+    test "does not include turns from other games" do
+      insert_turn(game_id: "99999", player_name: "intruder", started_at: @base, ended_at: nil)
+      insert_turn(player_name: "adam", started_at: @base, ended_at: nil)
+
+      result = Turns.round_info("11111")
+
+      assert result.turn_counts == %{"adam" => 1}
+      refute Map.has_key?(result.seat_number, "intruder")
+    end
+  end
+
   describe "backfill_from_turn_history/1" do
     test "inserts a LiveGameState.Turn for every TurnHistory record" do
       insert_history(player_name: "adam", started: @base, ended: DateTime.add(@base, 3600))

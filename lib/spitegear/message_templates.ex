@@ -61,19 +61,26 @@ defmodule Spitegear.MessageTemplates do
 
   # --- High-level builders (called from GamePoller) ---
 
-  def next_turn(player_name, game_id, round_info) do
+  def next_turn(state, round_info) do
+    player_name = state.current_turn.player_name
+    vs = state.current_view_screen
+    players = (vs && vs.players) || []
+
+    player_slack =
+      Enum.find_value(players, &(&1["name"] == player_name && &1["slack_name"]))
+
     render(
       :next_turn,
       %{
-        player_slack: Map.get(round_info.player_slack_names, player_name),
+        player_slack: player_slack,
         round: round_info.current_round,
         turn_number: round_info.turn_number_within_round,
         overall_turn: round_info.overall_turn_number,
         seat_number: Map.get(round_info.seat_number, player_name),
-        game_name: round_info.game_name,
-        game_url: game_url(game_id)
+        game_name: vs && vs.game_name,
+        game_url: game_url(state.game_id)
       },
-      game_id
+      state.game_id
     )
   end
 

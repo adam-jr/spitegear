@@ -39,7 +39,10 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
          {:ok, created} <- created_time(document),
          {:ok, finished} <- finished_time(document),
          {:ok, player_table_rows} <- get_players(document),
-         players <- Enum.map(player_table_rows, &Player.from_table_row/1) do
+         players <-
+           player_table_rows
+           |> Enum.with_index(1)
+           |> Enum.map(fn {row, seat} -> %{Player.from_table_row(row) | seat_number: seat} end) do
       {:ok,
        %__MODULE__{
          game_id: game_id,

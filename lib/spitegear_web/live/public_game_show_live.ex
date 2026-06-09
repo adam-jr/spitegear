@@ -27,7 +27,9 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
         {current_round, turn_within_round} =
           if current_turn do
-            seat = Map.get(round_info.seat_number, current_turn.player_name)
+            seat =
+              view_screen && view_screen.current_player && view_screen.current_player.seat_number
+
             {round_info.current_round, seat}
           else
             {nil, nil}

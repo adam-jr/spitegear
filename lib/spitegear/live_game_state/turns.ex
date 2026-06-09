@@ -6,7 +6,6 @@ defmodule Spitegear.LiveGameState.Turns do
   import Ecto.Query
 
   alias Spitegear.LiveGameState.Turn
-  alias Spitegear.LiveGameState.WargearViewScreenDb
   alias Spitegear.Repo
   alias Spitegear.TurnHistory
 
@@ -91,26 +90,18 @@ defmodule Spitegear.LiveGameState.Turns do
 
   ## Fields
 
-  - `current_round` — the highest turn count held by any player. Equivalent to
-    the round that player is currently playing.
+  - `current_round` — the highest turn count held by any player.
   - `turn_number_within_round` — how many players have reached `current_round`.
-    When exactly 1, a new round just started (`new_round_starting?` is also `true`).
   - `overall_turn_number` — total turns across all players and all rounds.
-  - `seat_number` — map of player name → 1-indexed seat position derived from
-    the view screen player list order (seat 1 goes first each round).
-  - `new_round_starting?` — `true` when exactly one player is at `current_round`,
-    i.e. a new round just started.
-  - `turn_counts` — map of player name → total turn count (open + closed).
+  - `new_round_starting?` — `true` when exactly one player is at `current_round`.
 
-  Returns all-zero/empty maps when no turns exist for the game.
+  Returns all-zero values when no turns exist for the game.
   """
   @type round_info :: %{
           current_round: non_neg_integer(),
           turn_number_within_round: non_neg_integer(),
           overall_turn_number: non_neg_integer(),
-          seat_number: %{optional(String.t()) => pos_integer()},
-          new_round_starting?: boolean(),
-          turn_counts: %{optional(String.t()) => pos_integer()}
+          new_round_starting?: boolean()
         }
 
   @spec round_info(game_id()) :: round_info()
@@ -124,51 +115,25 @@ defmodule Spitegear.LiveGameState.Turns do
         )
       )
 
-    seat_number = seat_number_from_view_screen(game_id)
-
     if raw == [] do
       %{
         current_round: 0,
         turn_number_within_round: 0,
         overall_turn_number: 0,
-        seat_number: seat_number,
-        new_round_starting?: false,
-        turn_counts: %{}
+        new_round_starting?: false
       }
     else
-      turn_counts = Map.new(raw, fn {player, cnt} -> {player, cnt} end)
-
-      current_round = turn_counts |> Map.values() |> Enum.max()
-      turn_number_within_round = turn_counts |> Map.values() |> Enum.count(&(&1 == current_round))
-      overall_turn_number = turn_counts |> Map.values() |> Enum.sum()
+      counts = Map.new(raw, fn {player, cnt} -> {player, cnt} end)
+      current_round = counts |> Map.values() |> Enum.max()
+      turn_number_within_round = counts |> Map.values() |> Enum.count(&(&1 == current_round))
+      overall_turn_number = counts |> Map.values() |> Enum.sum()
 
       %{
         current_round: current_round,
         turn_number_within_round: turn_number_within_round,
         overall_turn_number: overall_turn_number,
-        seat_number: seat_number,
-        new_round_starting?: turn_number_within_round == 1,
-        turn_counts: turn_counts
+        new_round_starting?: turn_number_within_round == 1
       }
-    end
-  end
-
-  defp seat_number_from_view_screen(game_id) do
-    case Repo.one(
-           from(vs in WargearViewScreenDb,
-             where: vs.game_id == ^game_id,
-             order_by: [desc: vs.inserted_at],
-             limit: 1,
-             select: vs.players
-           )
-         ) do
-      nil ->
-        %{}
-
-      players ->
-        players
-        |> Enum.with_index(1)
-        |> Map.new(fn {p, i} -> {p["name"], i} end)
     end
   end
 

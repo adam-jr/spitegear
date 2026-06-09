@@ -61,19 +61,22 @@ defmodule Spitegear.MessageTemplates do
 
   # --- High-level builders (called from GamePoller) ---
 
-  def next_turn(player_name, game_id, round_info) do
+  def next_turn(state, round_info) do
+    vs = state.current_view_screen
+    current_player = vs && vs.current_player
+
     render(
       :next_turn,
       %{
-        player_slack: Map.get(round_info.player_slack_names, player_name),
+        player_slack: current_player && current_player.slack_name,
         round: round_info.current_round,
         turn_number: round_info.turn_number_within_round,
         overall_turn: round_info.overall_turn_number,
-        seat_number: Map.get(round_info.seat_number, player_name),
-        game_name: round_info.game_name,
-        game_url: game_url(game_id)
+        seat_number: current_player && current_player.seat_number,
+        game_name: vs && vs.game_name,
+        game_url: game_url(state.game_id)
       },
-      game_id
+      state.game_id
     )
   end
 

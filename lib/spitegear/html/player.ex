@@ -14,6 +14,7 @@ defmodule Spitegear.HTML.Player do
     field(:slack_name, :string)
 
     field(:color, :string, virtual: true)
+    field(:seat_number, :integer, virtual: true)
     field(:current_turn?, :boolean, virtual: true)
     field(:eliminated?, :boolean, virtual: true)
     field(:winner?, :boolean, virtual: true)

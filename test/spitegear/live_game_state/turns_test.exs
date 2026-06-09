@@ -196,15 +196,13 @@ defmodule Spitegear.LiveGameState.TurnsTest do
   end
 
   describe "round_info/1" do
-    test "returns all-zero/empty result when no turns exist" do
+    test "returns all-zero result when no turns exist" do
       result = Turns.round_info("11111")
 
       assert result.current_round == 0
       assert result.turn_number_within_round == 0
       assert result.overall_turn_number == 0
-      assert result.seat_number == %{}
       assert result.new_round_starting? == false
-      assert result.turn_counts == %{}
     end
 
     test "single player, single turn" do
@@ -214,9 +212,7 @@ defmodule Spitegear.LiveGameState.TurnsTest do
       assert result.current_round == 1
       assert result.turn_number_within_round == 1
       assert result.overall_turn_number == 1
-      assert result.seat_number == %{"adam" => 1}
       assert result.new_round_starting? == true
-      assert result.turn_counts == %{"adam" => 1}
     end
 
     test "turn_number_within_round counts players at the max, not all players" do
@@ -261,21 +257,6 @@ defmodule Spitegear.LiveGameState.TurnsTest do
       assert result.new_round_starting? == true
     end
 
-    test "seat_number reflects chronological order of first turns" do
-      t1 = @base
-      t2 = DateTime.add(@base, 100)
-      t3 = DateTime.add(@base, 200)
-
-      # charlie went first, then adam, then bob
-      insert_turn(player_name: "charlie", started_at: t1, ended_at: t2)
-      insert_turn(player_name: "adam", started_at: t2, ended_at: t3)
-      insert_turn(player_name: "bob", started_at: t3, ended_at: nil)
-
-      result = Turns.round_info("11111")
-
-      assert result.seat_number == %{"charlie" => 1, "adam" => 2, "bob" => 3}
-    end
-
     test "overall_turn_number is the sum of all turn counts" do
       t1 = @base
       t2 = DateTime.add(@base, 100)
@@ -303,8 +284,8 @@ defmodule Spitegear.LiveGameState.TurnsTest do
 
       result = Turns.round_info("11111")
 
-      assert result.turn_counts == %{"adam" => 1}
-      refute Map.has_key?(result.seat_number, "intruder")
+      assert result.current_round == 1
+      assert result.overall_turn_number == 1
     end
   end
 

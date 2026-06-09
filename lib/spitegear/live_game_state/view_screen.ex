@@ -47,13 +47,16 @@ defmodule Spitegear.LiveGameState.ViewScreen do
     winner_names = MapSet.new(db.winners || [])
 
     players =
-      Enum.map(db.players || [], fn p ->
+      (db.players || [])
+      |> Enum.with_index(1)
+      |> Enum.map(fn {p, seat} ->
         name = p["name"]
 
         %Player{
           name: name,
           slack_name: p["slack_name"],
           color: p["color"],
+          seat_number: seat,
           current_turn?: name == db.current_player_name,
           eliminated?: MapSet.member?(eliminated_names, name),
           winner?: MapSet.member?(winner_names, name),

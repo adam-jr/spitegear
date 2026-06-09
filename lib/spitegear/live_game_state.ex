@@ -243,9 +243,8 @@ defmodule Spitegear.LiveGameState do
   def announce_next_turn(%__MODULE__{current_turn: nil} = state), do: state
 
   def announce_next_turn(%__MODULE__{} = state) do
-    player_name = state.current_turn.player_name
     round_info = Turns.round_info(state.game_id)
-    text = MessageTemplates.next_turn(player_name, state.game_id, round_info)
+    text = MessageTemplates.next_turn(state, round_info)
     PubSub.msg(:spitegear, text)
     state
   end

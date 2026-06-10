@@ -12,7 +12,7 @@ defmodule Spitegear.LiveGameState do
   For history API updates, call the pipeline steps in order:
 
       state
-      |> LiveGameState.record_history_response(turn_data)
+      |> LiveGameState.record_changed_history_response(turn_data)
       |> LiveGameState.send_reminder()
 
   For view screen updates, call the pipeline steps in order:
@@ -105,8 +105,8 @@ defmodule Spitegear.LiveGameState do
   `history_changed: true`. Sets `history_changed: false` when the response
   is identical to the last stored one or if the insert fails.
   """
-  @spec record_history_response(t(), map()) :: t()
-  def record_history_response(%__MODULE__{} = state, turn_data) do
+  @spec record_changed_history_response(t(), map()) :: t()
+  def record_changed_history_response(%__MODULE__{} = state, turn_data) do
     case HistoryResponses.record_if_changed(state.game_id, turn_data) do
       {:ok, :unchanged} ->
         %{state | history_changed: false}

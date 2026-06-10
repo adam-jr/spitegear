@@ -148,9 +148,9 @@ defmodule Spitegear.LiveGameStateTest do
     end
   end
 
-  describe "record_history_response/2" do
+  describe "record_changed_history_response/2" do
     test "inserts on first fetch and sets current_api_response and history_changed: true" do
-      state = blank_state() |> LiveGameState.record_history_response(%{"turnid" => "1"})
+      state = blank_state() |> LiveGameState.record_changed_history_response(%{"turnid" => "1"})
       assert state.current_api_response.turn_data["turnid"] == "1"
       assert state.prev_api_response == nil
       assert state.history_changed == true
@@ -159,8 +159,8 @@ defmodule Spitegear.LiveGameStateTest do
     test "shifts current to prev when turnid changes" do
       state =
         blank_state()
-        |> LiveGameState.record_history_response(%{"turnid" => "1"})
-        |> LiveGameState.record_history_response(%{"turnid" => "2"})
+        |> LiveGameState.record_changed_history_response(%{"turnid" => "1"})
+        |> LiveGameState.record_changed_history_response(%{"turnid" => "2"})
 
       assert state.current_api_response.turn_data["turnid"] == "2"
       assert state.prev_api_response.turn_data["turnid"] == "1"
@@ -168,8 +168,8 @@ defmodule Spitegear.LiveGameStateTest do
     end
 
     test "sets history_changed: false when turnid has not changed" do
-      state = blank_state() |> LiveGameState.record_history_response(%{"turnid" => "1"})
-      state2 = LiveGameState.record_history_response(state, %{"turnid" => "1"})
+      state = blank_state() |> LiveGameState.record_changed_history_response(%{"turnid" => "1"})
+      state2 = LiveGameState.record_changed_history_response(state, %{"turnid" => "1"})
       assert state2.history_changed == false
       assert state2.current_api_response.turn_data["turnid"] == "1"
     end

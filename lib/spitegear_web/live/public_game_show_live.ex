@@ -16,7 +16,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
         net_units_series = Stats.enriched_net_units_series(game_id)
         units_received_series = Stats.units_received_series(game_id)
         units_killed_series = Stats.units_killed_series(game_id)
-        luck_ratio_series = Stats.luck_ratio_series(game_id)
+        luck_delta_series = Stats.luck_delta_series(game_id)
         attacks_received_series = Stats.attacks_received_series(game_id)
         jormp_jomps_received_series = Stats.jormp_jomps_received_series(game_id)
         jormp_jomps_delivered_series = Stats.jormp_jomps_delivered_series(game_id)
@@ -45,7 +45,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
            net_units_series: net_units_series,
            units_received_series: units_received_series,
            units_killed_series: units_killed_series,
-           luck_ratio_series: luck_ratio_series,
+           luck_delta_series: luck_delta_series,
            attacks_received_series: attacks_received_series,
            jormp_jomps_received_series: jormp_jomps_received_series,
            jormp_jomps_delivered_series: jormp_jomps_delivered_series,
@@ -404,28 +404,28 @@ defmodule SpitegearWeb.PublicGameShowLive do
             </section>
           <% end %>
 
-          <%!-- Luck Ratio Chart --%>
-          <%= if map_size(@luck_ratio_series) > 0 do %>
+          <%!-- Luck Chart --%>
+          <%= if map_size(@luck_delta_series) > 0 do %>
             <section>
               <div class="flex items-center justify-between mb-1">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                  Luck Ratio Over Time
+                  Luck Over Time
                 </h2>
                 <button
-                  phx-click={JS.dispatch("reset-zoom", to: "#luck-ratio-chart")}
+                  phx-click={JS.dispatch("reset-zoom", to: "#luck-chart")}
                   class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   Reset Zoom
                 </button>
               </div>
               <p class="text-xs text-gray-400 mb-3">
-                Cumulative (defender losses − attacker losses) per attacker. Positive = lucky, negative = unlucky. Drag to zoom, double-click to reset.
+                Cumulative troops gained or lost due to luck vs. expected dice outcomes. Positive = luckier than average, negative = unluckier. Drag to zoom, double-click to reset.
               </p>
               <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-1 relative h-[260px] sm:h-[420px]">
                 <canvas
-                  id="luck-ratio-chart"
+                  id="luck-chart"
                   phx-hook="NetUnitsChart"
-                  data-series={Jason.encode!(@luck_ratio_series)}
+                  data-series={Jason.encode!(@luck_delta_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
                   data-order={
                     Jason.encode!(

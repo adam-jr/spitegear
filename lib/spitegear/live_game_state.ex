@@ -434,12 +434,17 @@ defmodule Spitegear.LiveGameState do
   @spec announce_winners(t()) :: t()
   def announce_winners(%__MODULE__{view_screen_changed: false} = state), do: state
   def announce_winners(%__MODULE__{current_view_screen: nil} = state), do: state
-  def announce_winners(%__MODULE__{current_view_screen: %ViewScreen{winners: []}} = state), do: state
+
+  def announce_winners(%__MODULE__{current_view_screen: %ViewScreen{winners: []}} = state),
+    do: state
 
   def announce_winners(%__MODULE__{} = state) do
     vs = state.current_view_screen
-    {blocks, fallback} = MessageTemplates.game_winners_blocks(vs.winners, state.game_id, vs.game_name)
-    PubSub.msg(:spitegear, [type: :game_winners, payload: {blocks, fallback}])
+
+    {blocks, fallback} =
+      MessageTemplates.game_winners_blocks(vs.winners, state.game_id, vs.game_name)
+
+    PubSub.msg(:spitegear, type: :game_winners, payload: {blocks, fallback})
     GenServer.cast(self(), :finish_game)
     state
   end

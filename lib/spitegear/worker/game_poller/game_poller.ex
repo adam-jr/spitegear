@@ -218,5 +218,4 @@ defmodule Spitegear.Worker.GamePoller do
   defp update_game, do: send(self(), :update_game)
 
   defp schedule_work, do: Process.send_after(self(), :work, @interval)
-
 end

@@ -152,6 +152,35 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   @doc """
+  Returns the expected losses for each side in a single `"attacked"` event,
+  accounting for the number of dice rolled and the battle modifier.
+
+  `battle_mod` is parsed as `"attacker_mod,defender_mod"` — each modifier shifts
+  the die size from the default 6 by that amount (e.g. `"0,1"` gives the
+  defender a 7-sided die; `"-1,0"` gives the attacker a 5-sided die). Ties in
+  each comparison go to the defender.
+
+  Returns `%{attacker: float, defender: float}` rounded to three decimal places,
+  or `nil` for non-attack events or events missing dice fields.
+  """
+  @spec expected_attack_losses(GameLogEvent.t()) ::
+          %{attacker: float(), defender: float()} | nil
+  def expected_attack_losses(%GameLogEvent{
+        event_type: "attacked",
+        attacker_dice: ad,
+        defender_dice: dd,
+        battle_mod: bm
+      })
+      when not is_nil(ad) and not is_nil(dd) do
+    na = ad |> String.split(",") |> length()
+    nd = dd |> String.split(",") |> length()
+    {a_mod, d_mod} = parse_battle_mod(bm)
+    compute_expected_losses(na, nd, 6 + a_mod, 6 + d_mod)
+  end
+
+  def expected_attack_losses(_), do: nil
+
+  @doc """
   Returns log-derived summary stats for a game:
     - `max_seq`    — highest log_seq in the game
     - `turn_count` — number of started_turn events
@@ -672,6 +701,48 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp jormp_delivered_delta(_), do: []
+
+  defp parse_battle_mod(nil), do: {0, 0}
+
+  defp parse_battle_mod(bm) do
+    [a, d] = bm |> String.split(",") |> Enum.map(&String.to_integer/1)
+    {a, d}
+  end
+
+  # Enumerate all ordered n-tuples of rolls for a `size`-sided die.
+  # Each tuple has equal probability, so averaging over all tuples gives
+  # the exact expected value without needing weighted sampling.
+  defp dice_outcomes(n, size) do
+    Enum.reduce(1..n, [[]], fn _, acc ->
+      for v <- 1..size, rest <- acc, do: [v | rest]
+    end)
+  end
+
+  defp compute_expected_losses(na, nd, a_size, d_size) do
+    pairs = min(na, nd)
+    a_rolls = dice_outcomes(na, a_size)
+    d_rolls = dice_outcomes(nd, d_size)
+    total = length(a_rolls) * length(d_rolls)
+
+    {al_sum, dl_sum} =
+      for a <- a_rolls, d <- d_rolls, reduce: {0, 0} do
+        {al, dl} ->
+          {a_loss, d_loss} =
+            battle_losses(Enum.sort(a, :desc), Enum.sort(d, :desc), pairs)
+
+          {al + a_loss, dl + d_loss}
+      end
+
+    %{attacker: Float.round(al_sum / total, 3), defender: Float.round(dl_sum / total, 3)}
+  end
+
+  # Compare top `pairs` dice from each side. Attacker wins strictly; ties to defender.
+  defp battle_losses(a_sorted, d_sorted, pairs) do
+    Enum.zip(Enum.take(a_sorted, pairs), Enum.take(d_sorted, pairs))
+    |> Enum.reduce({0, 0}, fn {a, d}, {al, dl} ->
+      if a > d, do: {al, dl + 1}, else: {al + 1, dl}
+    end)
+  end
 
   # Compute the area under a step-function series.
   # Each point holds net_units from its seq until the next point's seq;

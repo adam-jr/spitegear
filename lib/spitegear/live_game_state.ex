@@ -279,6 +279,7 @@ defmodule Spitegear.LiveGameState do
   `current_turn.reminded_at` is `nil`.
   """
   @spec send_reminder(t()) :: t()
+  def send_reminder(%__MODULE__{history_changed: true} = state), do: state
   def send_reminder(%__MODULE__{current_turn: nil} = state), do: state
   def send_reminder(%__MODULE__{current_view_screen: nil} = state), do: state
 

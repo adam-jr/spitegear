@@ -14,6 +14,7 @@ defmodule Spitegear.LiveGameState do
       state
       |> LiveGameState.record_changed_history_response(turn_data)
       |> LiveGameState.send_reminder()
+      |> LiveGameState.announce_moving()
 
   For view screen updates, call the pipeline steps in order:
 
@@ -305,5 +306,36 @@ defmodule Spitegear.LiveGameState do
     waking_hours? = chicago.hour >= 7 and chicago.hour < 24
     beyond_horizon? = DateTime.diff(now, reminded_at) > @reminder_interval_seconds
     waking_hours? and beyond_horizon?
+  end
+
+  @doc """
+  Announces that the active player is taking their turn when history just
+  changed, the current player matches the open turn, and at least one
+  reminder has been sent. Persists `moving_announced: true` on the turn.
+
+  No-op when `history_changed` is `false`, `current_turn` or
+  `current_view_screen` is `nil`, or `current_turn.moving_announced` is
+  already `true`.
+  """
+  @spec announce_moving(t()) :: t()
+  def announce_moving(%__MODULE__{history_changed: false} = state), do: state
+  def announce_moving(%__MODULE__{current_turn: nil} = state), do: state
+  def announce_moving(%__MODULE__{current_view_screen: nil} = state), do: state
+  def announce_moving(%__MODULE__{current_turn: %Turn{moving_announced: true}} = state), do: state
+
+  def announce_moving(%__MODULE__{} = state) do
+    vs = state.current_view_screen
+    turn = state.current_turn
+    same_player? = vs.current_player_name != nil && vs.current_player_name == turn.player_name
+
+    if same_player? && turn.reminders >= 1 do
+      Logger.info("#{turn.player_name} is taking their turn (game #{state.game_id})")
+      text = MessageTemplates.player_moving(vs.current_player, state.game_id)
+      PubSub.msg(:spitegear, text)
+      {:ok, updated_turn} = Turns.record_moving_announced(turn)
+      %{state | current_turn: updated_turn}
+    else
+      state
+    end
   end
 end

@@ -80,6 +80,16 @@ defmodule Spitegear.LiveGameState.Turns do
   end
 
   @doc """
+  Records that the moving announcement has been sent for `turn`. Sets
+  `moving_announced` to `true` in the DB. Returns the updated struct.
+  """
+  @spec record_moving_announced(Turn.t()) :: {:ok, Turn.t()} | {:error, term()}
+  def record_moving_announced(%Turn{id: id} = turn) do
+    Repo.update_all(from(t in Turn, where: t.id == ^id), set: [moving_announced: true])
+    {:ok, %{turn | moving_announced: true}}
+  end
+
+  @doc """
   Records a new turn starting for `player_name`. Closes any currently open
   turn for the game first, then inserts a new row with `started_at` set to
   the current UTC time and `ended_at: nil`.

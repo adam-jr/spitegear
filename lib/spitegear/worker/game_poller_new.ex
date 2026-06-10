@@ -67,8 +67,12 @@ defmodule Spitegear.Worker.GamePollerNew do
 
   @impl true
   def handle_cast({:history_fetched, turn_data}, %{game_state: game_state} = state) do
-    {:noreply,
-     %{state | game_state: LiveGameState.dispatch_history_response(game_state, turn_data)}}
+    game_state =
+      game_state
+      |> LiveGameState.record_changed_history_response(turn_data)
+      |> LiveGameState.send_reminder()
+
+    {:noreply, %{state | game_state: game_state}}
   end
 
   def handle_cast({:view_screen_fetched, view_screen}, %{game_state: game_state} = state) do

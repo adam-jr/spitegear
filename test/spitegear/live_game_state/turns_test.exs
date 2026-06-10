@@ -63,13 +63,13 @@ defmodule Spitegear.LiveGameState.TurnsTest do
         player_name: "adam",
         started_at: @base,
         ended_at: DateTime.add(@base, 3600),
-        reminded: reminded,
+        reminded_at: reminded,
         reminders: 2,
         moving_announced: true
       })
 
       [turn] = Turns.list_turns("11111")
-      assert turn.reminded == reminded
+      assert turn.reminded_at == reminded
       assert turn.reminders == 2
       assert turn.moving_announced == true
     end
@@ -321,7 +321,7 @@ defmodule Spitegear.LiveGameState.TurnsTest do
       [turn] = Turns.list_turns("11111")
       assert turn.reminders == 0
       assert turn.moving_announced == false
-      assert turn.reminded == nil
+      assert turn.reminded_at == nil
     end
 
     test "only inserts records for the given game_id" do

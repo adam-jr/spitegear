@@ -9,7 +9,11 @@ defmodule Spitegear.LiveGameState do
   Use `new/1` to build an initial struct for a game, or `hydrate/1` to
   refresh an existing struct's fields (e.g. after restart).
 
-  Use `dispatch_history_response/2` to process incoming history API data.
+  For history API updates, call the pipeline steps in order:
+
+      state
+      |> LiveGameState.record_changed_history_response(turn_data)
+      |> LiveGameState.send_reminder()
 
   For view screen updates, call the pipeline steps in order:
 
@@ -44,6 +48,7 @@ defmodule Spitegear.LiveGameState do
           prev_view_screen: ViewScreen.t() | nil,
           current_api_response: WargearHistoryApiResponseDb.t() | nil,
           prev_api_response: WargearHistoryApiResponseDb.t() | nil,
+          history_changed: boolean(),
           view_screen_changed: boolean(),
           turn_advanced: boolean()
         }
@@ -55,6 +60,7 @@ defmodule Spitegear.LiveGameState do
             prev_view_screen: nil,
             current_api_response: nil,
             prev_api_response: nil,
+            history_changed: false,
             view_screen_changed: false,
             turn_advanced: false
 
@@ -94,28 +100,28 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Processes a raw History API response. Persists it if the `turnid` has
-  changed, then shifts `current_api_response` → `prev_api_response`
-  and sets `current_api_response` to the new record.
-
-  Returns the struct unchanged if the response is identical to the last stored
-  one or if the insert fails.
+  changed, then shifts `current_api_response` → `prev_api_response`,
+  sets `current_api_response` to the new record, and sets
+  `history_changed: true`. Sets `history_changed: false` when the response
+  is identical to the last stored one or if the insert fails.
   """
-  @spec dispatch_history_response(t(), map()) :: t()
-  def dispatch_history_response(%__MODULE__{} = state, turn_data) do
+  @spec record_changed_history_response(t(), map()) :: t()
+  def record_changed_history_response(%__MODULE__{} = state, turn_data) do
     case HistoryResponses.record_if_changed(state.game_id, turn_data) do
       {:ok, :unchanged} ->
-        state
+        %{state | history_changed: false}
 
       {:ok, record} ->
         %{
           state
           | prev_api_response: state.current_api_response,
-            current_api_response: record
+            current_api_response: record,
+            history_changed: true
         }
 
       {:error, _} ->
         Logger.error("#{__MODULE__} failed to record history response for game #{state.game_id}")
-        state
+        %{state | history_changed: false}
     end
   end
 
@@ -257,5 +263,46 @@ defmodule Spitegear.LiveGameState do
     text = MessageTemplates.next_turn(state, round_info)
     PubSub.msg(:spitegear, text)
     state
+  end
+
+  @reminder_interval_seconds 3 * 60 * 60
+
+  @doc """
+  Sends a kind reminder to the active player if a reminder is due, then
+  persists the updated reminder state on `current_turn`.
+
+  A reminder is due when both hold:
+  - `reminded` was set more than 3 hours ago.
+  - The current time falls within waking hours in America/Chicago (07:00–23:59).
+
+  No-op when `current_turn` or `current_view_screen` is `nil`, or when
+  `current_turn.reminded_at` is `nil`.
+  """
+  @spec send_reminder(t()) :: t()
+  def send_reminder(%__MODULE__{current_turn: nil} = state), do: state
+  def send_reminder(%__MODULE__{current_view_screen: nil} = state), do: state
+
+  def send_reminder(%__MODULE__{} = state) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    if reminder_due?(state.current_turn, now) do
+      vs = state.current_view_screen
+      player_slack = vs.current_player && vs.current_player.slack_name
+      text = MessageTemplates.kind_reminder(state.current_turn, player_slack, vs.game_name)
+      PubSub.msg(:spitegear, text)
+      {:ok, updated_turn} = Turns.record_reminder(state.current_turn)
+      %{state | current_turn: updated_turn}
+    else
+      state
+    end
+  end
+
+  defp reminder_due?(%{reminded_at: nil}, _now), do: false
+
+  defp reminder_due?(%{reminded_at: reminded_at}, now) do
+    {:ok, chicago} = DateTime.shift_zone(now, "America/Chicago")
+    waking_hours? = chicago.hour >= 7 and chicago.hour < 24
+    beyond_horizon? = DateTime.diff(now, reminded_at) > @reminder_interval_seconds
+    waking_hours? and beyond_horizon?
   end
 end

@@ -7,6 +7,8 @@ defmodule Spitegear.GameLogEvent do
              attacker_dice defender_dice battle_mod
              attacker_losses defender_losses turn_id)a
 
+  @type t :: %__MODULE__{}
+
   schema "game_log_events" do
     field(:game_id, :string)
     field(:log_seq, :integer)

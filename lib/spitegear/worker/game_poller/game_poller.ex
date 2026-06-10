@@ -5,7 +5,6 @@ defmodule Spitegear.Worker.GamePoller do
   alias Spitegear.Games
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
-  alias Spitegear.Slack.Message
   alias Spitegear.Turn
   alias Spitegear.Wargear.HTTP.History
   alias Spitegear.Wargear.HTTP.LogSnapshot
@@ -257,33 +256,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp record_completed_turn(state) do
     ended = DateTime.utc_now() |> DateTime.truncate(:second)
     Games.record_completed_turn(state.current_turn, ended)
-
-    completed = Games.completed_rounds(state.game_id)
-
     state
-    |> maybe_announce_round(completed)
-    |> maybe_post_round_stats(completed)
-  end
-
-  defp maybe_announce_round(%{last_round: last_round} = state, completed)
-       when completed > last_round do
-    text = MessageTemplates.round_complete(state.game_id, completed, state.view_screen.game_name)
-    PubSub.msg(:spitegear, text)
-    %{state | last_round: completed}
-  end
-
-  defp maybe_announce_round(state, _completed), do: state
-
-  defp maybe_post_round_stats(state, completed) do
-    if completed > 0 && rem(completed, 5) == 0 && completed != state.last_stats_round do
-      stats = Games.turn_stats(state.game_id)
-      blocks = Message.blocks(:turn_stats, stats, state.game_id, completed)
-      fallback = Message.text(:turn_stats, stats, state.game_id, completed)
-      PubSub.msg(:spitegear_test, type: :turn_stats, payload: {blocks, fallback})
-      %{state | last_stats_round: completed}
-    else
-      state
-    end
   end
 
   defp maybe_announce_moving(%{current_turn: nil} = state), do: state

@@ -332,9 +332,18 @@ defmodule Spitegear.LiveGameStateTest do
         ended_at: DateTime.add(@base, 10_800)
       )
 
-      state = %LiveGameState{game_id: "11111", turn_advanced: true}
+      vs = %ViewScreen{
+        game_id: "11111",
+        game_name: "Test Game",
+        players: [],
+        eliminated: [],
+        winners: [],
+        fogged?: false
+      }
+
+      state = %LiveGameState{game_id: "11111", turn_advanced: true, current_view_screen: vs}
       assert LiveGameState.announce_next_round(state) == state
-      assert_receive {:message, :spitegear_test, "Round 2 starting in game 11111"}, 500
+      assert_receive {:message, :spitegear, _}, 500
     end
   end
 

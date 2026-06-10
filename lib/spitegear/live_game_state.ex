@@ -220,6 +220,7 @@ defmodule Spitegear.LiveGameState do
   """
   @spec announce_next_round(t()) :: t()
   def announce_next_round(%__MODULE__{turn_advanced: false} = state), do: state
+  def announce_next_round(%__MODULE__{current_view_screen: nil} = state), do: state
 
   def announce_next_round(%__MODULE__{current_view_screen: %ViewScreen{} = vs} = state) do
     %{new_round_starting?: new_round?, current_round: round} = Turns.round_info(state.game_id)

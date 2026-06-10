@@ -5,7 +5,6 @@ defmodule Spitegear.Worker.GamePoller do
   alias Spitegear.Games
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
-  alias Spitegear.Slack.Message
   alias Spitegear.Turn
   alias Spitegear.Wargear.HTTP.History
   alias Spitegear.Wargear.HTTP.LogSnapshot

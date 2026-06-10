@@ -59,6 +59,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Elixir
+        id: beam
         uses: erlef/setup-beam@v1
         with:
           elixir-version: "1.19"
@@ -82,8 +83,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: priv/plts
-          key: ${{ runner.os }}-plt-${{ hashFiles('mix.lock') }}
-          restore-keys: ${{ runner.os }}-plt-
+          key: ${{ runner.os }}-plt-otp${{ steps.beam.outputs.otp-version }}-elixir${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-plt-otp${{ steps.beam.outputs.otp-version }}-elixir${{ steps.beam.outputs.elixir-version }}-
 
       - name: Install deps
         run: mix deps.get

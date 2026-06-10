@@ -258,4 +258,45 @@ defmodule Spitegear.LiveGameState do
     PubSub.msg(:spitegear, text)
     state
   end
+
+  @reminder_interval_seconds 3 * 60 * 60
+
+  @doc """
+  Sends a kind reminder to the active player if a reminder is due, then
+  persists the updated reminder state on `current_turn`.
+
+  A reminder is due when both hold:
+  - `reminded` was set more than 3 hours ago.
+  - The current time falls within waking hours in America/Chicago (07:00–23:59).
+
+  No-op when `current_turn` or `current_view_screen` is `nil`, or when
+  `current_turn.reminded` is `nil`.
+  """
+  @spec send_reminder(t()) :: t()
+  def send_reminder(%__MODULE__{current_turn: nil} = state), do: state
+  def send_reminder(%__MODULE__{current_view_screen: nil} = state), do: state
+
+  def send_reminder(%__MODULE__{} = state) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    if reminder_due?(state.current_turn, now) do
+      vs = state.current_view_screen
+      player_slack = vs.current_player && vs.current_player.slack_name
+      text = MessageTemplates.kind_reminder(state.current_turn, player_slack, vs.game_name)
+      PubSub.msg(:spitegear, text)
+      {:ok, updated_turn} = Turns.record_reminder(state.current_turn)
+      %{state | current_turn: updated_turn}
+    else
+      state
+    end
+  end
+
+  defp reminder_due?(%{reminded: nil}, _now), do: false
+
+  defp reminder_due?(%{reminded: reminded}, now) do
+    {:ok, chicago} = DateTime.shift_zone(now, "America/Chicago")
+    waking_hours? = chicago.hour >= 7 and chicago.hour < 24
+    beyond_horizon? = DateTime.diff(now, reminded) > @reminder_interval_seconds
+    waking_hours? and beyond_horizon?
+  end
 end

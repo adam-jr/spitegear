@@ -55,7 +55,22 @@ defmodule Spitegear.LiveGameState.Turns do
   @spec start_turn(game_id(), String.t()) :: {:ok, Turn.t()} | {:error, term()}
   def start_turn(game_id, player_name) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
-    Repo.insert(%Turn{game_id: game_id, player_name: player_name, started_at: now})
+    Repo.insert(%Turn{game_id: game_id, player_name: player_name, started_at: now, reminded: now})
+  end
+
+  @doc """
+  Records that a reminder was sent for `turn`. Increments `reminders` and sets
+  `reminded` to the current UTC time. Returns the updated struct.
+  """
+  @spec record_reminder(Turn.t()) :: {:ok, Turn.t()} | {:error, term()}
+  def record_reminder(%Turn{id: id, reminders: count} = turn) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Repo.update_all(from(t in Turn, where: t.id == ^id),
+      set: [reminded: now, reminders: count + 1]
+    )
+
+    {:ok, %{turn | reminded: now, reminders: count + 1}}
   end
 
   @doc """

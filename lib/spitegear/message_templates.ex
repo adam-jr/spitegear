@@ -95,6 +95,21 @@ defmodule Spitegear.MessageTemplates do
     )
   end
 
+  def kind_reminder(turn, player_slack, game_name) do
+    key = :"kind_reminder_#{min(turn.reminders, 4)}"
+
+    render(
+      key,
+      %{
+        player_slack: player_slack,
+        reminders: turn.reminders,
+        game_name: game_name,
+        game_url: game_url(turn.game_id)
+      },
+      turn.game_id
+    )
+  end
+
   def player_moving(player, game_id) do
     render(
       :player_moving,

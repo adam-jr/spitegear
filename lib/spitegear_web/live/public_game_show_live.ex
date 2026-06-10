@@ -12,6 +12,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
       game ->
         log_summary = Stats.game_log_summary(game_id)
+        total_board_units_series = Stats.total_board_units_series(game_id)
         net_units_series = Stats.enriched_net_units_series(game_id)
         units_received_series = Stats.units_received_series(game_id)
         units_killed_series = Stats.units_killed_series(game_id)
@@ -40,6 +41,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
            game_id: game_id,
            game: game,
            log_summary: log_summary,
+           total_board_units_series: total_board_units_series,
            net_units_series: net_units_series,
            units_received_series: units_received_series,
            units_killed_series: units_killed_series,
@@ -247,6 +249,36 @@ defmodule SpitegearWeb.PublicGameShowLive do
               <% end %>
             </dl>
           </section>
+
+          <%!-- Total Board Units Chart --%>
+          <%= if map_size(@total_board_units_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Total Units on Board
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#total-board-units-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">
+                All units in play — rises when bonuses and factory production land, falls with every combat loss. Drag to zoom, double-click to reset.
+              </p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-2 sm:p-1 relative h-[200px] sm:h-[280px]">
+                <canvas
+                  id="total-board-units-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@total_board_units_series)}
+                  data-colors={Jason.encode!(%{"Total" => "#6366f1"})}
+                  data-order={Jason.encode!(["Total"])}
+                >
+                </canvas>
+              </div>
+            </section>
+          <% end %>
 
           <%!-- Net Units Chart --%>
           <%= if map_size(@net_units_series) > 0 do %>

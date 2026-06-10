@@ -97,6 +97,61 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   @doc """
+  Returns a single-series map `%{"Total" => points}` tracking the total number
+  of units on the board over time.
+
+  Board gains: setup placements (aggregated at the cutoff seq), then all
+  positive unit events (bonuses, factory production, card trades, etc.).
+  Board losses: attacker + defender losses per attack combined into one point,
+  plus factory_destroyed and discarded_units. `captured_reserve_units` is a
+  player-to-player transfer — no net board change.
+  """
+  def total_board_units_series(game_id) do
+    events =
+      Repo.all(
+        from(e in GameLogEvent,
+          where: e.game_id == ^game_id,
+          order_by: [asc: e.log_seq]
+        )
+      )
+
+    cutoff = setup_cutoff(events)
+
+    setup_entry =
+      if cutoff > 0 do
+        total =
+          events
+          |> Enum.take_while(&(&1.log_seq < cutoff))
+          |> Enum.flat_map(&setup_placed_delta/1)
+          |> Enum.map(& &1.delta)
+          |> Enum.sum()
+
+        if total > 0,
+          do: [
+            %{
+              player: "Total",
+              seq: cutoff,
+              delta: total,
+              event_type: "setup",
+              source_player: nil,
+              defender: nil
+            }
+          ],
+          else: []
+      else
+        []
+      end
+
+    game_deltas =
+      events
+      |> Enum.drop_while(&(&1.log_seq < cutoff))
+      |> Enum.flat_map(&board_total_delta/1)
+
+    (setup_entry ++ game_deltas)
+    |> build_series()
+  end
+
+  @doc """
   Returns log-derived summary stats for a game:
     - `max_seq`    — highest log_seq in the game
     - `turn_count` — number of started_turn events
@@ -451,6 +506,77 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp event_to_deltas(_), do: []
+
+  # Board total: positive events add to the whole board's unit count.
+  defp board_total_delta(%GameLogEvent{event_type: t, player: p, units: u, log_seq: s})
+       when t in @positive_unit_events and not is_nil(u) do
+    [%{player: "Total", seq: s, delta: u, event_type: t, source_player: p, defender: nil}]
+  end
+
+  # Board total: attacker + defender losses both leave the board; combine into one point.
+  defp board_total_delta(%GameLogEvent{
+         event_type: "attacked",
+         player: p,
+         defender: d,
+         attacker_losses: al,
+         defender_losses: dl,
+         log_seq: s
+       }) do
+    loss = (al || 0) + (dl || 0)
+
+    if loss > 0,
+      do: [
+        %{
+          player: "Total",
+          seq: s,
+          delta: -loss,
+          event_type: "attacked",
+          source_player: p,
+          defender: d
+        }
+      ],
+      else: []
+  end
+
+  defp board_total_delta(%GameLogEvent{
+         event_type: "factory_destroyed",
+         player: p,
+         units: u,
+         log_seq: s
+       })
+       when not is_nil(u) do
+    [
+      %{
+        player: "Total",
+        seq: s,
+        delta: -u,
+        event_type: "factory_destroyed",
+        source_player: p,
+        defender: nil
+      }
+    ]
+  end
+
+  defp board_total_delta(%GameLogEvent{
+         event_type: "discarded_units",
+         player: p,
+         units: u,
+         log_seq: s
+       })
+       when not is_nil(u) do
+    [
+      %{
+        player: "Total",
+        seq: s,
+        delta: -u,
+        event_type: "discarded_units",
+        source_player: p,
+        defender: nil
+      }
+    ]
+  end
+
+  defp board_total_delta(_), do: []
 
   # Positive unit events only (for units_received_series).
   defp received_delta(%GameLogEvent{event_type: t, player: p, units: u, log_seq: s})

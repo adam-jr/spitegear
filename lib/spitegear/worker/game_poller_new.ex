@@ -71,6 +71,7 @@ defmodule Spitegear.Worker.GamePollerNew do
       game_state
       |> LiveGameState.record_changed_history_response(turn_data)
       |> LiveGameState.send_reminder()
+      |> LiveGameState.announce_moving()
 
     {:noreply, %{state | game_state: game_state}}
   end

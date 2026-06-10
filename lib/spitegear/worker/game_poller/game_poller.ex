@@ -3,11 +3,8 @@ defmodule Spitegear.Worker.GamePoller do
   use GenServer
 
   alias Spitegear.Games
-  alias Spitegear.MessageTemplates
-  alias Spitegear.PubSub
   alias Spitegear.Turn
   alias Spitegear.Wargear.HTTP.History
-  alias Spitegear.Wargear.HTTP.LogSnapshot
   alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Worker.GamePoller.TurnLogic
   alias Spitegear.Worker.GamePollerNew
@@ -164,12 +161,8 @@ defmodule Spitegear.Worker.GamePoller do
           %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
           |> update_status()
           |> update_turn()
-          |> update_eliminated()
-          |> maybe_announce_winners()
 
         if Enum.any?(view_screen.winners) do
-          update_game()
-          finish_game(state.game_id)
           {:stop, state}
         else
           {timer, remaining} = maybe_schedule_view_screen_poll(polls_remaining)
@@ -200,7 +193,6 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp new_turn(state) do
     state = record_completed_turn(state)
-    state = infer_deaths_from_skip(state)
 
     turn = %Turn{
       game_id: state.game_id,
@@ -225,90 +217,6 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp update_game, do: send(self(), :update_game)
 
-  defp finish_game(game_id) do
-    Task.start(fn -> LogSnapshot.capture(game_id) end)
-    :ok
-  end
-
   defp schedule_work, do: Process.send_after(self(), :work, @interval)
 
-  defp update_eliminated(%{view_screen: %{fogged?: true}} = state), do: state
-  defp update_eliminated(%{view_screen: %{winners: [_ | _]}} = state), do: state
-
-  defp update_eliminated(state) do
-    known_dead = MapSet.new(state.dead_players, & &1.name)
-    newly_dead = Enum.reject(state.view_screen.eliminated, &MapSet.member?(known_dead, &1.name))
-
-    case newly_dead do
-      [] ->
-        state
-
-      newly_dead ->
-        now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-        Enum.each(newly_dead, fn player ->
-          Games.record_death(state.game_id, player.name, now)
-          text = MessageTemplates.player_died(player, state.game_id, state.view_screen.game_name)
-          PubSub.msg(:spitegear_test, text)
-        end)
-
-        %{state | dead_players: Enum.uniq_by(state.dead_players ++ newly_dead, & &1.name)}
-    end
-  end
-
-  defp infer_deaths_from_skip(%{current_turn: nil} = state), do: state
-
-  defp infer_deaths_from_skip(state) do
-    prev_name = state.current_turn.player.name
-    curr_name = state.view_screen.current_player.name
-
-    known_dead = MapSet.new(state.dead_players, & &1.name)
-
-    alive_players =
-      Enum.reject(state.view_screen.players, fn p ->
-        MapSet.member?(known_dead, p.name) or p.eliminated? or p.winner?
-      end)
-
-    n = length(alive_players)
-    prev_idx = Enum.find_index(alive_players, &(&1.name == prev_name))
-    curr_idx = Enum.find_index(alive_players, &(&1.name == curr_name))
-
-    alive_players
-    |> TurnLogic.skipped_players(n, prev_idx, curr_idx)
-    |> record_inferred_deaths(state)
-  end
-
-  defp record_inferred_deaths([], state), do: state
-
-  defp record_inferred_deaths(newly_dead, state) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    Enum.each(newly_dead, fn player ->
-      Logger.info("#{__MODULE__} inferring #{player.name} dead (skipped in turn order)")
-      Games.record_death(state.game_id, player.name, now)
-
-      unless state.view_screen.fogged? do
-        text = MessageTemplates.player_died(player, state.game_id, state.view_screen.game_name)
-        PubSub.msg(:spitegear_test, text)
-      end
-    end)
-
-    %{state | dead_players: Enum.uniq_by(state.dead_players ++ newly_dead, & &1.name)}
-  end
-
-  defp maybe_announce_winners(state) do
-    if Enum.any?(state.view_screen.winners) do
-      {blocks, fallback} =
-        MessageTemplates.game_winners_blocks(
-          state.view_screen.winners,
-          state.game_id,
-          state.view_screen.game_name
-        )
-
-      payload = [type: :game_winners, payload: {blocks, fallback}]
-      PubSub.msg(:spitegear, payload)
-    end
-
-    state
-  end
 end

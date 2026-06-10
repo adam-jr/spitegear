@@ -24,6 +24,9 @@ defmodule Spitegear.LiveGameState do
       |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
+      |> LiveGameState.infer_deaths_from_skip()
+      |> LiveGameState.detect_eliminations()
+      |> LiveGameState.announce_winners()
 
   Each step is a no-op when its precondition is not met, so the pipeline
   always returns a valid struct.
@@ -31,6 +34,7 @@ defmodule Spitegear.LiveGameState do
 
   require Logger
 
+  alias Spitegear.Games
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
@@ -337,5 +341,116 @@ defmodule Spitegear.LiveGameState do
     else
       state
     end
+  end
+
+  @doc """
+  Infers player deaths from skipped positions in turn order when a turn just
+  advanced. Compares the player who just finished (`prev_turn.player_name`)
+  to the player now active (`current_view_screen.current_player_name`). Any
+  alive players between them in circular order are presumed eliminated.
+
+  Persists each inferred death via `Games.record_death/3` and posts to
+  `:spitegear_test` unless the game is fogged.
+
+  No-op when `turn_advanced` is `false` or `prev_turn` / `current_view_screen`
+  is `nil`.
+  """
+  @spec infer_deaths_from_skip(t()) :: t()
+  def infer_deaths_from_skip(%__MODULE__{turn_advanced: false} = state), do: state
+  def infer_deaths_from_skip(%__MODULE__{prev_turn: nil} = state), do: state
+  def infer_deaths_from_skip(%__MODULE__{current_view_screen: nil} = state), do: state
+
+  def infer_deaths_from_skip(%__MODULE__{} = state) do
+    vs = state.current_view_screen
+    prev_name = state.prev_turn.player_name
+    curr_name = vs.current_player_name
+
+    known_dead = Games.list_deaths(state.game_id) |> MapSet.new(& &1.player_name)
+
+    alive_players =
+      Enum.reject(vs.players, fn p ->
+        p.eliminated? or p.winner? or MapSet.member?(known_dead, p.name)
+      end)
+
+    n = length(alive_players)
+    prev_idx = Enum.find_index(alive_players, &(&1.name == prev_name))
+    curr_idx = Enum.find_index(alive_players, &(&1.name == curr_name))
+    newly_dead = do_skipped_players(alive_players, n, prev_idx, curr_idx)
+
+    Enum.each(newly_dead, fn player ->
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      Logger.info("#{__MODULE__} inferring #{player.name} dead (skipped in turn order)")
+      Games.record_death(state.game_id, player.name, now)
+
+      unless vs.fogged? do
+        text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
+        PubSub.msg(:spitegear_test, text)
+      end
+    end)
+
+    state
+  end
+
+  @doc """
+  Detects newly eliminated players by diffing `current_view_screen.eliminated`
+  against the persisted `game_deaths` records. Persists each new death via
+  `Games.record_death/3` and posts to `:spitegear_test` unless the game is fogged.
+
+  No-op when `view_screen_changed` is `false` or `current_view_screen` is `nil`.
+  """
+  @spec detect_eliminations(t()) :: t()
+  def detect_eliminations(%__MODULE__{view_screen_changed: false} = state), do: state
+  def detect_eliminations(%__MODULE__{current_view_screen: nil} = state), do: state
+
+  def detect_eliminations(%__MODULE__{} = state) do
+    vs = state.current_view_screen
+    known_dead = Games.list_deaths(state.game_id) |> MapSet.new(& &1.player_name)
+    newly_dead = Enum.reject(vs.eliminated, &MapSet.member?(known_dead, &1.name))
+
+    Enum.each(newly_dead, fn player ->
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      Games.record_death(state.game_id, player.name, now)
+
+      unless vs.fogged? do
+        text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
+        PubSub.msg(:spitegear_test, text)
+      end
+    end)
+
+    state
+  end
+
+  @doc """
+  Announces game winners and signals the calling GenServer to finish when
+  `current_view_screen.winners` is non-empty.
+
+  Publishes the winner blocks to `:spitegear` and sends
+  `GenServer.cast(self(), :finish_game)` so the poller can capture the log
+  snapshot and stop cleanly.
+
+  No-op when `view_screen_changed` is `false`, `current_view_screen` is `nil`,
+  or `winners` is empty.
+  """
+  @spec announce_winners(t()) :: t()
+  def announce_winners(%__MODULE__{view_screen_changed: false} = state), do: state
+  def announce_winners(%__MODULE__{current_view_screen: nil} = state), do: state
+  def announce_winners(%__MODULE__{current_view_screen: %ViewScreen{winners: []}} = state), do: state
+
+  def announce_winners(%__MODULE__{} = state) do
+    vs = state.current_view_screen
+    {blocks, fallback} = MessageTemplates.game_winners_blocks(vs.winners, state.game_id, vs.game_name)
+    PubSub.msg(:spitegear, [type: :game_winners, payload: {blocks, fallback}])
+    GenServer.cast(self(), :finish_game)
+    state
+  end
+
+  defp do_skipped_players(_players, n, prev_idx, curr_idx)
+       when is_nil(prev_idx) or is_nil(curr_idx) or n < 2,
+       do: []
+
+  defp do_skipped_players(players, n, prev_idx, curr_idx) do
+    Stream.iterate(rem(prev_idx + 1, n), &rem(&1 + 1, n))
+    |> Enum.take_while(&(&1 != curr_idx))
+    |> Enum.map(&Enum.at(players, &1))
   end
 end

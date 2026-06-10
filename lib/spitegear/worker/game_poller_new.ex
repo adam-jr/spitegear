@@ -15,7 +15,9 @@ defmodule Spitegear.Worker.GamePollerNew do
   use GenServer
 
   alias Spitegear.GameLog.Processor
+  alias Spitegear.Games
   alias Spitegear.LiveGameState
+  alias Spitegear.Wargear.HTTP.LogSnapshot
 
   require Logger
 
@@ -77,6 +79,8 @@ defmodule Spitegear.Worker.GamePollerNew do
   end
 
   def handle_cast({:view_screen_fetched, view_screen}, %{game_state: game_state} = state) do
+    Games.upsert_game(view_screen)
+
     game_state =
       game_state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
@@ -84,8 +88,17 @@ defmodule Spitegear.Worker.GamePollerNew do
       |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
+      |> LiveGameState.infer_deaths_from_skip()
+      |> LiveGameState.detect_eliminations()
+      |> LiveGameState.announce_winners()
 
     {:noreply, %{state | game_state: game_state}}
+  end
+
+  def handle_cast(:finish_game, %{game_state: %{game_id: game_id}} = state) do
+    Logger.info("#{__MODULE__} game #{game_id} finished — capturing log snapshot")
+    Task.start(fn -> LogSnapshot.capture(game_id) end)
+    {:stop, :normal, state}
   end
 
   def handle_cast(:fetch_log, %{game_state: %{game_id: game_id}} = state) do

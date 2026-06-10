@@ -7,6 +7,9 @@ defmodule Spitegear.GameLog.Stats do
   """
 
   import Ecto.Query
+
+  require Logger
+
   alias Spitegear.GameLogEvent
   alias Spitegear.Repo
 
@@ -19,6 +22,205 @@ defmodule Spitegear.GameLog.Stats do
     traded_cards
     assimilated
   )
+
+  # Precomputed expected losses for every (na, nd, battle_mod) combination
+  # observed in the log history. Key: {attacker_dice, defender_dice, battle_mod}.
+  # Values computed by full dice-outcome enumeration. Attacker wins each
+  # comparison strictly; ties go to the defender.
+  @expected_losses %{
+    # --- 1 attacker die, 1 defender die ---
+    {1, 1, "0,0"} => %{attacker: 0.583, defender: 0.417},
+    {1, 1, "0,-1"} => %{attacker: 0.5, defender: 0.5},
+    {1, 1, "0,1"} => %{attacker: 0.643, defender: 0.357},
+    {1, 1, "0,-2"} => %{attacker: 0.417, defender: 0.583},
+    {1, 1, "0,2"} => %{attacker: 0.688, defender: 0.313},
+    {1, 1, "0,3"} => %{attacker: 0.722, defender: 0.278},
+    {1, 1, "0,4"} => %{attacker: 0.75, defender: 0.25},
+    {1, 1, "-1,0"} => %{attacker: 0.667, defender: 0.333},
+    {1, 1, "1,0"} => %{attacker: 0.5, defender: 0.5},
+    {1, 1, "-1,-1"} => %{attacker: 0.6, defender: 0.4},
+    {1, 1, "-1,1"} => %{attacker: 0.714, defender: 0.286},
+    {1, 1, "1,-1"} => %{attacker: 0.429, defender: 0.571},
+    {1, 1, "1,1"} => %{attacker: 0.571, defender: 0.429},
+    {1, 1, "-1,2"} => %{attacker: 0.75, defender: 0.25},
+    {1, 1, "1,-2"} => %{attacker: 0.357, defender: 0.643},
+    {1, 1, "1,2"} => %{attacker: 0.625, defender: 0.375},
+    {1, 1, "-1,3"} => %{attacker: 0.778, defender: 0.222},
+    {1, 1, "1,3"} => %{attacker: 0.667, defender: 0.333},
+    {1, 1, "1,4"} => %{attacker: 0.7, defender: 0.3},
+    {1, 1, "-2,0"} => %{attacker: 0.75, defender: 0.25},
+    {1, 1, "2,0"} => %{attacker: 0.438, defender: 0.563},
+    {1, 1, "-2,1"} => %{attacker: 0.786, defender: 0.214},
+    {1, 1, "2,-1"} => %{attacker: 0.375, defender: 0.625},
+    {1, 1, "2,1"} => %{attacker: 0.5, defender: 0.5},
+    {1, 1, "2,2"} => %{attacker: 0.563, defender: 0.438},
+    {1, 1, "2,3"} => %{attacker: 0.611, defender: 0.389},
+    {1, 1, "2,4"} => %{attacker: 0.65, defender: 0.35},
+    {1, 1, "3,0"} => %{attacker: 0.389, defender: 0.611},
+    {1, 1, "3,2"} => %{attacker: 0.5, defender: 0.5},
+    {1, 1, "3,6"} => %{attacker: 0.667, defender: 0.333},
+    {1, 1, "4,0"} => %{attacker: 0.35, defender: 0.65},
+    # --- 1 attacker die, 2 defender dice ---
+    {1, 2, "0,0"} => %{attacker: 0.745, defender: 0.255},
+    {1, 2, "0,-1"} => %{attacker: 0.633, defender: 0.367},
+    {1, 2, "0,1"} => %{attacker: 0.813, defender: 0.187},
+    {1, 2, "0,-2"} => %{attacker: 0.521, defender: 0.479},
+    {1, 2, "0,2"} => %{attacker: 0.857, defender: 0.143},
+    {1, 2, "0,3"} => %{attacker: 0.887, defender: 0.113},
+    {1, 2, "0,4"} => %{attacker: 0.908, defender: 0.092},
+    {1, 2, "-1,0"} => %{attacker: 0.833, defender: 0.167},
+    {1, 2, "1,0"} => %{attacker: 0.639, defender: 0.361},
+    {1, 2, "-1,-1"} => %{attacker: 0.76, defender: 0.24},
+    {1, 2, "-1,1"} => %{attacker: 0.878, defender: 0.122},
+    {1, 2, "1,-1"} => %{attacker: 0.543, defender: 0.457},
+    {1, 2, "1,1"} => %{attacker: 0.735, defender: 0.265},
+    {1, 2, "-1,2"} => %{attacker: 0.906, defender: 0.094},
+    {1, 2, "1,-2"} => %{attacker: 0.446, defender: 0.554},
+    {1, 2, "1,2"} => %{attacker: 0.797, defender: 0.203},
+    {1, 2, "-1,3"} => %{attacker: 0.926, defender: 0.074},
+    {1, 2, "1,3"} => %{attacker: 0.84, defender: 0.16},
+    {1, 2, "1,4"} => %{attacker: 0.87, defender: 0.13},
+    {1, 2, "-2,0"} => %{attacker: 0.903, defender: 0.097},
+    {1, 2, "2,0"} => %{attacker: 0.559, defender: 0.441},
+    {1, 2, "-2,1"} => %{attacker: 0.929, defender: 0.071},
+    {1, 2, "2,-1"} => %{attacker: 0.475, defender: 0.525},
+    {1, 2, "2,1"} => %{attacker: 0.643, defender: 0.357},
+    {1, 2, "2,2"} => %{attacker: 0.727, defender: 0.273},
+    {1, 2, "2,3"} => %{attacker: 0.784, defender: 0.216},
+    {1, 2, "2,4"} => %{attacker: 0.825, defender: 0.175},
+    {1, 2, "3,0"} => %{attacker: 0.497, defender: 0.503},
+    {1, 2, "3,2"} => %{attacker: 0.646, defender: 0.354},
+    {1, 2, "3,6"} => %{attacker: 0.843, defender: 0.157},
+    {1, 2, "4,0"} => %{attacker: 0.447, defender: 0.553},
+    # --- 2 attacker dice, 1 defender die ---
+    {2, 1, "0,0"} => %{attacker: 0.421, defender: 0.579},
+    {2, 1, "0,-1"} => %{attacker: 0.306, defender: 0.694},
+    {2, 1, "0,1"} => %{attacker: 0.504, defender: 0.496},
+    {2, 1, "0,-2"} => %{attacker: 0.208, defender: 0.792},
+    {2, 1, "0,2"} => %{attacker: 0.566, defender: 0.434},
+    {2, 1, "0,3"} => %{attacker: 0.614, defender: 0.386},
+    {2, 1, "0,4"} => %{attacker: 0.653, defender: 0.347},
+    {2, 1, "-1,0"} => %{attacker: 0.533, defender: 0.467},
+    {2, 1, "1,0"} => %{attacker: 0.31, defender: 0.69},
+    {2, 1, "-1,-1"} => %{attacker: 0.44, defender: 0.56},
+    {2, 1, "-1,1"} => %{attacker: 0.6, defender: 0.4},
+    {2, 1, "1,-1"} => %{attacker: 0.224, defender: 0.776},
+    {2, 1, "1,1"} => %{attacker: 0.408, defender: 0.592},
+    {2, 1, "-1,2"} => %{attacker: 0.65, defender: 0.35},
+    {2, 1, "1,-2"} => %{attacker: 0.153, defender: 0.847},
+    {2, 1, "1,2"} => %{attacker: 0.482, defender: 0.518},
+    {2, 1, "-1,3"} => %{attacker: 0.689, defender: 0.311},
+    {2, 1, "1,3"} => %{attacker: 0.54, defender: 0.46},
+    {2, 1, "1,4"} => %{attacker: 0.586, defender: 0.414},
+    {2, 1, "-2,0"} => %{attacker: 0.646, defender: 0.354},
+    {2, 1, "2,0"} => %{attacker: 0.237, defender: 0.763},
+    {2, 1, "-2,1"} => %{attacker: 0.696, defender: 0.304},
+    {2, 1, "2,-1"} => %{attacker: 0.172, defender: 0.828},
+    {2, 1, "2,1"} => %{attacker: 0.313, defender: 0.688},
+    {2, 1, "2,2"} => %{attacker: 0.398, defender: 0.602},
+    {2, 1, "2,3"} => %{attacker: 0.465, defender: 0.535},
+    {2, 1, "2,4"} => %{attacker: 0.519, defender: 0.481},
+    {2, 1, "3,0"} => %{attacker: 0.187, defender: 0.813},
+    {2, 1, "3,2"} => %{attacker: 0.315, defender: 0.685},
+    {2, 1, "3,6"} => %{attacker: 0.543, defender: 0.457},
+    {2, 1, "4,0"} => %{attacker: 0.152, defender: 0.848},
+    # --- 2 attacker dice, 2 defender dice ---
+    {2, 2, "0,0"} => %{attacker: 1.221, defender: 0.779},
+    {2, 2, "0,-1"} => %{attacker: 1.0, defender: 1.0},
+    {2, 2, "0,1"} => %{attacker: 1.365, defender: 0.635},
+    {2, 2, "0,-2"} => %{attacker: 0.799, defender: 1.201},
+    {2, 2, "0,2"} => %{attacker: 1.466, defender: 0.534},
+    {2, 2, "0,3"} => %{attacker: 1.54, defender: 0.46},
+    {2, 2, "0,4"} => %{attacker: 1.597, defender: 0.403},
+    {2, 2, "-1,0"} => %{attacker: 1.422, defender: 0.578},
+    {2, 2, "1,0"} => %{attacker: 1.0, defender: 1.0},
+    {2, 2, "-1,-1"} => %{attacker: 1.264, defender: 0.736},
+    {2, 2, "-1,1"} => %{attacker: 1.527, defender: 0.473},
+    {2, 2, "1,-1"} => %{attacker: 0.824, defender: 1.176},
+    {2, 2, "1,1"} => %{attacker: 1.19, defender: 0.81},
+    {2, 2, "-1,2"} => %{attacker: 1.6, defender: 0.4},
+    {2, 2, "1,-2"} => %{attacker: 0.663, defender: 1.337},
+    {2, 2, "1,2"} => %{attacker: 1.321, defender: 0.679},
+    {2, 2, "-1,3"} => %{attacker: 1.654, defender: 0.346},
+    {2, 2, "1,3"} => %{attacker: 1.418, defender: 0.582},
+    {2, 2, "1,4"} => %{attacker: 1.491, defender: 0.509},
+    {2, 2, "-2,0"} => %{attacker: 1.604, defender: 0.396},
+    {2, 2, "2,0"} => %{attacker: 0.845, defender: 1.155},
+    {2, 2, "-2,1"} => %{attacker: 1.673, defender: 0.327},
+    {2, 2, "2,-1"} => %{attacker: 0.7, defender: 1.3},
+    {2, 2, "2,1"} => %{attacker: 1.0, defender: 1.0},
+    {2, 2, "2,2"} => %{attacker: 1.166, defender: 0.834},
+    {2, 2, "2,3"} => %{attacker: 1.287, defender: 0.713},
+    {2, 2, "2,4"} => %{attacker: 1.379, defender: 0.621},
+    {2, 2, "3,0"} => %{attacker: 0.73, defender: 1.27},
+    {2, 2, "3,2"} => %{attacker: 1.0, defender: 1.0},
+    {2, 2, "3,6"} => %{attacker: 1.416, defender: 0.584},
+    {2, 2, "4,0"} => %{attacker: 0.642, defender: 1.358},
+    # --- 3 attacker dice, 1 defender die ---
+    {3, 1, "0,0"} => %{attacker: 0.34, defender: 0.66},
+    {3, 1, "0,-1"} => %{attacker: 0.208, defender: 0.792},
+    {3, 1, "0,1"} => %{attacker: 0.435, defender: 0.565},
+    {3, 1, "0,-2"} => %{attacker: 0.116, defender: 0.884},
+    {3, 1, "0,2"} => %{attacker: 0.505, defender: 0.495},
+    {3, 1, "0,3"} => %{attacker: 0.56, defender: 0.44},
+    {3, 1, "0,4"} => %{attacker: 0.604, defender: 0.396},
+    {3, 1, "-1,0"} => %{attacker: 0.467, defender: 0.533},
+    {3, 1, "1,0"} => %{attacker: 0.214, defender: 0.786},
+    {3, 1, "-1,-1"} => %{attacker: 0.36, defender: 0.64},
+    {3, 1, "-1,1"} => %{attacker: 0.543, defender: 0.457},
+    {3, 1, "1,-1"} => %{attacker: 0.131, defender: 0.869},
+    {3, 1, "1,1"} => %{attacker: 0.327, defender: 0.673},
+    {3, 1, "-1,2"} => %{attacker: 0.6, defender: 0.4},
+    {3, 1, "1,-2"} => %{attacker: 0.073, defender: 0.927},
+    {3, 1, "1,2"} => %{attacker: 0.411, defender: 0.589},
+    {3, 1, "-1,3"} => %{attacker: 0.644, defender: 0.356},
+    {3, 1, "1,3"} => %{attacker: 0.476, defender: 0.524},
+    {3, 1, "1,4"} => %{attacker: 0.529, defender: 0.471},
+    {3, 1, "-2,0"} => %{attacker: 0.594, defender: 0.406},
+    {3, 1, "2,0"} => %{attacker: 0.144, defender: 0.856},
+    {3, 1, "-2,1"} => %{attacker: 0.652, defender: 0.348},
+    {3, 1, "2,-1"} => %{attacker: 0.088, defender: 0.912},
+    {3, 1, "2,1"} => %{attacker: 0.219, defender: 0.781},
+    {3, 1, "2,2"} => %{attacker: 0.316, defender: 0.684},
+    {3, 1, "2,3"} => %{attacker: 0.392, defender: 0.608},
+    {3, 1, "2,4"} => %{attacker: 0.453, defender: 0.547},
+    {3, 1, "3,0"} => %{attacker: 0.101, defender: 0.899},
+    {3, 1, "3,2"} => %{attacker: 0.222, defender: 0.778},
+    {3, 1, "3,6"} => %{attacker: 0.481, defender: 0.519},
+    {3, 1, "4,0"} => %{attacker: 0.073, defender: 0.926},
+    # --- 3 attacker dice, 2 defender dice ---
+    {3, 2, "0,0"} => %{attacker: 0.921, defender: 1.079},
+    {3, 2, "0,-1"} => %{attacker: 0.646, defender: 1.354},
+    {3, 2, "0,1"} => %{attacker: 1.105, defender: 0.895},
+    {3, 2, "0,-2"} => %{attacker: 0.429, defender: 1.571},
+    {3, 2, "0,2"} => %{attacker: 1.237, defender: 0.763},
+    {3, 2, "0,3"} => %{attacker: 1.335, defender: 0.665},
+    {3, 2, "0,4"} => %{attacker: 1.412, defender: 0.588},
+    {3, 2, "-1,0"} => %{attacker: 1.172, defender: 0.828},
+    {3, 2, "1,0"} => %{attacker: 0.653, defender: 1.347},
+    {3, 2, "-1,-1"} => %{attacker: 0.968, defender: 1.032},
+    {3, 2, "-1,1"} => %{attacker: 1.31, defender: 0.69},
+    {3, 2, "1,-1"} => %{attacker: 0.461, defender: 1.539},
+    {3, 2, "1,1"} => %{attacker: 0.888, defender: 1.112},
+    {3, 2, "-1,2"} => %{attacker: 1.409, defender: 0.591},
+    {3, 2, "1,-2"} => %{attacker: 0.309, defender: 1.691},
+    {3, 2, "1,2"} => %{attacker: 1.055, defender: 0.945},
+    {3, 2, "-1,3"} => %{attacker: 1.484, defender: 0.516},
+    {3, 2, "1,3"} => %{attacker: 1.179, defender: 0.821},
+    {3, 2, "1,4"} => %{attacker: 1.275, defender: 0.725},
+    {3, 2, "-2,0"} => %{attacker: 1.406, defender: 0.594},
+    {3, 2, "2,0"} => %{attacker: 0.486, defender: 1.514},
+    {3, 2, "-2,1"} => %{attacker: 1.503, defender: 0.497},
+    {3, 2, "2,-1"} => %{attacker: 0.345, defender: 1.655},
+    {3, 2, "2,1"} => %{attacker: 0.658, defender: 1.342},
+    {3, 2, "2,2"} => %{attacker: 0.864, defender: 1.136},
+    {3, 2, "2,3"} => %{attacker: 1.016, defender: 0.984},
+    {3, 2, "2,4"} => %{attacker: 1.133, defender: 0.867},
+    {3, 2, "3,0"} => %{attacker: 0.376, defender: 1.624},
+    {3, 2, "3,2"} => %{attacker: 0.663, defender: 1.337},
+    {3, 2, "3,6"} => %{attacker: 1.183, defender: 0.817},
+    {3, 2, "4,0"} => %{attacker: 0.299, defender: 1.701}
+  }
 
   @doc """
   Returns a per-player net unit series for a game, keyed by player name.
@@ -150,6 +352,68 @@ defmodule Spitegear.GameLog.Stats do
     (setup_entry ++ game_deltas)
     |> build_series()
   end
+
+  @doc """
+  Returns the expected losses for each side in a single `"attacked"` event,
+  accounting for the number of dice rolled and the battle modifier.
+
+  `battle_mod` is parsed as `"attacker_mod,defender_mod"` — each modifier shifts
+  the die size from the default 6 by that amount (e.g. `"0,1"` gives the
+  defender a 7-sided die; `"-1,0"` gives the attacker a 5-sided die). Ties in
+  each comparison go to the defender.
+
+  Returns `%{attacker: float, defender: float}` rounded to three decimal places,
+  or `nil` for non-attack events or events missing dice fields.
+  """
+  @spec expected_attack_losses(GameLogEvent.t()) ::
+          %{attacker: float(), defender: float()} | nil
+  def expected_attack_losses(%GameLogEvent{
+        event_type: "attacked",
+        attacker_dice: ad,
+        defender_dice: dd,
+        battle_mod: bm
+      })
+      when not is_nil(ad) and not is_nil(dd) do
+    na = ad |> String.split(",") |> length()
+    nd = dd |> String.split(",") |> length()
+    key = {na, nd, bm || "0,0"}
+
+    case Map.fetch(@expected_losses, key) do
+      {:ok, result} ->
+        result
+
+      :error ->
+        Logger.error("#{__MODULE__} unknown battle config #{inspect(key)} — computing on the fly")
+        {a_mod, d_mod} = parse_battle_mod(bm)
+        compute_expected_losses(na, nd, 6 + a_mod, 6 + d_mod)
+    end
+  end
+
+  def expected_attack_losses(_), do: nil
+
+  @doc """
+  Returns the luck delta for each side of a single `"attacked"` event:
+  `expected_losses - actual_losses`. Positive means the side lost fewer
+  units than the dice odds predict (lucky); negative means unlucky.
+
+  Returns `%{attacker: float, defender: float}` or `nil` if the event is
+  not an attack or is missing required fields.
+  """
+  @spec attack_luck_delta(GameLogEvent.t()) :: %{attacker: float(), defender: float()} | nil
+  def attack_luck_delta(
+        %GameLogEvent{event_type: "attacked", attacker_losses: al, defender_losses: dl} = event
+      )
+      when not is_nil(al) and not is_nil(dl) do
+    case expected_attack_losses(event) do
+      nil ->
+        nil
+
+      %{attacker: exp_al, defender: exp_dl} ->
+        %{attacker: Float.round(exp_al - al, 3), defender: Float.round(exp_dl - dl, 3)}
+    end
+  end
+
+  def attack_luck_delta(_), do: nil
 
   @doc """
   Returns log-derived summary stats for a game:
@@ -284,6 +548,27 @@ defmodule Spitegear.GameLog.Stats do
       )
     )
     |> Enum.flat_map(&luck_delta/1)
+    |> build_series()
+  end
+
+  @doc """
+  Returns a per-player cumulative luck series, keyed by player name.
+  Same point shape as `enriched_net_units_series/1`.
+
+  For each attack, both the attacker and defender receive a delta of
+  `expected_losses - actual_losses`. A positive cumulative value means the
+  player has been lucky (lost fewer units than the dice odds predict);
+  negative means unlucky. The running total is a troop-equivalent measure
+  of luck across the entire game.
+  """
+  def luck_delta_series(game_id) do
+    Repo.all(
+      from(e in GameLogEvent,
+        where: e.game_id == ^game_id,
+        order_by: [asc: e.log_seq]
+      )
+    )
+    |> Enum.flat_map(&luck_event_deltas/1)
     |> build_series()
   end
 
@@ -615,6 +900,46 @@ defmodule Spitegear.GameLog.Stats do
 
   defp luck_delta(_), do: []
 
+  # Expected-vs-actual luck deltas for both sides of an attack (for luck_delta_series).
+  defp luck_event_deltas(
+         %GameLogEvent{
+           event_type: "attacked",
+           player: attacker,
+           defender: defender,
+           attacker_losses: al,
+           defender_losses: dl,
+           log_seq: s
+         } = event
+       )
+       when not is_nil(attacker) and not is_nil(defender) and not is_nil(al) and not is_nil(dl) do
+    case attack_luck_delta(event) do
+      nil ->
+        []
+
+      %{attacker: a_luck, defender: d_luck} ->
+        [
+          %{
+            player: attacker,
+            seq: s,
+            delta: a_luck,
+            event_type: "attacked",
+            source_player: attacker,
+            defender: defender
+          },
+          %{
+            player: defender,
+            seq: s,
+            delta: d_luck,
+            event_type: "attacked",
+            source_player: attacker,
+            defender: defender
+          }
+        ]
+    end
+  end
+
+  defp luck_event_deltas(_), do: []
+
   # Attacks received: attacker dice count directed at the defender per attack event.
   defp attacks_received_delta(%GameLogEvent{
          event_type: "attacked",
@@ -672,6 +997,48 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp jormp_delivered_delta(_), do: []
+
+  defp parse_battle_mod(nil), do: {0, 0}
+
+  defp parse_battle_mod(bm) do
+    [a, d] = bm |> String.split(",") |> Enum.map(&String.to_integer/1)
+    {a, d}
+  end
+
+  # Enumerate all ordered n-tuples of rolls for a `size`-sided die.
+  # Each tuple has equal probability, so averaging over all tuples gives
+  # the exact expected value without needing weighted sampling.
+  defp dice_outcomes(n, size) do
+    Enum.reduce(1..n, [[]], fn _, acc ->
+      for v <- 1..size, rest <- acc, do: [v | rest]
+    end)
+  end
+
+  defp compute_expected_losses(na, nd, a_size, d_size) do
+    pairs = min(na, nd)
+    a_rolls = dice_outcomes(na, a_size)
+    d_rolls = dice_outcomes(nd, d_size)
+    total = length(a_rolls) * length(d_rolls)
+
+    {al_sum, dl_sum} =
+      for a <- a_rolls, d <- d_rolls, reduce: {0, 0} do
+        {al, dl} ->
+          {a_loss, d_loss} =
+            battle_losses(Enum.sort(a, :desc), Enum.sort(d, :desc), pairs)
+
+          {al + a_loss, dl + d_loss}
+      end
+
+    %{attacker: Float.round(al_sum / total, 3), defender: Float.round(dl_sum / total, 3)}
+  end
+
+  # Compare top `pairs` dice from each side. Attacker wins strictly; ties to defender.
+  defp battle_losses(a_sorted, d_sorted, pairs) do
+    Enum.zip(Enum.take(a_sorted, pairs), Enum.take(d_sorted, pairs))
+    |> Enum.reduce({0, 0}, fn {a, d}, {al, dl} ->
+      if a > d, do: {al, dl + 1}, else: {al + 1, dl}
+    end)
+  end
 
   # Compute the area under a step-function series.
   # Each point holds net_units from its seq until the next point's seq;

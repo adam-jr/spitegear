@@ -27,16 +27,16 @@ defmodule Spitegear.Games do
           slowest_seconds: integer()
         }
 
-  @doc "Returns all active games (finished IS NULL, not undiscovered stubs)."
+  @doc "Returns all active games (finished IS NULL)."
   @spec list_active_games() :: [Game.t()]
   def list_active_games do
-    Repo.all(from(g in Game, where: is_nil(g.finished) and not g.discovered))
+    Repo.all(from(g in Game, where: is_nil(g.finished)))
   end
 
-  @doc "All tracked games (active + finished, excludes undiscovered stubs)."
+  @doc "All tracked games (active + finished)."
   @spec list_all_games() :: [Game.t()]
   def list_all_games do
-    Repo.all(from(g in Game, where: not g.discovered))
+    Repo.all(from(g in Game))
   end
 
   @doc "Returns finished games sorted by finish date descending."
@@ -90,12 +90,6 @@ defmodule Spitegear.Games do
   defp parse_finished_date(nil), do: ~N[1970-01-01 00:00:00]
   defp parse_finished_date(s), do: parse_game_date(s) || ~N[1970-01-01 00:00:00]
 
-  @doc "Returns games that were discovered via Slack but not yet fetched from wargear.net."
-  @spec list_unfetched_games() :: [Game.t()]
-  def list_unfetched_games do
-    Repo.all(from(g in Game, where: g.discovered, order_by: [desc: g.inserted_at]))
-  end
-
   @doc "Returns the set of game IDs that have a stored log snapshot."
   @spec game_ids_with_snapshots() :: MapSet.t(String.t())
   def game_ids_with_snapshots do
@@ -122,7 +116,6 @@ defmodule Spitegear.Games do
         finished: view_screen.finished,
         winners: Enum.map(view_screen.winners, & &1.name),
         player_colors: player_colors,
-        discovered: false
       },
       on_conflict:
         {:replace,
@@ -134,7 +127,6 @@ defmodule Spitegear.Games do
            :finished,
            :winners,
            :player_colors,
-           :discovered,
            :updated_at
          ]},
       conflict_target: :game_id
@@ -357,22 +349,6 @@ defmodule Spitegear.Games do
       on_conflict: :nothing,
       conflict_target: :game_id
     )
-  end
-
-  @doc "Inserts a discovered-game stub (seen in Slack, not yet fetched). No-op if already present."
-  @spec add_discovered_game(game_id()) :: {:ok, Game.t()} | {:error, Ecto.Changeset.t()}
-  def add_discovered_game(game_id) do
-    Repo.insert(%Game{game_id: game_id, discovered: true},
-      on_conflict: :nothing,
-      conflict_target: :game_id
-    )
-  end
-
-  @doc "Deletes the discovered-game stub for `game_id`. No-op if it has already been fetched."
-  @spec delete_discovered_game(game_id()) :: :ok
-  def delete_discovered_game(game_id) do
-    Repo.delete_all(from(g in Game, where: g.game_id == ^game_id and g.discovered))
-    :ok
   end
 
   @doc "Starts a `GamePoller` for `game_id` under `GameSupervisor`."

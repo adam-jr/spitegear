@@ -55,7 +55,13 @@ defmodule Spitegear.LiveGameState.Turns do
   @spec start_turn(game_id(), String.t()) :: {:ok, Turn.t()} | {:error, term()}
   def start_turn(game_id, player_name) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
-    Repo.insert(%Turn{game_id: game_id, player_name: player_name, started_at: now, reminded: now})
+
+    Repo.insert(%Turn{
+      game_id: game_id,
+      player_name: player_name,
+      started_at: now,
+      reminded_at: now
+    })
   end
 
   @doc """
@@ -67,10 +73,10 @@ defmodule Spitegear.LiveGameState.Turns do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     Repo.update_all(from(t in Turn, where: t.id == ^id),
-      set: [reminded: now, reminders: count + 1]
+      set: [reminded_at: now, reminders: count + 1]
     )
 
-    {:ok, %{turn | reminded: now, reminders: count + 1}}
+    {:ok, %{turn | reminded_at: now, reminders: count + 1}}
   end
 
   @doc """

@@ -42,7 +42,7 @@ defmodule Spitegear.LiveGameState.Turn do
     field(:player_name, :string)
     field(:started_at, :utc_datetime)
     field(:ended_at, :utc_datetime)
-    field(:reminded, :utc_datetime)
+    field(:reminded_at, :utc_datetime)
     field(:reminders, :integer, default: 0)
     field(:moving_announced, :boolean, default: false)
 
@@ -54,7 +54,7 @@ defmodule Spitegear.LiveGameState.Turn do
   for insertion when backfilling the new table from legacy data.
 
   Reminder fields are unavailable in `TurnHistory` and will be left at their
-  defaults (`reminders: 0`, `moving_announced: false`, `reminded: nil`).
+  defaults (`reminders: 0`, `moving_announced: false`, `reminded_at: nil`).
   """
   @spec to_live_game_state_turn(TurnHistory.t()) :: t()
   def to_live_game_state_turn(%TurnHistory{} = th) do

@@ -276,7 +276,7 @@ defmodule Spitegear.LiveGameState do
   - The current time falls within waking hours in America/Chicago (07:00–23:59).
 
   No-op when `current_turn` or `current_view_screen` is `nil`, or when
-  `current_turn.reminded` is `nil`.
+  `current_turn.reminded_at` is `nil`.
   """
   @spec send_reminder(t()) :: t()
   def send_reminder(%__MODULE__{current_turn: nil} = state), do: state
@@ -297,12 +297,12 @@ defmodule Spitegear.LiveGameState do
     end
   end
 
-  defp reminder_due?(%{reminded: nil}, _now), do: false
+  defp reminder_due?(%{reminded_at: nil}, _now), do: false
 
-  defp reminder_due?(%{reminded: reminded}, now) do
+  defp reminder_due?(%{reminded_at: reminded_at}, now) do
     {:ok, chicago} = DateTime.shift_zone(now, "America/Chicago")
     waking_hours? = chicago.hour >= 7 and chicago.hour < 24
-    beyond_horizon? = DateTime.diff(now, reminded) > @reminder_interval_seconds
+    beyond_horizon? = DateTime.diff(now, reminded_at) > @reminder_interval_seconds
     waking_hours? and beyond_horizon?
   end
 end

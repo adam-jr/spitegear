@@ -115,7 +115,7 @@ defmodule Spitegear.Games do
         created: view_screen.created,
         finished: view_screen.finished,
         winners: Enum.map(view_screen.winners, & &1.name),
-        player_colors: player_colors,
+        player_colors: player_colors
       },
       on_conflict:
         {:replace,

@@ -83,7 +83,6 @@ defmodule Spitegear.Worker.GamePoller do
     case History.latest_turn(game_id) do
       {:ok, %{"turnid" => ^last_turn_id} = turn_data} ->
         GamePollerNew.notify_history_fetched(game_id, turn_data)
-        state = maybe_remind(state)
         schedule_work()
         {:noreply, state}
 
@@ -194,44 +193,10 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp maybe_schedule_view_screen_poll(_), do: {nil, 0}
 
-  defp maybe_remind(%{status: s} = state) when s != :in_progress, do: state
-
-  defp maybe_remind(state) do
-    if reminder_due?(state), do: remind_player(state), else: state
-  end
-
   defp update_turn(%{status: s} = state) when s != :in_progress, do: state
 
   defp update_turn(state) do
-    cond do
-      TurnLogic.new_turn?(state) -> new_turn(state)
-      reminder_due?(state) -> remind_player(state)
-      true -> state
-    end
-  end
-
-  defp reminder_due?(state) do
-    TurnLogic.reminder_due?(
-      %{current_turn: state.current_turn},
-      DateTime.utc_now() |> DateTime.truncate(:second)
-    )
-  end
-
-  defp remind_player(state) do
-    player = state.current_turn.player
-    Logger.info("Reminding #{player.name} of turn...")
-    text = MessageTemplates.kind_reminder(state.current_turn, state.view_screen.game_name)
-    PubSub.msg(:spitegear, text)
-
-    turn = %{
-      state.current_turn
-      | reminded: DateTime.utc_now() |> DateTime.truncate(:second),
-        reminders: state.current_turn.reminders + 1
-    }
-
-    Games.upsert_turn(turn)
-
-    %{state | current_turn: turn}
+    if TurnLogic.new_turn?(state), do: new_turn(state), else: state
   end
 
   defp new_turn(state) do

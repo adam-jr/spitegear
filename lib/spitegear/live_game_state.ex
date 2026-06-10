@@ -9,7 +9,11 @@ defmodule Spitegear.LiveGameState do
   Use `new/1` to build an initial struct for a game, or `hydrate/1` to
   refresh an existing struct's fields (e.g. after restart).
 
-  Use `dispatch_history_response/2` to process incoming history API data.
+  For history API updates, call the pipeline steps in order:
+
+      state
+      |> LiveGameState.record_history_response(turn_data)
+      |> LiveGameState.send_reminder()
 
   For view screen updates, call the pipeline steps in order:
 
@@ -44,6 +48,7 @@ defmodule Spitegear.LiveGameState do
           prev_view_screen: ViewScreen.t() | nil,
           current_api_response: WargearHistoryApiResponseDb.t() | nil,
           prev_api_response: WargearHistoryApiResponseDb.t() | nil,
+          history_changed: boolean(),
           view_screen_changed: boolean(),
           turn_advanced: boolean()
         }
@@ -55,6 +60,7 @@ defmodule Spitegear.LiveGameState do
             prev_view_screen: nil,
             current_api_response: nil,
             prev_api_response: nil,
+            history_changed: false,
             view_screen_changed: false,
             turn_advanced: false
 
@@ -94,28 +100,28 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Processes a raw History API response. Persists it if the `turnid` has
-  changed, then shifts `current_api_response` → `prev_api_response`
-  and sets `current_api_response` to the new record.
-
-  Returns the struct unchanged if the response is identical to the last stored
-  one or if the insert fails.
+  changed, then shifts `current_api_response` → `prev_api_response`,
+  sets `current_api_response` to the new record, and sets
+  `history_changed: true`. Sets `history_changed: false` when the response
+  is identical to the last stored one or if the insert fails.
   """
-  @spec dispatch_history_response(t(), map()) :: t()
-  def dispatch_history_response(%__MODULE__{} = state, turn_data) do
+  @spec record_history_response(t(), map()) :: t()
+  def record_history_response(%__MODULE__{} = state, turn_data) do
     case HistoryResponses.record_if_changed(state.game_id, turn_data) do
       {:ok, :unchanged} ->
-        state
+        %{state | history_changed: false}
 
       {:ok, record} ->
         %{
           state
           | prev_api_response: state.current_api_response,
-            current_api_response: record
+            current_api_response: record,
+            history_changed: true
         }
 
       {:error, _} ->
         Logger.error("#{__MODULE__} failed to record history response for game #{state.game_id}")
-        state
+        %{state | history_changed: false}
     end
   end
 

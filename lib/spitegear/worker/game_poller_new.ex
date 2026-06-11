@@ -86,10 +86,10 @@ defmodule Spitegear.Worker.GamePollerNew do
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
       |> LiveGameState.fetch_log_if_unfogged()
-      |> LiveGameState.announce_next_round()
-      |> LiveGameState.announce_next_turn()
       |> LiveGameState.infer_deaths_from_skip()
       |> LiveGameState.detect_eliminations()
+      |> LiveGameState.announce_next_round()
+      |> LiveGameState.announce_next_turn()
       |> LiveGameState.announce_winners()
 
     {:noreply, %{state | game_state: game_state}}

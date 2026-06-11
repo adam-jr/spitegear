@@ -1,10 +1,7 @@
 defmodule Spitegear.GamesTest do
   use Spitegear.DataCase, async: true
 
-  import Ecto.Query
-
   alias Spitegear.Game
-  alias Spitegear.GameDeath
   alias Spitegear.Games
   alias Spitegear.Repo
   alias Spitegear.Turn

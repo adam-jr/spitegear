@@ -4,10 +4,8 @@ defmodule Spitegear.Worker.GamePoller do
 
   alias Spitegear.GameDeaths
   alias Spitegear.Games
-  alias Spitegear.Turn
   alias Spitegear.Wargear.HTTP.History
   alias Spitegear.Wargear.HTTP.ViewScreen
-  alias Spitegear.Worker.GamePoller.TurnLogic
   alias Spitegear.Worker.GamePollerNew
 
   require Logger
@@ -20,12 +18,10 @@ defmodule Spitegear.Worker.GamePoller do
     game_id: nil,
     view_screen: nil,
     dead_players: [],
-    current_turn: nil,
     last_turn_id: nil,
     status: :players_joining,
     view_screen_timer: nil,
     view_screen_polls_remaining: 0,
-    moving_announced: false,
     last_round: 0,
     last_stats_round: 0
   }
@@ -49,7 +45,6 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
 
     update_game()
-    update_current_turn()
     schedule_work()
 
     dead_players = GameDeaths.list(game_id) |> Enum.map(&%{name: &1.player_name})
@@ -129,19 +124,11 @@ defmodule Spitegear.Worker.GamePoller do
     end
   end
 
-  def handle_info(:update_current_turn, state) do
-    turn = Games.get_current_turn(state.game_id)
-    moving_announced = if turn, do: turn.moving_announced, else: false
-    {:noreply, %{state | current_turn: turn, moving_announced: moving_announced}}
-  end
-
   def handle_info({:ssl_closed, _}, state) do
     {:noreply, state}
   end
 
   def name(game_id), do: :"#{__MODULE__}_#{game_id}"
-
-  def update_current_turn, do: send(self(), :update_current_turn)
 
   def update_status(state) do
     if state.view_screen.current_player do
@@ -161,7 +148,6 @@ defmodule Spitegear.Worker.GamePoller do
         state =
           %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
           |> update_status()
-          |> update_turn()
 
         if Enum.any?(view_screen.winners) do
           {:stop, state}
@@ -185,36 +171,6 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp maybe_schedule_view_screen_poll(_), do: {nil, 0}
-
-  defp update_turn(%{status: s} = state) when s != :in_progress, do: state
-
-  defp update_turn(state) do
-    if TurnLogic.new_turn?(state), do: new_turn(state), else: state
-  end
-
-  defp new_turn(state) do
-    state = record_completed_turn(state)
-
-    turn = %Turn{
-      game_id: state.game_id,
-      player: state.view_screen.current_player,
-      started: DateTime.utc_now() |> DateTime.truncate(:second),
-      reminded: DateTime.utc_now() |> DateTime.truncate(:second),
-      reminders: 0
-    }
-
-    Games.upsert_turn(turn)
-
-    %{state | current_turn: turn, moving_announced: false}
-  end
-
-  defp record_completed_turn(%{current_turn: nil} = state), do: state
-
-  defp record_completed_turn(state) do
-    ended = DateTime.utc_now() |> DateTime.truncate(:second)
-    Games.record_completed_turn(state.current_turn, ended)
-    state
-  end
 
   defp update_game, do: send(self(), :update_game)
 

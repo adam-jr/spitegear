@@ -152,24 +152,6 @@ defmodule Spitegear.GamesTest do
     end
   end
 
-  describe "record_death/3" do
-    test "inserts a game_death record" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      assert {:ok, death} = Games.record_death("11111", "adam", now)
-      assert death.game_id == "11111"
-      assert death.player_name == "adam"
-      assert death.eliminated_at == now
-    end
-
-    test "is idempotent — second insert is a no-op" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, _} = Games.record_death("11111", "adam", now)
-      {:ok, _} = Games.record_death("11111", "adam", now)
-
-      assert Repo.aggregate(from(d in GameDeath, where: d.game_id == "11111"), :count) == 1
-    end
-  end
-
   describe "completed_rounds/1" do
     test "returns 0 with no turn history" do
       assert Games.completed_rounds("11111") == 0

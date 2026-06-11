@@ -12,7 +12,6 @@ defmodule Spitegear.Game do
     field(:finished, :string)
     field(:winners, {:array, :string}, default: [])
     field(:player_colors, :map, default: %{})
-    field(:discovered, :boolean, default: false)
 
     timestamps()
   end

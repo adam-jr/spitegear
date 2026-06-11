@@ -28,10 +28,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
         {current_round, turn_within_round} =
           if current_turn do
-            seat =
-              view_screen && view_screen.current_player && view_screen.current_player.seat_number
-
-            {round_info.current_round, seat}
+            {round_info.current_round, round_info.turn_number_within_round}
           else
             {nil, nil}
           end

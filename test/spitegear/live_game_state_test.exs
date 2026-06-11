@@ -605,13 +605,13 @@ defmodule Spitegear.LiveGameStateTest do
       assert Repo.aggregate(GameDeath, :count) == 1
     end
 
-    test "posts to :spitegear_test" do
+    test "posts to :spitegear" do
       Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
       vs = view_screen(players: [vs_player("adam", eliminated?: true), vs_player("bob")])
       state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
       LiveGameState.detect_eliminations(state)
 
-      assert_receive {:message, :spitegear_test, _}, 500
+      assert_receive {:message, :spitegear, _}, 500
     end
 
     test "returns state unchanged" do

@@ -424,7 +424,7 @@ defmodule Spitegear.LiveGameState do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       GameDeaths.create(state.game_id, player.name, now)
       text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
-      PubSub.msg(:spitegear_test, text)
+      PubSub.msg(:spitegear, text)
     end)
 
     state

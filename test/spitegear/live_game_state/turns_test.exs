@@ -153,6 +153,29 @@ defmodule Spitegear.LiveGameState.TurnsTest do
     end
   end
 
+  describe "record_moving_announced/1" do
+    test "sets moving_announced to true in the DB" do
+      turn = insert_turn(ended_at: nil)
+      {:ok, updated} = Turns.record_moving_announced(turn)
+      assert updated.moving_announced == true
+      assert Repo.get!(Turn, turn.id).moving_announced == true
+    end
+
+    test "returns the updated struct" do
+      turn = insert_turn(ended_at: nil)
+      {:ok, updated} = Turns.record_moving_announced(turn)
+      assert updated.player_name == turn.player_name
+      assert updated.started_at == turn.started_at
+    end
+
+    test "does not affect other turns" do
+      other = insert_turn(game_id: "22222", ended_at: nil)
+      turn = insert_turn(ended_at: nil)
+      Turns.record_moving_announced(turn)
+      assert Repo.get!(Turn, other.id).moving_announced == false
+    end
+  end
+
   describe "start_turn/2" do
     test "inserts a new open turn for the player" do
       {:ok, turn} = Turns.start_turn("11111", "adam")

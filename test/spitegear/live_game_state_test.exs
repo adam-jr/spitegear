@@ -1,6 +1,8 @@
 defmodule Spitegear.LiveGameStateTest do
   use Spitegear.DataCase, async: true
 
+  alias Spitegear.GameDeath
+  alias Spitegear.HTML.Player
   alias Spitegear.LiveGameState
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.ViewScreen
@@ -12,6 +14,31 @@ defmodule Spitegear.LiveGameStateTest do
   @base ~U[2024-01-01 12:00:00Z]
 
   defp player(name), do: %{name: name, slack_name: "@#{name}", color: nil}
+
+  defp vs_player(name, opts \\ []) do
+    %Player{
+      name: name,
+      slack_name: "@#{name}",
+      eliminated?: Keyword.get(opts, :eliminated?, false),
+      winner?: Keyword.get(opts, :winner?, false),
+      current_turn?: Keyword.get(opts, :current_turn?, false)
+    }
+  end
+
+  defp view_screen(opts) do
+    players = Keyword.get(opts, :players, [])
+
+    %ViewScreen{
+      game_id: Keyword.get(opts, :game_id, "11111"),
+      game_name: Keyword.get(opts, :game_name, "Test Game"),
+      players: players,
+      current_player_name: Keyword.get(opts, :current_player_name, nil),
+      current_player: Keyword.get(opts, :current_player, nil),
+      eliminated: Enum.filter(players, & &1.eliminated?),
+      winners: Enum.filter(players, & &1.winner?),
+      fogged?: Keyword.get(opts, :fogged?, false)
+    }
+  end
 
   defp insert_turn(attrs) do
     Repo.insert!(%Turn{
@@ -370,6 +397,273 @@ defmodule Spitegear.LiveGameStateTest do
 
       assert result == state
       assert_receive {:message, :spitegear, _}, 500
+    end
+  end
+
+  describe "infer_deaths_from_skip/1" do
+    test "no-op when turn_advanced is false" do
+      state = %LiveGameState{game_id: "11111", turn_advanced: false}
+      assert LiveGameState.infer_deaths_from_skip(state) == state
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
+    test "no-op when prev_turn is nil" do
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: true
+        )
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: nil,
+        current_view_screen: vs
+      }
+
+      assert LiveGameState.infer_deaths_from_skip(state) == state
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
+    test "no-op when current_view_screen is nil" do
+      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: prev,
+        current_view_screen: nil
+      }
+
+      assert LiveGameState.infer_deaths_from_skip(state) == state
+    end
+
+    test "no-op when game is not fogged" do
+      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
+
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: false
+        )
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: prev,
+        current_view_screen: vs
+      }
+
+      LiveGameState.infer_deaths_from_skip(state)
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
+    test "no-op when no players are skipped" do
+      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
+
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: true
+        )
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: prev,
+        current_view_screen: vs
+      }
+
+      LiveGameState.infer_deaths_from_skip(state)
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
+    test "records a death when a player is skipped in turn order" do
+      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
+
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: true
+        )
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: prev,
+        current_view_screen: vs
+      }
+
+      LiveGameState.infer_deaths_from_skip(state)
+
+      deaths = Repo.all(GameDeath)
+      assert length(deaths) == 1
+      assert hd(deaths).player_name == "charlie"
+    end
+
+    test "does not record a death for players already in game_deaths" do
+      Repo.insert!(%GameDeath{game_id: "11111", player_name: "charlie", eliminated_at: @base})
+      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
+
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: true
+        )
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: prev,
+        current_view_screen: vs
+      }
+
+      LiveGameState.infer_deaths_from_skip(state)
+      assert Repo.aggregate(GameDeath, :count) == 1
+    end
+
+    test "posts to :spitegear_test" do
+      Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
+      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
+
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: true
+        )
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: prev,
+        current_view_screen: vs
+      }
+
+      LiveGameState.infer_deaths_from_skip(state)
+      assert_receive {:message, :spitegear_test, _}, 500
+    end
+  end
+
+  describe "detect_eliminations/1" do
+    test "no-op when view_screen_changed is false" do
+      state = %LiveGameState{game_id: "11111", view_screen_changed: false}
+      assert LiveGameState.detect_eliminations(state) == state
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
+    test "no-op when current_view_screen is nil" do
+      state = %LiveGameState{
+        game_id: "11111",
+        view_screen_changed: true,
+        current_view_screen: nil
+      }
+
+      assert LiveGameState.detect_eliminations(state) == state
+    end
+
+    test "no-op when game is fogged" do
+      vs =
+        view_screen(
+          players: [vs_player("adam", eliminated?: true), vs_player("bob")],
+          fogged?: true
+        )
+
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      LiveGameState.detect_eliminations(state)
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
+    test "no-op when eliminated list is empty" do
+      vs = view_screen(players: [vs_player("adam"), vs_player("bob")])
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      LiveGameState.detect_eliminations(state)
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
+    test "records a death for a newly eliminated player" do
+      vs = view_screen(players: [vs_player("adam", eliminated?: true), vs_player("bob")])
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      LiveGameState.detect_eliminations(state)
+
+      deaths = Repo.all(GameDeath)
+      assert length(deaths) == 1
+      assert hd(deaths).player_name == "adam"
+    end
+
+    test "does not re-record a player already in game_deaths" do
+      Repo.insert!(%GameDeath{game_id: "11111", player_name: "adam", eliminated_at: @base})
+      vs = view_screen(players: [vs_player("adam", eliminated?: true), vs_player("bob")])
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      LiveGameState.detect_eliminations(state)
+
+      assert Repo.aggregate(GameDeath, :count) == 1
+    end
+
+    test "posts to :spitegear" do
+      Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
+      vs = view_screen(players: [vs_player("adam", eliminated?: true), vs_player("bob")])
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      LiveGameState.detect_eliminations(state)
+
+      assert_receive {:message, :spitegear, _}, 500
+    end
+
+    test "returns state unchanged" do
+      vs = view_screen(players: [vs_player("adam", eliminated?: true)])
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      assert LiveGameState.detect_eliminations(state) == state
+    end
+  end
+
+  describe "announce_winners/1" do
+    test "no-op when view_screen_changed is false" do
+      state = %LiveGameState{game_id: "11111", view_screen_changed: false}
+      assert LiveGameState.announce_winners(state) == state
+    end
+
+    test "no-op when current_view_screen is nil" do
+      state = %LiveGameState{
+        game_id: "11111",
+        view_screen_changed: true,
+        current_view_screen: nil
+      }
+
+      assert LiveGameState.announce_winners(state) == state
+    end
+
+    test "no-op when winners list is empty" do
+      vs = view_screen(players: [vs_player("adam"), vs_player("bob")])
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      assert LiveGameState.announce_winners(state) == state
+    end
+
+    test "publishes winner blocks to :spitegear when winners present" do
+      Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
+
+      vs =
+        view_screen(
+          players: [vs_player("adam", winner?: true), vs_player("bob")],
+          game_name: "Test Game"
+        )
+
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+
+      LiveGameState.announce_winners(state)
+
+      assert_receive {:message, :spitegear, _}, 500
+    end
+
+    test "returns state unchanged" do
+      vs = view_screen(players: [vs_player("adam", winner?: true)])
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      result = LiveGameState.announce_winners(state)
+      assert result == state
     end
   end
 end

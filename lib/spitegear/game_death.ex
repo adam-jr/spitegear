@@ -7,6 +7,7 @@ defmodule Spitegear.GameDeath do
     field(:game_id, :string)
     field(:player_name, :string)
     field(:eliminated_at, :utc_datetime)
+    field(:inferred, :boolean, default: false)
 
     timestamps()
   end

@@ -34,7 +34,7 @@ defmodule Spitegear.LiveGameState do
 
   require Logger
 
-  alias Spitegear.Games
+  alias Spitegear.GameDeaths
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
@@ -349,23 +349,31 @@ defmodule Spitegear.LiveGameState do
   to the player now active (`current_view_screen.current_player_name`). Any
   alive players between them in circular order are presumed eliminated.
 
-  Persists each inferred death via `Games.record_death/3` and posts to
-  `:spitegear_test` unless the game is fogged.
+  Only runs for fogged games — when the board is visible, `detect_eliminations/1`
+  reads eliminations directly from the view screen instead.
 
-  No-op when `turn_advanced` is `false` or `prev_turn` / `current_view_screen`
-  is `nil`.
+  Persists each inferred death via `GameDeaths.create/3` and posts to
+  `:spitegear_test`.
+
+  No-op when `turn_advanced` is `false`, the game is not fogged, or
+  `prev_turn` / `current_view_screen` is `nil`.
   """
   @spec infer_deaths_from_skip(t()) :: t()
   def infer_deaths_from_skip(%__MODULE__{turn_advanced: false} = state), do: state
   def infer_deaths_from_skip(%__MODULE__{prev_turn: nil} = state), do: state
   def infer_deaths_from_skip(%__MODULE__{current_view_screen: nil} = state), do: state
 
+  def infer_deaths_from_skip(
+        %__MODULE__{current_view_screen: %ViewScreen{fogged?: false}} = state
+      ),
+      do: state
+
   def infer_deaths_from_skip(%__MODULE__{} = state) do
     vs = state.current_view_screen
     prev_name = state.prev_turn.player_name
     curr_name = vs.current_player_name
 
-    known_dead = Games.list_deaths(state.game_id) |> MapSet.new(& &1.player_name)
+    known_dead = GameDeaths.list(state.game_id) |> MapSet.new(& &1.player_name)
 
     alive_players =
       Enum.reject(vs.players, fn p ->
@@ -380,12 +388,9 @@ defmodule Spitegear.LiveGameState do
     Enum.each(newly_dead, fn player ->
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       Logger.info("#{__MODULE__} inferring #{player.name} dead (skipped in turn order)")
-      Games.record_death(state.game_id, player.name, now)
-
-      unless vs.fogged? do
-        text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
-        PubSub.msg(:spitegear_test, text)
-      end
+      GameDeaths.create(state.game_id, player.name, now, inferred: true)
+      text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
+      PubSub.msg(:spitegear_test, text)
     end)
 
     state
@@ -394,27 +399,32 @@ defmodule Spitegear.LiveGameState do
   @doc """
   Detects newly eliminated players by diffing `current_view_screen.eliminated`
   against the persisted `game_deaths` records. Persists each new death via
-  `Games.record_death/3` and posts to `:spitegear_test` unless the game is fogged.
+  `GameDeaths.create/3` and posts to `:spitegear_test`.
 
-  No-op when `view_screen_changed` is `false` or `current_view_screen` is `nil`.
+  Only runs for unfogged games — when the board is fogged, eliminations are
+  not reliably visible in the view screen and `infer_deaths_from_skip/1`
+  handles detection instead.
+
+  No-op when `view_screen_changed` is `false`, the game is fogged, or
+  `current_view_screen` is `nil`.
   """
   @spec detect_eliminations(t()) :: t()
   def detect_eliminations(%__MODULE__{view_screen_changed: false} = state), do: state
   def detect_eliminations(%__MODULE__{current_view_screen: nil} = state), do: state
 
+  def detect_eliminations(%__MODULE__{current_view_screen: %ViewScreen{fogged?: true}} = state),
+    do: state
+
   def detect_eliminations(%__MODULE__{} = state) do
     vs = state.current_view_screen
-    known_dead = Games.list_deaths(state.game_id) |> MapSet.new(& &1.player_name)
+    known_dead = GameDeaths.list(state.game_id) |> MapSet.new(& &1.player_name)
     newly_dead = Enum.reject(vs.eliminated, &MapSet.member?(known_dead, &1.name))
 
     Enum.each(newly_dead, fn player ->
       now = DateTime.utc_now() |> DateTime.truncate(:second)
-      Games.record_death(state.game_id, player.name, now)
-
-      unless vs.fogged? do
-        text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
-        PubSub.msg(:spitegear_test, text)
-      end
+      GameDeaths.create(state.game_id, player.name, now)
+      text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
+      PubSub.msg(:spitegear_test, text)
     end)
 
     state

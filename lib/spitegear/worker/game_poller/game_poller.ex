@@ -2,6 +2,7 @@ defmodule Spitegear.Worker.GamePoller do
   @moduledoc false
   use GenServer
 
+  alias Spitegear.GameDeaths
   alias Spitegear.Games
   alias Spitegear.Turn
   alias Spitegear.Wargear.HTTP.History
@@ -51,7 +52,7 @@ defmodule Spitegear.Worker.GamePoller do
     update_current_turn()
     schedule_work()
 
-    dead_players = Games.list_deaths(game_id) |> Enum.map(&%{name: &1.player_name})
+    dead_players = GameDeaths.list(game_id) |> Enum.map(&%{name: &1.player_name})
 
     {:ok,
      %{

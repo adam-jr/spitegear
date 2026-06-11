@@ -176,17 +176,6 @@ defmodule Spitegear.Games do
     })
   end
 
-  @doc "Records a player elimination. Safe to call more than once — duplicate inserts are ignored."
-  @spec record_death(game_id(), String.t(), DateTime.t()) ::
-          {:ok, GameDeath.t()} | {:error, Ecto.Changeset.t()}
-  def record_death(game_id, player_name, eliminated_at) do
-    Repo.insert(
-      %GameDeath{game_id: game_id, player_name: player_name, eliminated_at: eliminated_at},
-      on_conflict: :nothing,
-      conflict_target: [:game_id, :player_name]
-    )
-  end
-
   @doc """
   Returns the number of completed rounds for `game_id`.
 
@@ -260,12 +249,6 @@ defmodule Spitegear.Games do
   @spec get_game(game_id()) :: Game.t() | nil
   def get_game(game_id) do
     Repo.get_by(Game, game_id: game_id)
-  end
-
-  @doc "Returns all recorded player deaths for `game_id`."
-  @spec list_deaths(game_id()) :: [GameDeath.t()]
-  def list_deaths(game_id) do
-    Repo.all(from(d in GameDeath, where: d.game_id == ^game_id))
   end
 
   @doc """

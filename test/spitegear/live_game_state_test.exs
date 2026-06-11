@@ -408,7 +408,12 @@ defmodule Spitegear.LiveGameStateTest do
     end
 
     test "no-op when prev_turn is nil" do
-      vs = view_screen(players: [vs_player("adam"), vs_player("bob")], current_player_name: "bob")
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: true
+        )
 
       state = %LiveGameState{
         game_id: "11111",
@@ -434,9 +439,36 @@ defmodule Spitegear.LiveGameStateTest do
       assert LiveGameState.infer_deaths_from_skip(state) == state
     end
 
+    test "no-op when game is not fogged" do
+      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
+
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: false
+        )
+
+      state = %LiveGameState{
+        game_id: "11111",
+        turn_advanced: true,
+        prev_turn: prev,
+        current_view_screen: vs
+      }
+
+      LiveGameState.infer_deaths_from_skip(state)
+      assert Repo.aggregate(GameDeath, :count) == 0
+    end
+
     test "no-op when no players are skipped" do
       prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
-      vs = view_screen(players: [vs_player("adam"), vs_player("bob")], current_player_name: "bob")
+
+      vs =
+        view_screen(
+          players: [vs_player("adam"), vs_player("bob")],
+          current_player_name: "bob",
+          fogged?: true
+        )
 
       state = %LiveGameState{
         game_id: "11111",
@@ -455,7 +487,8 @@ defmodule Spitegear.LiveGameStateTest do
       vs =
         view_screen(
           players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
-          current_player_name: "bob"
+          current_player_name: "bob",
+          fogged?: true
         )
 
       state = %LiveGameState{
@@ -479,7 +512,8 @@ defmodule Spitegear.LiveGameStateTest do
       vs =
         view_screen(
           players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
-          current_player_name: "bob"
+          current_player_name: "bob",
+          fogged?: true
         )
 
       state = %LiveGameState{
@@ -490,33 +524,10 @@ defmodule Spitegear.LiveGameStateTest do
       }
 
       LiveGameState.infer_deaths_from_skip(state)
-
       assert Repo.aggregate(GameDeath, :count) == 1
     end
 
-    test "posts to :spitegear_test when not fogged" do
-      Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
-      prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
-
-      vs =
-        view_screen(
-          players: [vs_player("adam"), vs_player("charlie"), vs_player("bob")],
-          current_player_name: "bob"
-        )
-
-      state = %LiveGameState{
-        game_id: "11111",
-        turn_advanced: true,
-        prev_turn: prev,
-        current_view_screen: vs
-      }
-
-      LiveGameState.infer_deaths_from_skip(state)
-
-      assert_receive {:message, :spitegear_test, _}, 500
-    end
-
-    test "does not post when fogged" do
+    test "posts to :spitegear_test" do
       Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
       prev = %Turn{game_id: "11111", player_name: "adam", started_at: @base}
 
@@ -535,8 +546,7 @@ defmodule Spitegear.LiveGameStateTest do
       }
 
       LiveGameState.infer_deaths_from_skip(state)
-
-      refute_receive {:message, :spitegear_test, _}, 200
+      assert_receive {:message, :spitegear_test, _}, 500
     end
   end
 
@@ -555,6 +565,18 @@ defmodule Spitegear.LiveGameStateTest do
       }
 
       assert LiveGameState.detect_eliminations(state) == state
+    end
+
+    test "no-op when game is fogged" do
+      vs =
+        view_screen(
+          players: [vs_player("adam", eliminated?: true), vs_player("bob")],
+          fogged?: true
+        )
+
+      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
+      LiveGameState.detect_eliminations(state)
+      assert Repo.aggregate(GameDeath, :count) == 0
     end
 
     test "no-op when eliminated list is empty" do
@@ -583,28 +605,13 @@ defmodule Spitegear.LiveGameStateTest do
       assert Repo.aggregate(GameDeath, :count) == 1
     end
 
-    test "posts to :spitegear_test when not fogged" do
+    test "posts to :spitegear_test" do
       Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
       vs = view_screen(players: [vs_player("adam", eliminated?: true), vs_player("bob")])
       state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
       LiveGameState.detect_eliminations(state)
 
       assert_receive {:message, :spitegear_test, _}, 500
-    end
-
-    test "does not post when fogged" do
-      Phoenix.PubSub.subscribe(Spitegear.PubSub, "slack_messages")
-
-      vs =
-        view_screen(
-          players: [vs_player("adam", eliminated?: true), vs_player("bob")],
-          fogged?: true
-        )
-
-      state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
-      LiveGameState.detect_eliminations(state)
-
-      refute_receive {:message, :spitegear_test, _}, 200
     end
 
     test "returns state unchanged" do

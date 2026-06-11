@@ -51,16 +51,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
     {:noreply, assign(socket, load(socket.assigns.game_id))}
   end
 
-  def handle_event("start_new_poller", _params, socket) do
-    Games.start_new_poller(socket.assigns.game_id)
-    {:noreply, assign(socket, load(socket.assigns.game_id))}
-  end
-
-  def handle_event("stop_new_poller", _params, socket) do
-    Games.stop_new_poller(socket.assigns.game_id)
-    {:noreply, assign(socket, load(socket.assigns.game_id))}
-  end
-
   def handle_event("fetch_log", _params, socket) do
     game_id = socket.assigns.game_id
     lv = self()
@@ -124,7 +114,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
     completed_rounds = Games.completed_rounds(game_id)
     poller_alive = Games.poller_alive?(game_id)
     poller_turn_id = Games.poller_turn_id(game_id)
-    new_poller_alive = Games.new_poller_alive?(game_id)
     player_statuses = Games.list_player_statuses(game_id)
     net_units_series = Stats.enriched_net_units_series(game_id)
     units_received_series = Stats.units_received_series(game_id)
@@ -146,7 +135,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
       completed_rounds: completed_rounds,
       poller_alive: poller_alive,
       poller_turn_id: poller_turn_id,
-      new_poller_alive: new_poller_alive,
       player_statuses: player_statuses,
       net_units_series: net_units_series,
       units_received_series: units_received_series,
@@ -223,23 +211,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
               </button>
             <% else %>
               <button phx-click="start_poller" class="text-sm text-blue-600 hover:underline">
-                Start
-              </button>
-            <% end %>
-            <span class="text-gray-300">|</span>
-            <span class={
-              if @new_poller_alive,
-                do: "text-green-600 text-sm font-medium",
-                else: "text-gray-400 text-sm"
-            }>
-              {if @new_poller_alive, do: "● new", else: "○ new"}
-            </span>
-            <%= if @new_poller_alive do %>
-              <button phx-click="stop_new_poller" class="text-sm text-red-600 hover:underline">
-                Stop
-              </button>
-            <% else %>
-              <button phx-click="start_new_poller" class="text-sm text-blue-600 hover:underline">
                 Start
               </button>
             <% end %>

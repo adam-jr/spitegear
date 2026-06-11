@@ -166,9 +166,6 @@ defmodule SpitegearWeb.PublicGameShowLive do
                       </span>
                     <% end %>
                   </div>
-                  <%= if player.eliminated? do %>
-                    <span class="text-gray-400 shrink-0">✕</span>
-                  <% end %>
                   <%= if player.current_turn? do %>
                     <span class="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
                   <% end %>

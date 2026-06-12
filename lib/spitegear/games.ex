@@ -14,8 +14,8 @@ defmodule Spitegear.Games do
   alias Spitegear.TurnHistory
   alias Spitegear.Wargear.HTTP.LogSnapshot
   alias Spitegear.Wargear.HTTP.ViewScreen
+  alias Spitegear.Worker.GameManager
   alias Spitegear.Worker.GamePoller
-  alias Spitegear.Worker.GamePollerNew
 
   @type game_id :: String.t()
 
@@ -334,23 +334,24 @@ defmodule Spitegear.Games do
     )
   end
 
-  @doc "Starts a `GamePoller` for `game_id` under `GameSupervisor`."
-  @spec start_poller(game_id()) ::
-          {:ok, pid()} | {:error, {:already_started, pid()} | :max_children | term()}
-  def start_poller(game_id) do
-    DynamicSupervisor.start_child(
-      GameSupervisor,
-      GamePoller.child_spec(game_id: game_id)
-    )
+  @doc "Starts both a `GamePoller` and a `GameManager` for `game_id`."
+  @spec start_game(game_id()) :: :ok
+  def start_game(game_id) do
+    DynamicSupervisor.start_child(GameSupervisor, GamePoller.child_spec(game_id: game_id))
+    DynamicSupervisor.start_child(GameSupervisor, GameManager.child_spec(game_id: game_id))
+    :ok
   end
 
-  @doc "Terminates the running `GamePoller` for `game_id`. No-op if none is running."
-  @spec stop_poller(game_id()) :: :ok | {:error, :not_found | term()}
-  def stop_poller(game_id) do
+  @doc "Terminates the `GamePoller` and `GameManager` for `game_id`. No-op if neither is running."
+  @spec stop_game(game_id()) :: :ok
+  def stop_game(game_id) do
     case Process.whereis(poller_name(game_id)) do
       nil -> :ok
       pid -> DynamicSupervisor.terminate_child(GameSupervisor, pid)
     end
+
+    GameManager.stop(game_id)
+    :ok
   end
 
   @doc "Returns `true` if a `GamePoller` is currently running for `game_id`."
@@ -368,50 +369,15 @@ defmodule Spitegear.Games do
     end
   end
 
-  @doc "Starts a `GamePoller` for each active game. Called once at application startup."
+  @doc "Returns `true` if a `GameManager` is currently running for `game_id`."
+  @spec game_manager_alive?(game_id()) :: boolean()
+  def game_manager_alive?(game_id), do: GameManager.alive?(game_id)
+
+  @doc "Starts a `GamePoller` and `GameManager` for each active game. Called once at application startup."
   @spec resume_games() :: :ok
   def resume_games do
-    Enum.each(list_active_games(), fn game ->
-      DynamicSupervisor.start_child(
-        GameSupervisor,
-        GamePoller.child_spec(game_id: game.game_id)
-      )
-    end)
+    Enum.each(list_active_games(), fn game -> start_game(game.game_id) end)
   end
-
-  @doc "Starts a `GamePollerNew` for each active game. Called once at application startup."
-  @spec resume_new_pollers() :: :ok
-  def resume_new_pollers do
-    Enum.each(list_active_games(), fn game ->
-      DynamicSupervisor.start_child(
-        GameSupervisor,
-        GamePollerNew.child_spec(game_id: game.game_id)
-      )
-    end)
-  end
-
-  @doc "Starts a `GamePollerNew` for `game_id` alongside any existing poller."
-  @spec start_new_poller(game_id()) ::
-          {:ok, pid()} | {:error, {:already_started, pid()} | :max_children | term()}
-  def start_new_poller(game_id) do
-    DynamicSupervisor.start_child(
-      GameSupervisor,
-      GamePollerNew.child_spec(game_id: game_id)
-    )
-  end
-
-  @doc "Terminates the running `GamePollerNew` for `game_id`. No-op if none is running."
-  @spec stop_new_poller(game_id()) :: :ok | {:error, :not_found | term()}
-  def stop_new_poller(game_id) do
-    case Process.whereis(GamePollerNew.name(game_id)) do
-      nil -> :ok
-      pid -> DynamicSupervisor.terminate_child(GameSupervisor, pid)
-    end
-  end
-
-  @doc "Returns `true` if a `GamePollerNew` is currently running for `game_id`."
-  @spec new_poller_alive?(game_id()) :: boolean()
-  def new_poller_alive?(game_id), do: GamePollerNew.alive?(game_id)
 
   defp poller_name(game_id), do: GamePoller.name(game_id)
 end

@@ -1,15 +1,15 @@
-defmodule Spitegear.Worker.GamePollerNew do
+defmodule Spitegear.Worker.GameManager do
   @moduledoc """
-  Experimental replacement for `GamePoller`.
+  Manages game state for a single active game.
 
-  One `GamePollerNew` GenServer runs per active game. Rather than polling
+  One `GameManager` GenServer runs per active game. Rather than polling
   wargear.net directly, it receives notifications from `GamePoller` whenever
   that poller successfully fetches a `History.latest_turn` or `ViewScreen`.
 
-  Start and stop a poller for any running game from the admin:
+  Start and stop a manager for any running game from the admin:
 
-      Games.start_new_poller(game_id)
-      Games.stop_new_poller(game_id)
+      Games.start_game_manager(game_id)
+      Games.stop_game_manager(game_id)
   """
 
   use GenServer
@@ -38,18 +38,27 @@ defmodule Spitegear.Worker.GamePollerNew do
   @spec name(String.t()) :: atom()
   def name(game_id), do: :"#{__MODULE__}_#{game_id}"
 
-  @doc "Returns `true` if a `GamePollerNew` is currently running for `game_id`."
+  @doc "Returns `true` if a `GameManager` is currently running for `game_id`."
   @spec alive?(String.t()) :: boolean()
   def alive?(game_id), do: Process.whereis(name(game_id)) != nil
 
-  @doc "Notifies the new poller of a successful `History.latest_turn` fetch. No-op if not running."
+  @doc "Stops the running `GameManager` for `game_id`. No-op if none is running."
+  @spec stop(String.t()) :: :ok
+  def stop(game_id) do
+    case Process.whereis(name(game_id)) do
+      nil -> :ok
+      pid -> GenServer.stop(pid, :normal)
+    end
+  end
+
+  @doc "Notifies the manager of a successful `History.latest_turn` fetch. No-op if not running."
   @spec notify_history_fetched(String.t(), map()) :: :ok
   def notify_history_fetched(game_id, turn_data) do
     if alive?(game_id), do: GenServer.cast(name(game_id), {:history_fetched, turn_data})
     :ok
   end
 
-  @doc "Notifies the new poller of a successful `ViewScreen.get_game` fetch. No-op if not running."
+  @doc "Notifies the manager of a successful `ViewScreen.get_game` fetch. No-op if not running."
   @spec notify_view_screen_fetched(String.t(), term()) :: :ok
   def notify_view_screen_fetched(game_id, view_screen) do
     if alive?(game_id), do: GenServer.cast(name(game_id), {:view_screen_fetched, view_screen})

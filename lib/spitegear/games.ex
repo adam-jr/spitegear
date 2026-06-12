@@ -14,8 +14,8 @@ defmodule Spitegear.Games do
   alias Spitegear.TurnHistory
   alias Spitegear.Wargear.HTTP.LogSnapshot
   alias Spitegear.Wargear.HTTP.ViewScreen
-  alias Spitegear.Worker.GamePoller
   alias Spitegear.Worker.GameManager
+  alias Spitegear.Worker.GamePoller
 
   @type game_id :: String.t()
 

@@ -2,11 +2,9 @@ defmodule Spitegear.Worker.GamePoller do
   @moduledoc false
   use GenServer
 
-  alias Spitegear.GameDeaths
-  alias Spitegear.Games
   alias Spitegear.Wargear.HTTP.History
   alias Spitegear.Wargear.HTTP.ViewScreen
-  alias Spitegear.Worker.GamePollerNew
+  alias Spitegear.Worker.GameManager
 
   require Logger
 
@@ -16,14 +14,9 @@ defmodule Spitegear.Worker.GamePoller do
 
   @state %{
     game_id: nil,
-    view_screen: nil,
-    dead_players: [],
     last_turn_id: nil,
-    status: :players_joining,
     view_screen_timer: nil,
-    view_screen_polls_remaining: 0,
-    last_round: 0,
-    last_stats_round: 0
+    view_screen_polls_remaining: 0
   }
 
   def child_spec(game_id: game_id) do
@@ -44,25 +37,17 @@ defmodule Spitegear.Worker.GamePoller do
     Logger.info("Initializing #{__MODULE__} with game_id #{game_id}")
     Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
 
-    update_game()
+    send(self(), :update_game)
     schedule_work()
 
-    dead_players = GameDeaths.list(game_id) |> Enum.map(&%{name: &1.player_name})
-
-    {:ok,
-     %{
-       @state
-       | game_id: game_id,
-         last_round: Games.completed_rounds(game_id),
-         dead_players: dead_players
-     }}
+    {:ok, %{@state | game_id: game_id}}
   end
 
   @impl true
   def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
     case History.latest_turn(game_id) do
       {:ok, %{"turnid" => turn_id} = turn_data} ->
-        GamePollerNew.notify_history_fetched(game_id, turn_data)
+        GameManager.notify_history_fetched(game_id, turn_data)
         schedule_work()
         {:noreply, %{state | last_turn_id: turn_id}}
 
@@ -75,12 +60,12 @@ defmodule Spitegear.Worker.GamePoller do
   def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
     case History.latest_turn(game_id) do
       {:ok, %{"turnid" => ^last_turn_id} = turn_data} ->
-        GamePollerNew.notify_history_fetched(game_id, turn_data)
+        GameManager.notify_history_fetched(game_id, turn_data)
         schedule_work()
         {:noreply, state}
 
       {:ok, %{"turnid" => turn_id} = turn_data} ->
-        GamePollerNew.notify_history_fetched(game_id, turn_data)
+        GameManager.notify_history_fetched(game_id, turn_data)
         if state.view_screen_timer, do: Process.cancel_timer(state.view_screen_timer)
 
         state = %{
@@ -115,9 +100,8 @@ defmodule Spitegear.Worker.GamePoller do
   def handle_info(:update_game, state) do
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
-        Games.upsert_game(view_screen)
-        GamePollerNew.notify_view_screen_fetched(state.game_id, view_screen)
-        {:noreply, update_status(%{state | view_screen: view_screen})}
+        GameManager.notify_view_screen_fetched(state.game_id, view_screen)
+        {:noreply, state}
 
       _ ->
         {:noreply, state}
@@ -128,26 +112,22 @@ defmodule Spitegear.Worker.GamePoller do
     {:noreply, state}
   end
 
-  def name(game_id), do: :"#{__MODULE__}_#{game_id}"
-
-  def update_status(state) do
-    if state.view_screen.current_player do
-      %{state | status: :in_progress}
-    else
-      state
-    end
+  @impl true
+  def terminate(:normal, %{game_id: game_id}) do
+    GameManager.stop(game_id)
   end
+
+  def terminate(_reason, _state), do: :ok
+
+  def name(game_id), do: :"#{__MODULE__}_#{game_id}"
 
   defp fetch_view_screen(state) do
     polls_remaining = state.view_screen_polls_remaining - 1
 
     case ViewScreen.get_game(state.game_id) do
       {:ok, view_screen} ->
-        GamePollerNew.notify_view_screen_fetched(state.game_id, view_screen)
-
-        state =
-          %{state | view_screen: view_screen, view_screen_polls_remaining: polls_remaining}
-          |> update_status()
+        GameManager.notify_view_screen_fetched(state.game_id, view_screen)
+        state = %{state | view_screen_polls_remaining: polls_remaining}
 
         if Enum.any?(view_screen.winners) do
           {:stop, state}
@@ -171,8 +151,6 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp maybe_schedule_view_screen_poll(_), do: {nil, 0}
-
-  defp update_game, do: send(self(), :update_game)
 
   defp schedule_work, do: Process.send_after(self(), :work, @interval)
 end

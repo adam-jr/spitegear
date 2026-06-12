@@ -24,13 +24,13 @@ defmodule SpitegearWeb.AdminGamesLive do
     end
   end
 
-  def handle_event("start_poller", %{"game_id" => game_id}, socket) do
-    Games.start_poller(game_id)
+  def handle_event("start_game", %{"game_id" => game_id}, socket) do
+    Games.start_game(game_id)
     {:noreply, assign(socket, games: load_games())}
   end
 
-  def handle_event("stop_poller", %{"game_id" => game_id}, socket) do
-    Games.stop_poller(game_id)
+  def handle_event("stop_game", %{"game_id" => game_id}, socket) do
+    Games.stop_game(game_id)
     {:noreply, assign(socket, games: load_games())}
   end
 
@@ -38,7 +38,8 @@ defmodule SpitegearWeb.AdminGamesLive do
     Games.list_active_games()
     |> Enum.map(fn game ->
       turn = Games.get_current_turn(game.game_id)
-      %{game: game, turn: turn, poller_alive: Games.poller_alive?(game.game_id)}
+      running = Games.poller_alive?(game.game_id) or Games.game_manager_alive?(game.game_id)
+      %{game: game, turn: turn, running: running}
     end)
   end
 
@@ -89,7 +90,7 @@ defmodule SpitegearWeb.AdminGamesLive do
               </tr>
             </thead>
             <tbody>
-              <%= for %{game: game, turn: turn, poller_alive: alive} <- @games do %>
+              <%= for %{game: game, turn: turn, running: running} <- @games do %>
                 <tr class="border-b border-gray-100 align-middle">
                   <td class="py-2 pr-4 font-mono">
                     <a href={"/admin/games/#{game.game_id}"} class="text-blue-600 hover:underline">
@@ -99,14 +100,14 @@ defmodule SpitegearWeb.AdminGamesLive do
                   <td class="py-2 pr-4">{game.game_name || "—"}</td>
                   <td class="py-2 pr-4">{if turn, do: turn.player.name, else: "—"}</td>
                   <td class="py-2 pr-4">
-                    <span class={if alive, do: "text-green-600", else: "text-gray-400"}>
-                      {if alive, do: "running", else: "stopped"}
+                    <span class={if running, do: "text-green-600", else: "text-gray-400"}>
+                      {if running, do: "running", else: "stopped"}
                     </span>
                   </td>
                   <td class="py-2 flex gap-3">
-                    <%= if alive do %>
+                    <%= if running do %>
                       <button
-                        phx-click="stop_poller"
+                        phx-click="stop_game"
                         phx-value-game_id={game.game_id}
                         class="text-red-600 hover:underline"
                       >
@@ -114,7 +115,7 @@ defmodule SpitegearWeb.AdminGamesLive do
                       </button>
                     <% else %>
                       <button
-                        phx-click="start_poller"
+                        phx-click="start_game"
                         phx-value-game_id={game.game_id}
                         class="text-blue-600 hover:underline"
                       >

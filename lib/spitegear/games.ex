@@ -8,9 +8,7 @@ defmodule Spitegear.Games do
   alias Spitegear.Game
   alias Spitegear.GameDeath
   alias Spitegear.GameLogSnapshot
-  alias Spitegear.HTML.Player
   alias Spitegear.Repo
-  alias Spitegear.Turn
   alias Spitegear.TurnHistory
   alias Spitegear.Wargear.HTTP.LogSnapshot
   alias Spitegear.Wargear.HTTP.ViewScreen
@@ -131,49 +129,6 @@ defmodule Spitegear.Games do
          ]},
       conflict_target: :game_id
     )
-  end
-
-  @doc """
-  Returns the current turn for `game_id`, with the `player` virtual field populated.
-  Returns `nil` if no turn exists yet.
-  """
-  @spec get_current_turn(game_id()) :: Turn.t() | nil
-  def get_current_turn(game_id) do
-    case Repo.get_by(Turn, game_id: game_id) do
-      nil -> nil
-      turn -> %{turn | player: Player.from_name(turn.player_name)}
-    end
-  end
-
-  @doc "Inserts or updates the current turn row for `turn.game_id`."
-  @spec upsert_turn(Turn.t()) :: {:ok, Turn.t()} | {:error, Ecto.Changeset.t()}
-  def upsert_turn(turn) do
-    Repo.insert(
-      %Turn{
-        game_id: turn.game_id,
-        player_name: turn.player.name,
-        started: turn.started,
-        reminded: turn.reminded,
-        reminders: turn.reminders,
-        moving_announced: turn.moving_announced
-      },
-      on_conflict:
-        {:replace,
-         [:player_name, :started, :reminded, :reminders, :moving_announced, :updated_at]},
-      conflict_target: :game_id
-    )
-  end
-
-  @doc "Appends a completed-turn record to `turn_history`."
-  @spec record_completed_turn(Turn.t(), DateTime.t()) ::
-          {:ok, TurnHistory.t()} | {:error, Ecto.Changeset.t()}
-  def record_completed_turn(turn, ended) do
-    Repo.insert(%TurnHistory{
-      game_id: turn.game_id,
-      player_name: turn.player.name,
-      started: turn.started,
-      ended: ended
-    })
   end
 
   @doc """

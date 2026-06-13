@@ -4,7 +4,6 @@ defmodule Spitegear.GamesTest do
   alias Spitegear.Game
   alias Spitegear.Games
   alias Spitegear.Repo
-  alias Spitegear.Turn
   alias Spitegear.TurnHistory
   alias Spitegear.Wargear.HTTP.ViewScreen
 
@@ -19,18 +18,6 @@ defmodule Spitegear.GamesTest do
       created: Keyword.get(attrs, :created, "2024-01-01"),
       finished: Keyword.get(attrs, :finished, nil),
       winners: Keyword.get(attrs, :winners, [])
-    }
-  end
-
-  defp build_turn(attrs \\ []) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    %Turn{
-      game_id: Keyword.get(attrs, :game_id, "11111"),
-      player: %{name: "adam jormp jomp", slack_name: "@atom.r"},
-      started: Keyword.get(attrs, :started, now),
-      reminded: Keyword.get(attrs, :reminded, now),
-      reminders: Keyword.get(attrs, :reminders, 0)
     }
   end
 
@@ -74,78 +61,6 @@ defmodule Spitegear.GamesTest do
     test "marks game as finished" do
       {:ok, game} = Games.upsert_game(build_view_screen(finished: "2024-12-01"))
       assert game.finished == "2024-12-01"
-    end
-  end
-
-  describe "upsert_turn/1" do
-    test "inserts a new turn row" do
-      assert {:ok, _} = Games.upsert_turn(build_turn())
-      assert Repo.aggregate(Turn, :count) == 1
-    end
-
-    test "updates the existing row on same game_id" do
-      Games.upsert_turn(build_turn(reminders: 0))
-      Games.upsert_turn(build_turn(reminders: 3))
-
-      assert Repo.aggregate(Turn, :count) == 1
-      assert Repo.get_by(Turn, game_id: "11111").reminders == 3
-    end
-
-    test "updates reminded timestamp" do
-      later = DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
-      Games.upsert_turn(build_turn())
-      Games.upsert_turn(build_turn(reminded: later))
-
-      assert Repo.get_by(Turn, game_id: "11111").reminded == later
-    end
-
-    test "stores player name" do
-      Games.upsert_turn(build_turn())
-      assert Repo.get_by(Turn, game_id: "11111").player_name == "adam jormp jomp"
-    end
-  end
-
-  describe "get_current_turn/1" do
-    test "returns nil when no turn exists for game" do
-      assert Games.get_current_turn("99999") == nil
-    end
-
-    test "returns turn with player struct populated from name" do
-      Games.upsert_turn(build_turn())
-      turn = Games.get_current_turn("11111")
-
-      assert turn.game_id == "11111"
-      assert turn.player.name == "adam jormp jomp"
-      assert turn.player.slack_name == "@atom.r"
-    end
-
-    test "returns reminders count" do
-      Games.upsert_turn(build_turn(reminders: 2))
-      assert Games.get_current_turn("11111").reminders == 2
-    end
-  end
-
-  describe "record_completed_turn/2" do
-    test "inserts a turn_history record with correct fields" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      ended = now |> DateTime.add(300)
-      turn = build_turn(started: now)
-
-      assert {:ok, record} = Games.record_completed_turn(turn, ended)
-      assert record.game_id == "11111"
-      assert record.player_name == "adam jormp jomp"
-      assert record.started == now
-      assert record.ended == ended
-    end
-
-    test "allows multiple history records for the same game and player" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      turn = build_turn(started: now)
-
-      Games.record_completed_turn(turn, DateTime.add(now, 100))
-      Games.record_completed_turn(turn, DateTime.add(now, 200))
-
-      assert Repo.aggregate(TurnHistory, :count) == 2
     end
   end
 

@@ -2,12 +2,13 @@ defmodule SpitegearWeb.PublicLandingLive do
   use SpitegearWeb, :live_view
   alias Spitegear.GameLog.Stats
   alias Spitegear.Games
+  alias Spitegear.LiveGameState.Turns
 
   def mount(_params, _session, socket) do
     active_games =
       Games.list_active_games()
       |> Enum.map(fn game ->
-        turn = Games.get_current_turn(game.game_id)
+        turn = Turns.get_open_turn(game.game_id)
         %{game: game, current_turn: turn}
       end)
 

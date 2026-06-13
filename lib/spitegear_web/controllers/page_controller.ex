@@ -1,12 +1,13 @@
 defmodule SpitegearWeb.PageController do
   use SpitegearWeb, :controller
   alias Spitegear.Games
+  alias Spitegear.LiveGameState.Turns
 
   def home(conn, _params) do
     active_games =
       Games.list_active_games()
       |> Enum.map(fn game ->
-        turn = Games.get_current_turn(game.game_id)
+        turn = Turns.get_open_turn(game.game_id)
         statuses = Games.list_player_statuses(game.game_id)
         alive = Enum.filter(statuses, & &1.alive)
 

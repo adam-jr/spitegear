@@ -4,6 +4,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
   alias Spitegear.GameLog.Processor
   alias Spitegear.GameLog.Stats
   alias Spitegear.Games
+  alias Spitegear.LiveGameState.Turns
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.PubSub
   alias Spitegear.QuickChart
@@ -107,7 +108,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
   defp load(game_id) do
     game = Games.get_game(game_id)
-    turn = Games.get_current_turn(game_id)
+    turn = Turns.get_open_turn(game_id)
     history = Games.list_turn_history(game_id)
     stats = Games.turn_stats(game_id)
     total_turns = Games.completed_turn_count(game_id)

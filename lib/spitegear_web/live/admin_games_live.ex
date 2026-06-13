@@ -1,6 +1,7 @@
 defmodule SpitegearWeb.AdminGamesLive do
   use SpitegearWeb, :live_view
   alias Spitegear.Games
+  alias Spitegear.LiveGameState.Turns
 
   def mount(_params, _session, socket) do
     {:ok,
@@ -37,7 +38,7 @@ defmodule SpitegearWeb.AdminGamesLive do
   defp load_games do
     Games.list_active_games()
     |> Enum.map(fn game ->
-      turn = Games.get_current_turn(game.game_id)
+      turn = Turns.get_open_turn(game.game_id)
       running = Games.poller_alive?(game.game_id) or Games.game_manager_alive?(game.game_id)
       %{game: game, turn: turn, running: running}
     end)

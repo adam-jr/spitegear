@@ -13,23 +13,27 @@ defmodule Spitegear.MessageTemplates do
 
   def default_template(:next_turn),
     do:
-      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}>"
+      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}> · <%{spitegear_url}|live view>"
 
   def default_template(:kind_reminder_0),
-    do: "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> 🎖️"
+    do:
+      "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> · <%{spitegear_url}|live view> 🎖️"
 
   def default_template(:kind_reminder_1),
-    do: "<%{player_slack}> the front lines are stalled. your move. <%{game_url}|%{game_name}>"
+    do:
+      "<%{player_slack}> the front lines are stalled. your move. <%{game_url}|%{game_name}> · <%{spitegear_url}|live view>"
 
   def default_template(:kind_reminder_2),
-    do: "<%{player_slack}> insubordination noted. take your turn. <%{game_url}|%{game_name}>"
+    do:
+      "<%{player_slack}> insubordination noted. take your turn. <%{game_url}|%{game_name}> · <%{spitegear_url}|live view>"
 
   def default_template(:kind_reminder_3),
     do:
-      "<%{player_slack}> desertion is punishable by... well, more reminders. <%{game_url}|%{game_name}>"
+      "<%{player_slack}> desertion is punishable by... well, more reminders. <%{game_url}|%{game_name}> · <%{spitegear_url}|live view>"
 
   def default_template(:kind_reminder_4),
-    do: "<%{player_slack}> court martial pending <%{game_url}|%{game_name}> ⚖️"
+    do:
+      "<%{player_slack}> court martial pending <%{game_url}|%{game_name}> · <%{spitegear_url}|live view> ⚖️"
 
   def default_template(:player_moving),
     do: "%{player_handle} is taking their turn! 👀"
@@ -47,11 +51,12 @@ defmodule Spitegear.MessageTemplates do
     do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|%{game_name}>"
 
   def available_vars(:next_turn),
-    do: ~w(player_slack round turn_number overall_turn seat_number game_name game_url)
+    do:
+      ~w(player_slack round turn_number overall_turn seat_number game_name game_url spitegear_url)
 
   def available_vars(key)
       when key in ~w(kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4)a,
-      do: ~w(player_slack reminders game_name game_url)
+      do: ~w(player_slack reminders game_name game_url spitegear_url)
 
   def available_vars(:player_moving), do: ~w(player_handle)
   def available_vars(:player_died), do: ~w(player_slack game_name game_url)
@@ -74,7 +79,8 @@ defmodule Spitegear.MessageTemplates do
         overall_turn: round_info.overall_turn_number,
         seat_number: current_player && current_player.seat_number,
         game_name: vs && vs.game_name,
-        game_url: game_url(state.game_id)
+        game_url: game_url(state.game_id),
+        spitegear_url: spitegear_game_url(state.game_id)
       },
       state.game_id
     )
@@ -89,7 +95,8 @@ defmodule Spitegear.MessageTemplates do
         player_slack: turn.player.slack_name,
         reminders: turn.reminders,
         game_name: game_name,
-        game_url: game_url(turn.game_id)
+        game_url: game_url(turn.game_id),
+        spitegear_url: spitegear_game_url(turn.game_id)
       },
       turn.game_id
     )
@@ -104,7 +111,8 @@ defmodule Spitegear.MessageTemplates do
         player_slack: player_slack,
         reminders: turn.reminders,
         game_name: game_name,
-        game_url: game_url(turn.game_id)
+        game_url: game_url(turn.game_id),
+        spitegear_url: spitegear_game_url(turn.game_id)
       },
       turn.game_id
     )
@@ -182,7 +190,8 @@ defmodule Spitegear.MessageTemplates do
       overall_turn: 8,
       seat_number: 3,
       game_name: "Test Game",
-      game_url: game_url(game_id || "00000000")
+      game_url: game_url(game_id || "00000000"),
+      spitegear_url: spitegear_game_url(game_id || "00000000")
     }
   end
 
@@ -194,7 +203,8 @@ defmodule Spitegear.MessageTemplates do
       player_slack: slack_name,
       reminders: n,
       game_name: "Test Game",
-      game_url: game_url(game_id || "00000000")
+      game_url: game_url(game_id || "00000000"),
+      spitegear_url: spitegear_game_url(game_id || "00000000")
     }
   end
 
@@ -292,4 +302,6 @@ defmodule Spitegear.MessageTemplates do
   end
 
   defp game_url(game_id), do: "https://www.wargear.net/games/view/#{game_id}"
+
+  defp spitegear_game_url(game_id), do: SpitegearWeb.Endpoint.url() <> "/games/#{game_id}"
 end

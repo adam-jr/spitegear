@@ -42,19 +42,19 @@ defmodule SpitegearWeb.PublicGamesIndexLive do
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-gray-50 text-gray-900">
-      <header class="bg-white border-b border-gray-200">
+      <header class="bg-black">
         <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <a href="/" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="/" class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               ← Home
             </a>
-            <span class="text-gray-200">|</span>
-            <h1 class="text-lg font-bold tracking-tight">All Games</h1>
+            <span class="text-gray-600">|</span>
+            <h1 class="text-lg font-bold tracking-tight text-white">All Games</h1>
           </div>
           <a
             href="https://www.wargear.net"
             target="_blank"
-            class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            class="text-xs text-gray-400 hover:text-gray-200 transition-colors"
           >
             wargear.net ↗
           </a>

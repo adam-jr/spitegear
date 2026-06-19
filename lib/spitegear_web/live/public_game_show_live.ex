@@ -67,18 +67,18 @@ defmodule SpitegearWeb.PublicGameShowLive do
   def render(assigns) do
     ~H"""
     <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-gray-50 text-gray-900">
-      <header class="bg-white border-b border-gray-200">
+      <header class="bg-black">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <a href="/" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="/" class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               ← Home
             </a>
-            <h1 class="text-lg font-bold tracking-tight">⚙️ Spitegear</h1>
+            <h1 class="text-lg font-bold tracking-tight text-white">⚙️ Spitegear</h1>
           </div>
           <a
             href={"https://www.wargear.net/games/view/#{@game_id}"}
             target="_blank"
-            class="text-xs text-gray-400 hover:text-gray-600 shrink-0 transition-colors"
+            class="text-xs text-gray-400 hover:text-gray-200 shrink-0 transition-colors"
           >
             wargear.net ↗
           </a>

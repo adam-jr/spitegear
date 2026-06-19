@@ -94,6 +94,7 @@ defmodule Spitegear.Worker.GameManager do
       game_state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
+      |> LiveGameState.fetch_board_image_if_advanced()
       |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.infer_deaths_from_skip()
       |> LiveGameState.detect_eliminations()

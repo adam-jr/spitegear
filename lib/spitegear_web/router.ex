@@ -26,6 +26,7 @@ defmodule SpitegearWeb.Router do
     live "/", PublicLandingLive
     live "/games", PublicGamesIndexLive
     live "/games/:game_id", PublicGameShowLive
+    get "/games/:game_id/map", GameMapController, :show
     get "/ping", PingController, :ping
   end
 

@@ -3,6 +3,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
   require Logger
   alias Spitegear.GameLog.Processor
   alias Spitegear.GameLog.Stats
+  alias Spitegear.GameMaps
   alias Spitegear.Games
   alias Spitegear.LiveGameState.Turns
   alias Spitegear.LiveGameState.ViewScreens
@@ -15,7 +16,10 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
   def mount(%{"game_id" => game_id}, _session, socket) do
     if connected?(socket), do: Process.send_after(self(), :refresh, @refresh_interval)
-    {:ok, assign(socket, load(game_id)) |> assign(chart_status: nil, log_fetch_status: nil)}
+
+    {:ok,
+     assign(socket, load(game_id))
+     |> assign(chart_status: nil, log_fetch_status: nil, board_image_status: nil)}
   end
 
   def handle_info(:refresh, socket) do
@@ -29,6 +33,14 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
   def handle_info({:chart_result, {:error, reason}}, socket) do
     {:noreply, assign(socket, chart_status: {:error, reason})}
+  end
+
+  def handle_info({:board_image_result, {:ok, _}}, socket) do
+    {:noreply, assign(socket, board_image_status: :ok)}
+  end
+
+  def handle_info({:board_image_result, {:error, reason}}, socket) do
+    {:noreply, assign(socket, board_image_status: {:error, reason})}
   end
 
   def handle_info({:log_fetch_result, {:ok, counts}}, socket) do
@@ -65,6 +77,30 @@ defmodule SpitegearWeb.AdminGameShowLive do
     end)
 
     {:noreply, assign(socket, log_fetch_status: :fetching)}
+  end
+
+  def handle_event("fetch_board_image", _params, socket) do
+    url = socket.assigns.view_screen && socket.assigns.view_screen.board_image_url
+    game_id = socket.assigns.game_id
+    lv = self()
+
+    Task.start(fn ->
+      result =
+        case HTTPoison.get(url, [], timeout: 60_000, recv_timeout: 60_000) do
+          {:ok, %{status_code: 200, body: body, headers: headers}} ->
+            GameMaps.upsert(game_id, body, parse_content_type(headers))
+
+          {:ok, %{status_code: status}} ->
+            {:error, "HTTP #{status}"}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      send(lv, {:board_image_result, result})
+    end)
+
+    {:noreply, assign(socket, board_image_status: :fetching)}
   end
 
   def handle_event("send_test_stats", _params, socket) do
@@ -234,9 +270,24 @@ defmodule SpitegearWeb.AdminGameShowLive do
             </button>
             <%= case @log_fetch_status do %>
               <% {:ok, counts} -> %>
-                <span class="text-sm text-green-600">
-                  +{counts.new_events} new
-                </span>
+                <span class="text-sm text-green-600">+{counts.new_events} new</span>
+              <% {:error, reason} -> %>
+                <span class="text-sm text-red-600">Error: {inspect(reason)}</span>
+              <% _ -> %>
+            <% end %>
+            <button
+              phx-click="fetch_board_image"
+              disabled={
+                @board_image_status == :fetching ||
+                  is_nil(@view_screen && @view_screen.board_image_url)
+              }
+              class="text-sm text-blue-600 hover:underline disabled:opacity-50"
+            >
+              {if @board_image_status == :fetching, do: "Fetching map…", else: "Fetch Map"}
+            </button>
+            <%= case @board_image_status do %>
+              <% :ok -> %>
+                <span class="text-sm text-green-600">✓ map saved</span>
               <% {:error, reason} -> %>
                 <span class="text-sm text-red-600">Error: {inspect(reason)}</span>
               <% _ -> %>
@@ -640,6 +691,18 @@ defmodule SpitegearWeb.AdminGameShowLive do
       </div>
     </div>
     """
+  end
+
+  defp parse_content_type(headers) do
+    headers
+    |> Enum.find_value("image/png", fn
+      {"Content-Type", v} -> v
+      {"content-type", v} -> v
+      _ -> nil
+    end)
+    |> String.split(";")
+    |> List.first()
+    |> String.trim()
   end
 
   defp format_score(n) when n < 0, do: "-" <> format_score(-n)

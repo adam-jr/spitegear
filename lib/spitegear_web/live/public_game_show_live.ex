@@ -11,6 +11,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
         {:ok, push_navigate(socket, to: "/")}
 
       game ->
+        has_map_image = Spitegear.GameMaps.get(game_id) != nil
         log_summary = Stats.game_log_summary(game_id)
         total_board_units_series = Stats.total_board_units_series(game_id)
         net_units_series = Stats.enriched_net_units_series(game_id)
@@ -48,6 +49,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
            jormp_jomps_delivered_series: jormp_jomps_delivered_series,
            placement_scores: placement_scores,
            days: days,
+           has_map_image: has_map_image,
            timezone: "America/New_York",
            view_screen: view_screen,
            current_turn: current_turn,
@@ -190,6 +192,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </p>
               </div>
             </div>
+          <% end %>
+
+          <%!-- Map image --%>
+          <%= if @has_map_image do %>
+            <section>
+              <img
+                src={"/games/#{@game_id}/map"}
+                alt="Game map"
+                class="w-full rounded-xl border border-gray-200 shadow-sm"
+              />
+            </section>
           <% end %>
 
           <%!-- Game stats row --%>

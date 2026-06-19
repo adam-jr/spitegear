@@ -21,6 +21,7 @@ defmodule Spitegear.LiveGameState do
       state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
+      |> LiveGameState.fetch_board_image_if_advanced()
       |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
@@ -44,6 +45,7 @@ defmodule Spitegear.LiveGameState do
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen
+  alias Spitegear.Worker.GamePoller
 
   @type t :: %__MODULE__{
           game_id: String.t() | nil,
@@ -156,6 +158,26 @@ defmodule Spitegear.LiveGameState do
         Logger.error("#{__MODULE__} failed to record view screen for game #{state.game_id}")
         %{state | view_screen_changed: false}
     end
+  end
+
+  @doc """
+  Casts an async board image fetch to the `GamePoller` for this game if the
+  turn just advanced on an unfogged game. The poller handles retries with backoff.
+
+  No-op when `turn_advanced` is `false` or the game is fogged.
+  """
+  @spec fetch_board_image_if_advanced(t()) :: t()
+  def fetch_board_image_if_advanced(%__MODULE__{turn_advanced: false} = state), do: state
+
+  def fetch_board_image_if_advanced(
+        %__MODULE__{current_view_screen: %ViewScreen{fogged?: true}} = state
+      ),
+      do: state
+
+  def fetch_board_image_if_advanced(%__MODULE__{} = state) do
+    url = state.current_view_screen.board_image_url
+    if url, do: GenServer.cast(GamePoller.name(state.game_id), {:fetch_board_image, url})
+    state
   end
 
   @doc """

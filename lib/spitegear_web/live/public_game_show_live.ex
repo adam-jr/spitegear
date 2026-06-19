@@ -109,20 +109,9 @@ defmodule SpitegearWeb.PublicGameShowLive do
             </div>
           <% end %>
 
-          <%!-- Top section: map left, summary + turn order right --%>
+          <%!-- Top section: summary + turn order left, map right --%>
           <div class="flex flex-col md:flex-row gap-6 md:items-start">
-            <%!-- Map image --%>
-            <%= if @has_map_image do %>
-              <div class="md:flex-1 min-w-0">
-                <img
-                  src={"/games/#{@game_id}/map"}
-                  alt="Game map"
-                  class="w-full rounded-xl border border-gray-200 shadow-sm"
-                />
-              </div>
-            <% end %>
-
-            <%!-- Right column: summary + current turn --%>
+            <%!-- Left column: summary + current turn --%>
             <div class="flex flex-col gap-4 md:w-56 shrink-0">
               <%!-- Game summary --%>
               <section class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4">
@@ -224,9 +213,29 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </section>
               <% end %>
             </div>
+
+            <%!-- Map image --%>
+            <%= if @has_map_image do %>
+              <div class="md:flex-1 min-w-0">
+                <img
+                  src={"/games/#{@game_id}/map"}
+                  alt="Game map"
+                  class="w-full rounded-xl border border-gray-200 shadow-sm"
+                />
+              </div>
+            <% end %>
           </div>
 
-          <%!-- Charts --%>
+          <%!-- Game Stats section --%>
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">Game Stats</h2>
+
+          <%= if @view_screen && @view_screen.fogged? && !@game.finished do %>
+            <div class="bg-gray-50 border border-gray-200 rounded-xl px-6 py-8 text-center">
+              <p class="text-2xl mb-2">🌫️</p>
+              <p class="text-sm font-medium text-gray-600">Stats hidden — game is fogged</p>
+              <p class="text-xs text-gray-400 mt-1">Available after the game ends</p>
+            </div>
+          <% else %>
           <div class="flex flex-col gap-6 sm:gap-8">
 
           <%!-- Total Board Units Chart --%>
@@ -519,6 +528,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             </section>
           <% end %>
           </div>
+          <% end %>
       </main>
     </div>
     """

@@ -13,42 +13,42 @@ defmodule Spitegear.MessageTemplates do
 
   def default_template(:next_turn),
     do:
-      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
+      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|🗺️ %{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_0),
     do:
-      "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats> 🎖️"
+      "General <%{player_slack}>, your troops await orders in <%{game_url}|🗺️ %{game_name}> · <%{spitegear_url}|📊 Live game stats> 🎖️"
 
   def default_template(:kind_reminder_1),
     do:
-      "<%{player_slack}> the front lines are stalled. your move. <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
+      "<%{player_slack}> the front lines are stalled. your move. <%{game_url}|🗺️ %{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_2),
     do:
-      "<%{player_slack}> insubordination noted. take your turn. <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
+      "<%{player_slack}> insubordination noted. take your turn. <%{game_url}|🗺️ %{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_3),
     do:
-      "<%{player_slack}> desertion is punishable by... well, more reminders. <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
+      "<%{player_slack}> desertion is punishable by... well, more reminders. <%{game_url}|🗺️ %{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_4),
     do:
-      "<%{player_slack}> court martial pending <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats> ⚖️"
+      "<%{player_slack}> court martial pending <%{game_url}|🗺️ %{game_name}> · <%{spitegear_url}|📊 Live game stats> ⚖️"
 
   def default_template(:player_moving),
     do: "%{player_handle} is taking their turn! 👀"
 
   def default_template(:player_died),
-    do: "<%{player_slack}> died in <%{game_url}|%{game_name}>"
+    do: "<%{player_slack}> died in <%{game_url}|🗺️ %{game_name}>"
 
   def default_template(:game_winners),
-    do: "%{players_slack} won <%{game_url}|%{game_name}>, huzzah! :tada: <!channel>"
+    do: "%{players_slack} won <%{game_url}|🗺️ %{game_name}>, huzzah! :tada: <!channel>"
 
   def default_template(:game_winners_gif),
     do: "https://media.giphy.com/media/a0h7sAqON67nO/giphy.gif"
 
   def default_template(:round_complete),
-    do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|%{game_name}>"
+    do: "⚔️ Round %{round} complete — round %{next_round} begins! <%{game_url}|🗺️ %{game_name}>"
 
   def available_vars(:next_turn),
     do:

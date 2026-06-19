@@ -41,6 +41,7 @@ defmodule Spitegear.LiveGameState do
   alias Spitegear.LiveGameState.ViewScreen
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
+  alias Spitegear.GameMaps
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen
@@ -140,6 +141,8 @@ defmodule Spitegear.LiveGameState do
   """
   @spec record_changed_view_screen_db(t(), HTTPViewScreen.t()) :: t()
   def record_changed_view_screen_db(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
+    maybe_fetch_map_image(state.game_id, view_screen.map_image_url)
+
     case ViewScreens.record_if_changed(view_screen) do
       {:ok, :unchanged} ->
         %{state | view_screen_changed: false}
@@ -156,6 +159,31 @@ defmodule Spitegear.LiveGameState do
         Logger.error("#{__MODULE__} failed to record view screen for game #{state.game_id}")
         %{state | view_screen_changed: false}
     end
+  end
+
+  defp maybe_fetch_map_image(_game_id, nil), do: :ok
+
+  defp maybe_fetch_map_image(game_id, url) do
+    case HTTPoison.get(url, [], timeout: 15_000, recv_timeout: 15_000) do
+      {:ok, %{status_code: 200, body: body, headers: headers}} ->
+        content_type = content_type_from_headers(headers)
+        GameMaps.upsert(game_id, body, content_type)
+
+      _ ->
+        Logger.warning("#{__MODULE__} failed to fetch map image for game #{game_id}")
+    end
+  end
+
+  defp content_type_from_headers(headers) do
+    headers
+    |> Enum.find_value("image/png", fn
+      {"Content-Type", v} -> v
+      {"content-type", v} -> v
+      _ -> nil
+    end)
+    |> String.split(";")
+    |> List.first()
+    |> String.trim()
   end
 
   @doc """

@@ -14,6 +14,7 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
             created: nil,
             finished: nil,
             next_card: nil,
+            map_image_url: nil,
             players: [],
             current_player: nil,
             eliminated: [],
@@ -52,6 +53,7 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
          created: created,
          finished: finished,
          next_card: card,
+         map_image_url: map_image_url(document),
          players: players,
          current_player: Enum.find(players, & &1.current_turn?),
          eliminated: Enum.filter(players, & &1.eliminated?),
@@ -168,6 +170,31 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
   end
 
   def get_player_rows(_), do: :error
+
+  # Selector may need tuning after inspecting live wargear.net HTML.
+  defp map_image_url(document) do
+    document
+    |> Floki.find("img[src*='/boards/']")
+    |> List.first()
+    |> case do
+      nil ->
+        document
+        |> Floki.find("img[src*='/games/images/']")
+        |> List.first()
+
+      img ->
+        img
+    end
+    |> case do
+      nil -> nil
+      {"img", attrs, _} -> resolve_url(List.keyfind(attrs, "src", 0))
+    end
+  end
+
+  defp resolve_url(nil), do: nil
+  defp resolve_url({"src", "/" <> _ = path}), do: "https://www.wargear.net#{path}"
+  defp resolve_url({"src", "http" <> _ = url}), do: url
+  defp resolve_url(_), do: nil
 
   defp wargear_cookie do
     Spitegear.Settings.get("wargear_cookie") ||

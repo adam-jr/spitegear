@@ -317,13 +317,12 @@ defmodule SpitegearWeb.AdminGameShowLive do
               Current Turn
             </h2>
             <%= if @turn do %>
-              <p class="text-xl font-bold">{@turn.player.name}</p>
-              <p class="text-sm text-gray-500">{@turn.player.slack_name}</p>
+              <p class="text-xl font-bold">{@turn.player_name}</p>
               <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <dt class="text-gray-500">Started</dt>
-                <dd>{format_datetime(@turn.started)}</dd>
+                <dd>{format_datetime(@turn.started_at)}</dd>
                 <dt class="text-gray-500">Duration</dt>
-                <dd>{elapsed(@turn.started)}</dd>
+                <dd>{elapsed(@turn.started_at)}</dd>
                 <dt class="text-gray-500">Reminders</dt>
                 <dd>{@turn.reminders}</dd>
               </dl>
@@ -680,8 +679,8 @@ defmodule SpitegearWeb.AdminGameShowLive do
                 <%= for t <- @history do %>
                   <tr class="border-b border-gray-100">
                     <td class="py-1 pr-4">{t.player_name}</td>
-                    <td class="py-1 pr-4">{format_datetime(t.started)}</td>
-                    <td class="py-1">{format_duration(DateTime.diff(t.ended, t.started))}</td>
+                    <td class="py-1 pr-4">{format_datetime(t.started_at)}</td>
+                    <td class="py-1">{format_duration(DateTime.diff(t.ended_at, t.started_at))}</td>
                   </tr>
                 <% end %>
               </tbody>

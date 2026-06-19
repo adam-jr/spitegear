@@ -1,8 +1,6 @@
 # Spitegear
 
-A Phoenix/Elixir bot that monitors board games on [wargear.net](https://wargear.net) and sends Slack notifications. Tracks turn changes, player eliminations, winners, and sends hourly reminders during waking hours.
-
-Secondary feature: a cron job that pulls crypto market breadth data from TradingView.
+A Phoenix/Elixir bot that monitors board games on [wargear.net](https://wargear.net) and sends Slack notifications. Tracks turn changes, player eliminations, winners, and sends reminder messages during waking hours.
 
 ## What it does
 

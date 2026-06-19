@@ -22,8 +22,6 @@ Local secrets go in `config/dev.secret.exs` (gitignored). Slack posting is disab
 
 A Phoenix/Elixir bot that monitors board games on wargear.net and sends Slack notifications. Tracks game state (turn changes, eliminations, winners, reminders) using Postgres.
 
-Secondary feature: a cron job that pulls crypto market breadth data from TradingView.
-
 ## Architecture
 
 **Startup sequence** (`application.ex`):

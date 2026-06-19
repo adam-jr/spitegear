@@ -193,13 +193,13 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
     end
   end
 
-  defp board_image_url(document, game_id) do
-    with [{"img", attrs, _} | _] <- Floki.find(document, "img[src*='/boards/']"),
-         {"src", src} <- List.keyfind(attrs, "src", 0),
-         [_, board_id] <- Regex.run(~r{/boards/(\d+)}, src) do
-      "https://www.wargear.net/rest/GetBoardImage/#{board_id}?gameid=#{game_id}"
-    else
-      _ -> nil
+  defp board_image_url(document, _game_id) do
+    document
+    |> Floki.find("img[src*='GetBoardImage']")
+    |> List.first()
+    |> case do
+      nil -> nil
+      {"img", attrs, _} -> resolve_url(List.keyfind(attrs, "src", 0))
     end
   end
 

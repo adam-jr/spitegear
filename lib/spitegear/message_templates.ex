@@ -13,27 +13,27 @@ defmodule Spitegear.MessageTemplates do
 
   def default_template(:next_turn),
     do:
-      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}> · <%{spitegear_url}|Live game stats>"
+      "*Turn %{round}.%{turn_number} • Overall Turn %{overall_turn}* • Seat %{seat_number}  — <%{player_slack}>, you're up in <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_0),
     do:
-      "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> · <%{spitegear_url}|Live game stats> 🎖️"
+      "General <%{player_slack}>, your troops await orders in <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats> 🎖️"
 
   def default_template(:kind_reminder_1),
     do:
-      "<%{player_slack}> the front lines are stalled. your move. <%{game_url}|%{game_name}> · <%{spitegear_url}|Live game stats>"
+      "<%{player_slack}> the front lines are stalled. your move. <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_2),
     do:
-      "<%{player_slack}> insubordination noted. take your turn. <%{game_url}|%{game_name}> · <%{spitegear_url}|Live game stats>"
+      "<%{player_slack}> insubordination noted. take your turn. <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_3),
     do:
-      "<%{player_slack}> desertion is punishable by... well, more reminders. <%{game_url}|%{game_name}> · <%{spitegear_url}|Live game stats>"
+      "<%{player_slack}> desertion is punishable by... well, more reminders. <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats>"
 
   def default_template(:kind_reminder_4),
     do:
-      "<%{player_slack}> court martial pending <%{game_url}|%{game_name}> · <%{spitegear_url}|Live game stats> ⚖️"
+      "<%{player_slack}> court martial pending <%{game_url}|%{game_name}> · <%{spitegear_url}|📊 Live game stats> ⚖️"
 
   def default_template(:player_moving),
     do: "%{player_handle} is taking their turn! 👀"

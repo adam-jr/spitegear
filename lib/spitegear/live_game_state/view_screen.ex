@@ -23,7 +23,8 @@ defmodule Spitegear.LiveGameState.ViewScreen do
           current_player_name: String.t() | nil,
           eliminated: [Player.t()],
           winners: [Player.t()],
-          fogged?: boolean()
+          fogged?: boolean(),
+          next_card: String.t() | nil
         }
 
   defstruct game_id: nil,
@@ -37,7 +38,8 @@ defmodule Spitegear.LiveGameState.ViewScreen do
             current_player_name: nil,
             eliminated: [],
             winners: [],
-            fogged?: false
+            fogged?: false,
+            next_card: nil
 
   @doc """
   Reconstructs a `ViewScreen` from a `WargearViewScreenDb` record,
@@ -78,7 +80,8 @@ defmodule Spitegear.LiveGameState.ViewScreen do
       current_player_name: db.current_player_name,
       eliminated: Enum.filter(players, & &1.eliminated?),
       winners: Enum.filter(players, & &1.winner?),
-      fogged?: db.fogged
+      fogged?: db.fogged,
+      next_card: db.next_card
     }
   end
 end

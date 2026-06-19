@@ -94,150 +94,149 @@ defmodule SpitegearWeb.PublicGameShowLive do
       </header>
 
       <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 sm:gap-8">
-          <%!-- Winner banner --%>
-          <%= if @game.finished && Enum.any?(@game.winners) do %>
-            <div class="bg-amber-50 border border-amber-200 rounded-xl px-6 py-5 flex items-center gap-4">
-              <span class="text-3xl">🏆</span>
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-0.5">
-                  Winner
-                </p>
-                <p class="text-xl font-bold text-amber-700">
-                  {Enum.join(@game.winners, " & ")}
-                </p>
-              </div>
+        <%!-- Winner banner --%>
+        <%= if @game.finished && Enum.any?(@game.winners) do %>
+          <div class="bg-amber-50 border border-amber-200 rounded-xl px-6 py-5 flex items-center gap-4">
+            <span class="text-3xl">🏆</span>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-0.5">
+                Winner
+              </p>
+              <p class="text-xl font-bold text-amber-700">
+                {Enum.join(@game.winners, " & ")}
+              </p>
+            </div>
+          </div>
+        <% end %>
+
+        <%!-- Top section: map left, summary + turn order right --%>
+        <div class="flex flex-col md:flex-row gap-6 md:items-start">
+          <%!-- Map image --%>
+          <%= if @has_map_image do %>
+            <div class="md:flex-1 min-w-0">
+              <img
+                src={"/games/#{@game_id}/map"}
+                alt="Game map"
+                class="w-full rounded-xl border border-gray-200 shadow-sm"
+              />
             </div>
           <% end %>
 
-          <%!-- Top section: map left, summary + turn order right --%>
-          <div class="flex flex-col md:flex-row gap-6 md:items-start">
-            <%!-- Map image --%>
-            <%= if @has_map_image do %>
-              <div class="md:flex-1 min-w-0">
-                <img
-                  src={"/games/#{@game_id}/map"}
-                  alt="Game map"
-                  class="w-full rounded-xl border border-gray-200 shadow-sm"
-                />
+          <%!-- Right column: combined summary + turn panel --%>
+          <div class="md:w-60 shrink-0">
+            <section class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+              <%!-- Title block --%>
+              <div class="px-5 pt-5 pb-4">
+                <h2 class="text-base font-bold text-gray-900 leading-snug">
+                  {@game.board_name || "Game #{@game_id}"}
+                </h2>
+                <%= if @game.game_name do %>
+                  <p class="text-xs text-gray-500 mt-1 leading-snug">{@game.game_name}</p>
+                <% end %>
+                <%= if @current_round && @turn_within_round do %>
+                  <p class="text-[10px] font-mono tracking-widest text-gray-400 mt-3 uppercase">
+                    Round {@current_round} · Day {game_day(@game.created)} · Turn {@turn_within_round}
+                  </p>
+                <% end %>
               </div>
-            <% end %>
 
-            <%!-- Right column: combined summary + turn panel --%>
-            <div class="md:w-60 shrink-0">
-              <section class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                <%!-- Title block --%>
-                <div class="px-5 pt-5 pb-4">
-                  <h2 class="text-base font-bold text-gray-900 leading-snug">
-                    {@game.board_name || "Game #{@game_id}"}
-                  </h2>
-                  <%= if @game.game_name do %>
-                    <p class="text-xs text-gray-500 mt-1 leading-snug">{@game.game_name}</p>
-                  <% end %>
-                  <%= if @current_round && @turn_within_round do %>
-                    <p class="text-[10px] font-mono tracking-widest text-gray-400 mt-3 uppercase">
-                      Round {@current_round} · Day {game_day(@game.created)} · Turn {@turn_within_round}
-                    </p>
-                  <% end %>
+              <div class="mx-5 border-t border-gray-100"></div>
+
+              <%!-- Summary stats --%>
+              <div class="px-5 py-4 flex flex-col gap-2.5">
+                <%= if @game.created do %>
+                  <div class="flex justify-between items-baseline">
+                    <span class="text-xs text-gray-500">Days Elapsed</span>
+                    <span class="text-sm font-mono text-gray-700 tabular-nums">
+                      {game_day(@game.created)}
+                    </span>
+                  </div>
+                <% end %>
+                <div class="flex justify-between items-baseline">
+                  <span class="text-xs text-gray-500">Total Turns</span>
+                  <span class="text-sm font-mono text-gray-700 tabular-nums">
+                    {@log_summary.turn_count}
+                  </span>
                 </div>
+                <div class="flex justify-between items-baseline">
+                  <span class="text-xs text-gray-500">Log Events</span>
+                  <span class="text-sm font-mono text-gray-700 tabular-nums">
+                    {@log_summary.max_seq}
+                  </span>
+                </div>
+                <%= if @view_screen && @view_screen.players do %>
+                  <div class="flex justify-between items-baseline">
+                    <span class="text-xs text-gray-500">Players</span>
+                    <span class="text-sm font-mono text-gray-700 tabular-nums">
+                      {length(@view_screen.players)}
+                    </span>
+                  </div>
+                <% end %>
+                <%= if @game.finished && @days do %>
+                  <div class="flex justify-between items-baseline">
+                    <span class="text-xs text-gray-500">Duration</span>
+                    <span class="text-sm font-mono text-gray-700 tabular-nums">{@days}d</span>
+                  </div>
+                <% end %>
+              </div>
 
+              <%!-- Current turn player list --%>
+              <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
                 <div class="mx-5 border-t border-gray-100"></div>
-
-                <%!-- Summary stats --%>
-                <div class="px-5 py-4 flex flex-col gap-2.5">
-                  <%= if @game.created do %>
-                    <div class="flex justify-between items-baseline">
-                      <span class="text-xs text-gray-500">Days Elapsed</span>
-                      <span class="text-sm font-mono text-gray-700 tabular-nums">
-                        {game_day(@game.created)}
-                      </span>
-                    </div>
-                  <% end %>
-                  <div class="flex justify-between items-baseline">
-                    <span class="text-xs text-gray-500">Total Turns</span>
-                    <span class="text-sm font-mono text-gray-700 tabular-nums">
-                      {@log_summary.turn_count}
-                    </span>
-                  </div>
-                  <div class="flex justify-between items-baseline">
-                    <span class="text-xs text-gray-500">Log Events</span>
-                    <span class="text-sm font-mono text-gray-700 tabular-nums">
-                      {@log_summary.max_seq}
-                    </span>
-                  </div>
-                  <%= if @view_screen && @view_screen.players do %>
-                    <div class="flex justify-between items-baseline">
-                      <span class="text-xs text-gray-500">Players</span>
-                      <span class="text-sm font-mono text-gray-700 tabular-nums">
-                        {length(@view_screen.players)}
-                      </span>
-                    </div>
-                  <% end %>
-                  <%= if @game.finished && @days do %>
-                    <div class="flex justify-between items-baseline">
-                      <span class="text-xs text-gray-500">Duration</span>
-                      <span class="text-sm font-mono text-gray-700 tabular-nums">{@days}d</span>
-                    </div>
-                  <% end %>
-                </div>
-
-                <%!-- Current turn player list --%>
-                <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
-                  <div class="mx-5 border-t border-gray-100"></div>
-                  <div class="px-5 py-4 flex flex-col">
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">
-                      Current Turn
-                    </p>
-                    <div class="flex flex-col gap-0.5">
-                      <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
-                        <%= if player.current_turn? do %>
-                          <div class="rounded px-3 py-2.5 bg-orange-50 border border-orange-200 mb-1">
-                            <div class="flex items-center gap-2">
-                              <span class="text-xs text-orange-400 tabular-nums w-4 shrink-0">
-                                {idx}
-                              </span>
-                              <span class="text-sm font-semibold text-orange-900 truncate">
-                                {player.name}
-                              </span>
-                            </div>
-                            <p class="text-xs text-orange-600 mt-0.5 ml-6">
-                              <%= if @current_round && @turn_within_round do %>
-                                Turn {@current_round}.{@turn_within_round}
-                              <% end %>
-                              <%= if @current_turn && @current_turn.started_at do %>
-                                &nbsp;·&nbsp;{elapsed(@current_turn.started_at)}
-                              <% end %>
-                            </p>
-                          </div>
-                        <% else %>
-                          <div class={[
-                            "flex items-center gap-2 px-3 py-1 rounded",
-                            if(player.eliminated?, do: "opacity-40", else: "")
-                          ]}>
-                            <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">
+                <div class="px-5 py-4 flex flex-col">
+                  <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">
+                    Current Turn
+                  </p>
+                  <div class="flex flex-col gap-0.5">
+                    <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
+                      <%= if player.current_turn? do %>
+                        <div class="rounded px-3 py-2.5 bg-orange-50 border border-orange-200 mb-1">
+                          <div class="flex items-center gap-2">
+                            <span class="text-xs text-orange-400 tabular-nums w-4 shrink-0">
                               {idx}
                             </span>
-                            <span class={[
-                              "text-sm truncate",
-                              if(player.eliminated?,
-                                do: "line-through text-gray-400",
-                                else: "text-gray-700"
-                              )
-                            ]}>
+                            <span class="text-sm font-semibold text-orange-900 truncate">
                               {player.name}
                             </span>
                           </div>
-                        <% end %>
+                          <p class="text-xs text-orange-600 mt-0.5 ml-6">
+                            <%= if @current_round && @turn_within_round do %>
+                              Turn {@current_round}.{@turn_within_round}
+                            <% end %>
+                            <%= if @current_turn && @current_turn.started_at do %>
+                              &nbsp;·&nbsp;{elapsed(@current_turn.started_at)}
+                            <% end %>
+                          </p>
+                        </div>
+                      <% else %>
+                        <div class={[
+                          "flex items-center gap-2 px-3 py-1 rounded",
+                          if(player.eliminated?, do: "opacity-40", else: "")
+                        ]}>
+                          <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">
+                            {idx}
+                          </span>
+                          <span class={[
+                            "text-sm truncate",
+                            if(player.eliminated?,
+                              do: "line-through text-gray-400",
+                              else: "text-gray-700"
+                            )
+                          ]}>
+                            {player.name}
+                          </span>
+                        </div>
                       <% end %>
-                    </div>
+                    <% end %>
                   </div>
-                <% end %>
-              </section>
-            </div>
+                </div>
+              <% end %>
+            </section>
           </div>
+        </div>
 
-          <%!-- Charts --%>
-          <div class="flex flex-col gap-6 sm:gap-8">
-
+        <%!-- Charts --%>
+        <div class="flex flex-col gap-6 sm:gap-8">
           <%!-- Total Board Units Chart --%>
           <%= if map_size(@total_board_units_series) > 0 do %>
             <section>
@@ -527,7 +526,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
               </div>
             </section>
           <% end %>
-          </div>
+        </div>
       </main>
     </div>
     """
@@ -557,15 +556,6 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
       _ ->
         nil
-    end
-  end
-
-  defp format_game_date(nil), do: nil
-
-  defp format_game_date(date_str) do
-    case Games.parse_game_date(date_str) do
-      %NaiveDateTime{} = ndt -> Calendar.strftime(ndt, "%b %d, %Y")
-      _ -> date_str
     end
   end
 

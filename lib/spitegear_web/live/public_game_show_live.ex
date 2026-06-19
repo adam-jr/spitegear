@@ -160,14 +160,6 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
               <%!-- Summary stats --%>
               <div class="px-5 py-4 flex flex-col gap-2.5">
-                <%= if @game.created do %>
-                  <div class="flex justify-between items-baseline">
-                    <span class="text-xs text-gray-500">Days Elapsed</span>
-                    <span class="text-sm font-mono text-gray-700 tabular-nums">
-                      {game_day(@game.created)}
-                    </span>
-                  </div>
-                <% end %>
                 <div class="flex justify-between items-baseline">
                   <span class="text-xs text-gray-500">Total Turns</span>
                   <span class="text-sm font-mono text-gray-700 tabular-nums">
@@ -182,7 +174,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </div>
                 <%= if @view_screen && @view_screen.players do %>
                   <div class="flex justify-between items-baseline">
-                    <span class="text-xs text-gray-500">Players</span>
+                    <span class="text-xs text-gray-500">Players Left</span>
                     <span class="text-sm font-mono text-gray-700 tabular-nums">
                       {Enum.count(@view_screen.players, &(!&1.eliminated?))}
                     </span>

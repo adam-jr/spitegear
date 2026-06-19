@@ -193,6 +193,9 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
     end
   end
 
+  @board_image_width 2400
+  @board_image_height 2000
+
   defp board_image_url(document, _game_id) do
     document
     |> Floki.find("img[src*='GetBoardImage']")
@@ -205,17 +208,16 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
         attrs
         |> List.keyfind("src", 0)
         |> resolve_url()
-        |> strip_size_params()
+        |> with_hires_size()
     end
   end
 
-  defp strip_size_params(nil), do: nil
+  defp with_hires_size(nil), do: nil
 
-  defp strip_size_params(url) do
+  defp with_hires_size(url) do
     uri = URI.parse(url)
     query = URI.decode_query(uri.query || "")
-    clean = Map.drop(query, ["width", "height"])
-    new_query = if map_size(clean) > 0, do: URI.encode_query(clean), else: nil
+    new_query = query |> Map.put("width", @board_image_width) |> Map.put("height", @board_image_height) |> URI.encode_query()
     URI.to_string(%{uri | query: new_query})
   end
 

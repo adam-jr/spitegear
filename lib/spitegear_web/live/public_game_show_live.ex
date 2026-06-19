@@ -122,107 +122,116 @@ defmodule SpitegearWeb.PublicGameShowLive do
               </div>
             <% end %>
 
-            <%!-- Right column: summary + current turn --%>
-            <div class="flex flex-col gap-4 md:w-56 shrink-0">
-              <%!-- Game summary --%>
-              <section class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4">
-                <div class="flex items-center justify-between mb-3">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    Game Summary
+            <%!-- Right column: combined summary + turn panel --%>
+            <div class="md:w-60 shrink-0">
+              <section class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                <%!-- Title block --%>
+                <div class="px-5 pt-5 pb-4">
+                  <h2 class="text-base font-bold text-gray-900 leading-snug">
+                    {@game.board_name || "Game #{@game_id}"}
                   </h2>
-                  <%= if @game.created do %>
-                    <span class="text-xs text-gray-400">{format_game_date(@game.created)}</span>
+                  <%= if @game.game_name do %>
+                    <p class="text-xs text-gray-500 mt-1 leading-snug">{@game.game_name}</p>
+                  <% end %>
+                  <%= if @current_round && @turn_within_round do %>
+                    <p class="text-[10px] font-mono tracking-widest text-gray-400 mt-3 uppercase">
+                      Round {@current_round} · Day {game_day(@game.created)} · Turn {@turn_within_round}
+                    </p>
                   <% end %>
                 </div>
-                <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  <%= if @current_turn do %>
-                    <div>
-                      <dt class="text-xs text-gray-400 mb-0.5">Days</dt>
-                      <dd class="font-semibold text-gray-900 tabular-nums">
-                        {game_day(@game.created)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt class="text-xs text-gray-400 mb-0.5">Round</dt>
-                      <dd class="font-semibold text-gray-900 tabular-nums">{@current_round}</dd>
-                    </div>
-                    <div>
-                      <dt class="text-xs text-gray-400 mb-0.5">Turn</dt>
-                      <dd class="font-semibold text-gray-900 tabular-nums">{@turn_within_round}</dd>
-                    </div>
-                  <% end %>
-                  <div>
-                    <dt class="text-xs text-gray-400 mb-0.5">Total turns</dt>
-                    <dd class="font-semibold text-gray-900 tabular-nums">
-                      {@log_summary.turn_count}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs text-gray-400 mb-0.5">Log Events</dt>
-                    <dd class="font-semibold text-gray-900 tabular-nums">{@log_summary.max_seq}</dd>
-                  </div>
-                  <%= if @days do %>
-                    <div>
-                      <dt class="text-xs text-gray-400 mb-0.5">Duration</dt>
-                      <dd class="font-semibold text-gray-900 tabular-nums">{@days} days</dd>
-                    </div>
-                  <% end %>
-                  <%= if @game.finished do %>
-                    <div>
-                      <dt class="text-xs text-gray-400 mb-0.5">Finished</dt>
-                      <dd class="text-gray-700">{format_game_date(@game.finished)}</dd>
-                    </div>
-                  <% end %>
-                </dl>
-              </section>
 
-              <%!-- Current turn (player list) --%>
-              <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
-                <section class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-                    Current Turn
-                  </h2>
-                  <div class="flex flex-col gap-1">
-                    <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
-                      <div class={[
-                        "flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm",
-                        cond do
-                          player.current_turn? -> "bg-orange-50 border border-orange-200"
-                          player.eliminated? -> "opacity-40"
-                          true -> ""
-                        end
-                      ]}>
-                        <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">{idx}</span>
-                        <div class="flex-1 min-w-0">
-                          <span class={[
-                            "block truncate text-sm",
-                            if(player.current_turn?,
-                              do: "font-semibold text-orange-900",
-                              else: "text-gray-700"
-                            ),
-                            if(player.eliminated?, do: "line-through", else: "")
-                          ]}>
-                            {player.name}
-                          </span>
-                          <%= if player.current_turn? && @current_round && @turn_within_round do %>
-                            <span class="text-xs text-orange-600 font-medium">
-                              Turn {@current_round}.{@turn_within_round}
-                            </span>
-                          <% end %>
-                          <%= if player.current_turn? && @current_turn && @current_turn.started_at do %>
-                            <span class="text-xs text-orange-400">
-                              {elapsed(@current_turn.started_at)}
-                            </span>
-                          <% end %>
-                        </div>
-                        <%= if player.current_turn? do %>
-                          <span class="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
-                        <% end %>
-                      </div>
-                    <% end %>
+                <div class="mx-5 border-t border-gray-100"></div>
+
+                <%!-- Summary stats --%>
+                <div class="px-5 py-4 flex flex-col gap-2.5">
+                  <%= if @game.created do %>
+                    <div class="flex justify-between items-baseline">
+                      <span class="text-xs text-gray-500">Days Elapsed</span>
+                      <span class="text-sm font-mono text-gray-700 tabular-nums">
+                        {game_day(@game.created)}
+                      </span>
+                    </div>
+                  <% end %>
+                  <div class="flex justify-between items-baseline">
+                    <span class="text-xs text-gray-500">Total Turns</span>
+                    <span class="text-sm font-mono text-gray-700 tabular-nums">
+                      {@log_summary.turn_count}
+                    </span>
                   </div>
-                </section>
-              <% end %>
+                  <div class="flex justify-between items-baseline">
+                    <span class="text-xs text-gray-500">Log Events</span>
+                    <span class="text-sm font-mono text-gray-700 tabular-nums">
+                      {@log_summary.max_seq}
+                    </span>
+                  </div>
+                  <%= if @view_screen && @view_screen.players do %>
+                    <div class="flex justify-between items-baseline">
+                      <span class="text-xs text-gray-500">Players</span>
+                      <span class="text-sm font-mono text-gray-700 tabular-nums">
+                        {length(@view_screen.players)}
+                      </span>
+                    </div>
+                  <% end %>
+                  <%= if @game.finished && @days do %>
+                    <div class="flex justify-between items-baseline">
+                      <span class="text-xs text-gray-500">Duration</span>
+                      <span class="text-sm font-mono text-gray-700 tabular-nums">{@days}d</span>
+                    </div>
+                  <% end %>
+                </div>
+
+                <%!-- Current turn player list --%>
+                <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
+                  <div class="mx-5 border-t border-gray-100"></div>
+                  <div class="px-5 py-4 flex flex-col">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">
+                      Current Turn
+                    </p>
+                    <div class="flex flex-col gap-0.5">
+                      <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
+                        <%= if player.current_turn? do %>
+                          <div class="rounded px-3 py-2.5 bg-orange-50 border border-orange-200 mb-1">
+                            <div class="flex items-center gap-2">
+                              <span class="text-xs text-orange-400 tabular-nums w-4 shrink-0">
+                                {idx}
+                              </span>
+                              <span class="text-sm font-semibold text-orange-900 truncate">
+                                {player.name}
+                              </span>
+                            </div>
+                            <p class="text-xs text-orange-600 mt-0.5 ml-6">
+                              <%= if @current_round && @turn_within_round do %>
+                                Turn {@current_round}.{@turn_within_round}
+                              <% end %>
+                              <%= if @current_turn && @current_turn.started_at do %>
+                                &nbsp;·&nbsp;{elapsed(@current_turn.started_at)}
+                              <% end %>
+                            </p>
+                          </div>
+                        <% else %>
+                          <div class={[
+                            "flex items-center gap-2 px-3 py-1 rounded",
+                            if(player.eliminated?, do: "opacity-40", else: "")
+                          ]}>
+                            <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">
+                              {idx}
+                            </span>
+                            <span class={[
+                              "text-sm truncate",
+                              if(player.eliminated?,
+                                do: "line-through text-gray-400",
+                                else: "text-gray-700"
+                              )
+                            ]}>
+                              {player.name}
+                            </span>
+                          </div>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              </section>
             </div>
           </div>
 

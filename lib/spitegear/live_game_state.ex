@@ -35,13 +35,13 @@ defmodule Spitegear.LiveGameState do
   require Logger
 
   alias Spitegear.GameDeaths
+  alias Spitegear.GameMaps
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
   alias Spitegear.LiveGameState.ViewScreen
   alias Spitegear.LiveGameState.ViewScreens
   alias Spitegear.LiveGameState.WargearHistoryApiResponseDb
-  alias Spitegear.GameMaps
   alias Spitegear.MessageTemplates
   alias Spitegear.PubSub
   alias Spitegear.Wargear.HTTP.ViewScreen, as: HTTPViewScreen

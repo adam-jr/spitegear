@@ -180,6 +180,14 @@ defmodule SpitegearWeb.PublicGameShowLive do
                     </span>
                   </div>
                 <% end %>
+                <%= if @view_screen && @view_screen.next_card do %>
+                  <div class="flex justify-between items-baseline">
+                    <span class="text-xs text-gray-500">Next Trade</span>
+                    <span class="text-sm font-mono text-gray-700 tabular-nums">
+                      {@view_screen.next_card}
+                    </span>
+                  </div>
+                <% end %>
                 <%= if @game.finished && @days do %>
                   <div class="flex justify-between items-baseline">
                     <span class="text-xs text-gray-500">Duration</span>

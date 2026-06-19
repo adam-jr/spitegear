@@ -31,6 +31,7 @@ defmodule Spitegear.LiveGameState.WargearViewScreenDb do
     field(:winners, {:array, :string})
     field(:fogged, :boolean, default: false)
     field(:board_image_url, :string)
+    field(:next_card, :string)
 
     timestamps()
   end
@@ -53,7 +54,8 @@ defmodule Spitegear.LiveGameState.WargearViewScreenDb do
       eliminated: Enum.map(vs.eliminated, & &1.name),
       winners: Enum.map(vs.winners, & &1.name),
       fogged: vs.fogged?,
-      board_image_url: vs.board_image_url
+      board_image_url: vs.board_image_url,
+      next_card: vs.next_card
     }
   end
 end

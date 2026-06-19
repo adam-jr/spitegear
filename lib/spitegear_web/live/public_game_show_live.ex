@@ -68,20 +68,12 @@ defmodule SpitegearWeb.PublicGameShowLive do
     ~H"""
     <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-gray-50 text-gray-900">
       <header class="bg-white border-b border-gray-200">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3 min-w-0">
-            <a href="/" class="text-sm text-gray-400 hover:text-gray-600 shrink-0 transition-colors">
-              ← Games
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <a href="/" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              ← Home
             </a>
-            <span class="text-gray-200 shrink-0">|</span>
-            <div class="min-w-0">
-              <p class="font-semibold text-gray-900 truncate">
-                {@game.board_name || "Game #{@game_id}"}
-              </p>
-              <%= if @game.game_name do %>
-                <p class="text-xs text-gray-400 truncate">{@game.game_name}</p>
-              <% end %>
-            </div>
+            <h1 class="text-lg font-bold tracking-tight">⚙️ Spitegear</h1>
           </div>
           <a
             href={"https://www.wargear.net/games/view/#{@game_id}"}
@@ -127,9 +119,33 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <section class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <%!-- Title block --%>
               <div class="px-5 pt-5 pb-4">
-                <h2 class="text-base font-bold text-gray-900 leading-snug">
-                  {@game.board_name || "Game #{@game_id}"}
-                </h2>
+                <a
+                  href={"https://www.wargear.net/games/view/#{@game_id}"}
+                  target="_blank"
+                  title="Play on wargear.net"
+                  class="flex items-center gap-2 no-underline group"
+                >
+                  <h2 class="text-base font-bold text-gray-900 leading-snug group-hover:text-gray-600 transition-colors">
+                    {@game.board_name || "Game #{@game_id}"}
+                  </h2>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    class="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-colors shrink-0"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Z"
+                      clip-rule="evenodd"
+                    />
+                    <path
+                      fill-rule="evenodd"
+                      d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06Z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </a>
                 <%= if @game.game_name do %>
                   <p class="text-xs text-gray-500 mt-1 leading-snug">{@game.game_name}</p>
                 <% end %>

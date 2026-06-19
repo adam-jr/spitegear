@@ -61,9 +61,4 @@ Local secrets go in `config/dev.secret.exs` (gitignored). Slack posting is disab
 
 ## Deployment
 
-Deployed on a self-hosted Beelink server (`spitegear.44ajr.com`) via GitHub Actions. The deploy job builds a Docker image and restarts the container with secrets from `$HOME/spitegear/.env`.
-
-```bash
-# Run a command on the live app
-ssh beelink "docker exec spitegear bin/spitegear rpc 'IO.inspect(SomeModule.some_function())'"
-```
+Deployed via GitHub Actions on a self-hosted runner. The deploy job builds a Docker image and restarts the container with secrets injected via env file.

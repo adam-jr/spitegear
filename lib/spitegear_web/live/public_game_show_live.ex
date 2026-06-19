@@ -151,7 +151,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 <% end %>
                 <%= if @current_round && @turn_within_round do %>
                   <p class="text-[10px] font-mono tracking-widest text-gray-400 mt-3 uppercase">
-                    Round {@current_round} · Day {game_day(@game.created)} · Turn {@turn_within_round}
+                    Day {game_day(@game.created)} · Round {@current_round} · Turn {@turn_within_round}
                   </p>
                 <% end %>
               </div>
@@ -184,7 +184,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   <div class="flex justify-between items-baseline">
                     <span class="text-xs text-gray-500">Players</span>
                     <span class="text-sm font-mono text-gray-700 tabular-nums">
-                      {length(@view_screen.players)}
+                      {Enum.count(@view_screen.players, &(!&1.eliminated?))}
                     </span>
                   </div>
                 <% end %>

@@ -15,7 +15,6 @@ defmodule Spitegear.Worker.GameManager do
   use GenServer
 
   alias Spitegear.GameLog.Processor
-  alias Spitegear.GameMaps
   alias Spitegear.Games
   alias Spitegear.LiveGameState
   alias Spitegear.Wargear.HTTP.LogSnapshot
@@ -95,7 +94,7 @@ defmodule Spitegear.Worker.GameManager do
       game_state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
-      |> LiveGameState.fetch_board_image_if_advanced(self())
+      |> LiveGameState.fetch_board_image_if_advanced()
       |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.infer_deaths_from_skip()
       |> LiveGameState.detect_eliminations()
@@ -128,47 +127,6 @@ defmodule Spitegear.Worker.GameManager do
     {:noreply, state}
   end
 
-  def handle_cast({:fetch_board_image, url}, %{game_state: %{game_id: game_id}} = state) do
-    start_board_image_fetch(url, game_id, 0, self())
-    {:noreply, state}
-  end
-
   @impl true
-  def handle_info({:retry_board_image, url, attempt}, %{game_state: %{game_id: game_id}} = state) do
-    start_board_image_fetch(url, game_id, attempt, self())
-    {:noreply, state}
-  end
-
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
-
-  @backoff_ms [5_000, 15_000, 30_000]
-  @max_attempts length(@backoff_ms) + 1
-
-  defp start_board_image_fetch(url, game_id, attempt, manager) do
-    Task.start(fn ->
-      case HTTPoison.get(url, [], timeout: 60_000, recv_timeout: 60_000) do
-        {:ok, %{status_code: 200, body: body, headers: headers}} ->
-          GameMaps.upsert(game_id, body, board_image_content_type(headers))
-
-        _ when attempt + 1 < @max_attempts ->
-          backoff = Enum.at(@backoff_ms, attempt)
-          Process.send_after(manager, {:retry_board_image, url, attempt + 1}, backoff)
-
-        _ ->
-          Logger.warning("#{__MODULE__} board image fetch failed for game #{game_id}")
-      end
-    end)
-  end
-
-  defp board_image_content_type(headers) do
-    headers
-    |> Enum.find_value("image/png", fn
-      {"Content-Type", v} -> v
-      {"content-type", v} -> v
-      _ -> nil
-    end)
-    |> String.split(";")
-    |> List.first()
-    |> String.trim()
-  end
 end

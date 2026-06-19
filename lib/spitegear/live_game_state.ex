@@ -21,6 +21,7 @@ defmodule Spitegear.LiveGameState do
       state
       |> LiveGameState.record_changed_view_screen_db(view_screen)
       |> LiveGameState.advance_turn()
+      |> LiveGameState.fetch_board_image_if_advanced(manager_pid)
       |> LiveGameState.fetch_log_if_unfogged()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
@@ -35,7 +36,6 @@ defmodule Spitegear.LiveGameState do
   require Logger
 
   alias Spitegear.GameDeaths
-  alias Spitegear.GameMaps
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
@@ -141,8 +141,6 @@ defmodule Spitegear.LiveGameState do
   """
   @spec record_changed_view_screen_db(t(), HTTPViewScreen.t()) :: t()
   def record_changed_view_screen_db(%__MODULE__{} = state, %HTTPViewScreen{} = view_screen) do
-    maybe_fetch_map_image(state.game_id, view_screen.map_image_url)
-
     case ViewScreens.record_if_changed(view_screen) do
       {:ok, :unchanged} ->
         %{state | view_screen_changed: false}
@@ -161,29 +159,26 @@ defmodule Spitegear.LiveGameState do
     end
   end
 
-  defp maybe_fetch_map_image(_game_id, nil), do: :ok
+  @doc """
+  Casts an async board image fetch to `manager` if the turn just advanced on an
+  unfogged game. The manager handles retries with backoff.
 
-  defp maybe_fetch_map_image(game_id, url) do
-    case HTTPoison.get(url, [], timeout: 15_000, recv_timeout: 15_000) do
-      {:ok, %{status_code: 200, body: body, headers: headers}} ->
-        content_type = content_type_from_headers(headers)
-        GameMaps.upsert(game_id, body, content_type)
+  No-op when `turn_advanced` is `false` or the game is fogged.
+  """
+  @spec fetch_board_image_if_advanced(t(), pid()) :: t()
+  def fetch_board_image_if_advanced(%__MODULE__{turn_advanced: false} = state, _manager),
+    do: state
 
-      _ ->
-        Logger.warning("#{__MODULE__} failed to fetch map image for game #{game_id}")
-    end
-  end
+  def fetch_board_image_if_advanced(
+        %__MODULE__{current_view_screen: %ViewScreen{fogged?: true}} = state,
+        _manager
+      ),
+      do: state
 
-  defp content_type_from_headers(headers) do
-    headers
-    |> Enum.find_value("image/png", fn
-      {"Content-Type", v} -> v
-      {"content-type", v} -> v
-      _ -> nil
-    end)
-    |> String.split(";")
-    |> List.first()
-    |> String.trim()
+  def fetch_board_image_if_advanced(%__MODULE__{} = state, manager) do
+    url = state.current_view_screen.board_image_url
+    if url, do: GenServer.cast(manager, {:fetch_board_image, url})
+    state
   end
 
   @doc """

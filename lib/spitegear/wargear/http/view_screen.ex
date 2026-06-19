@@ -15,6 +15,7 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
             finished: nil,
             next_card: nil,
             map_image_url: nil,
+            board_image_url: nil,
             players: [],
             current_player: nil,
             eliminated: [],
@@ -54,6 +55,7 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
          finished: finished,
          next_card: card,
          map_image_url: map_image_url(document),
+         board_image_url: board_image_url(document, game_id),
          players: players,
          current_player: Enum.find(players, & &1.current_turn?),
          eliminated: Enum.filter(players, & &1.eliminated?),
@@ -188,6 +190,16 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
     |> case do
       nil -> nil
       {"img", attrs, _} -> resolve_url(List.keyfind(attrs, "src", 0))
+    end
+  end
+
+  defp board_image_url(document, game_id) do
+    with [{"img", attrs, _} | _] <- Floki.find(document, "img[src*='/boards/']"),
+         {"src", src} <- List.keyfind(attrs, "src", 0),
+         [_, board_id] <- Regex.run(~r{/boards/(\d+)}, src) do
+      "https://www.wargear.net/rest/GetBoardImage/#{board_id}?gameid=#{game_id}"
+    else
+      _ -> nil
     end
   end
 

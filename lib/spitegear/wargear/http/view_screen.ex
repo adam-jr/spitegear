@@ -198,9 +198,25 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
     |> Floki.find("img[src*='GetBoardImage']")
     |> List.first()
     |> case do
-      nil -> nil
-      {"img", attrs, _} -> resolve_url(List.keyfind(attrs, "src", 0))
+      nil ->
+        nil
+
+      {"img", attrs, _} ->
+        attrs
+        |> List.keyfind("src", 0)
+        |> resolve_url()
+        |> strip_size_params()
     end
+  end
+
+  defp strip_size_params(nil), do: nil
+
+  defp strip_size_params(url) do
+    uri = URI.parse(url)
+    query = URI.decode_query(uri.query || "")
+    clean = Map.drop(query, ["width", "height"])
+    new_query = if map_size(clean) > 0, do: URI.encode_query(clean), else: nil
+    URI.to_string(%{uri | query: new_query})
   end
 
   defp resolve_url(nil), do: nil

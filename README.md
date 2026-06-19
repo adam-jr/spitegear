@@ -16,7 +16,7 @@ A Phoenix/Elixir bot that monitors board games on [wargear.net](https://wargear.
 - Elixir / Phoenix 1.8, LiveView, Bandit
 - PostgreSQL (Ecto)
 - Slack Web API
-- Docker + GitHub Actions (self-hosted runner on a Beelink server)
+- Docker + GitHub Actions (self-hosted runner)
 
 ## Development
 

@@ -75,9 +75,9 @@ A Phoenix/Elixir bot that monitors board games on wargear.net and sends Slack no
 
 ## Deployment
 
-Deployed on a self-hosted Beelink server (192.168.1.72 on local network, `spitegear.44ajr.com` externally) via GitHub Actions (`.github/workflows/deploy.yml`). The deploy job runs on a `self-hosted` runner, writes secrets to `$HOME/spitegear/.env`, pulls the latest code, then runs `make deploy` (builds a Docker image and restarts the container with `--env-file`). Assets built with `mix assets.deploy`.
+Deployed on a self-hosted server via GitHub Actions (`.github/workflows/deploy.yml`). The deploy job runs on a `self-hosted` runner, writes secrets to `$HOME/spitegear/.env`, pulls the latest code, then runs `make deploy` (builds a Docker image and restarts the container with `--env-file`). Assets built with `mix assets.deploy`.
 
 To run commands on the deployed app:
 ```bash
-ssh beelink "docker exec spitegear bin/spitegear rpc 'IO.inspect(SomeModule.some_function())'"
+ssh <server> "docker exec spitegear bin/spitegear rpc 'IO.inspect(SomeModule.some_function())'"
 ```

@@ -77,7 +77,7 @@ Secondary feature: a cron job that pulls crypto market breadth data from Trading
 
 ## Deployment
 
-Deployed on a self-hosted Beelink server (192.168.1.72 on local network, `spitegear.duckdns.org` externally) via GitHub Actions (`.github/workflows/deploy.yml`). The deploy job runs on a `self-hosted` runner, writes secrets to `$HOME/spitegear/.env`, pulls the latest code, then runs `make deploy` (builds a Docker image and restarts the container with `--env-file`). Assets built with `mix assets.deploy`.
+Deployed on a self-hosted Beelink server (192.168.1.72 on local network, `spitegear.44ajr.com` externally) via GitHub Actions (`.github/workflows/deploy.yml`). The deploy job runs on a `self-hosted` runner, writes secrets to `$HOME/spitegear/.env`, pulls the latest code, then runs `make deploy` (builds a Docker image and restarts the container with `--env-file`). Assets built with `mix assets.deploy`.
 
 To run commands on the deployed app:
 ```bash

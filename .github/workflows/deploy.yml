@@ -18,7 +18,7 @@ jobs:
           SLACK_AUTH_TOKEN=${{ secrets.SLACK_AUTH_TOKEN }}
           SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}
           DATABASE_URL=ecto://postgres:postgres@postgres/spitegear_dev
-          PHX_HOST=spitegear.duckdns.org
+          PHX_HOST=spitegear.44ajr.com
           PORT=4001
           PHX_SERVER=true
           WARGEAR_USERNAME=${{ secrets.WARGEAR_USERNAME }}

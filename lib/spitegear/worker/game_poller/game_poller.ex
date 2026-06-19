@@ -111,14 +111,14 @@ defmodule Spitegear.Worker.GamePoller do
 
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
 
-  def handle_info({:retry_board_image, url, attempt}, state) do
-    start_board_image_fetch(url, state.game_id, attempt, self())
+  def handle_info({:retry_board_image, url, turn_id, attempt}, state) do
+    start_board_image_fetch(url, turn_id, state.game_id, attempt, self())
     {:noreply, state}
   end
 
   @impl true
-  def handle_cast({:fetch_board_image, url}, state) do
-    start_board_image_fetch(url, state.game_id, 0, self())
+  def handle_cast({:fetch_board_image, url, turn_id}, state) do
+    start_board_image_fetch(url, turn_id, state.game_id, 0, self())
     {:noreply, state}
   end
 
@@ -167,15 +167,15 @@ defmodule Spitegear.Worker.GamePoller do
   @backoff_ms [5_000, 15_000, 30_000]
   @max_attempts length(@backoff_ms) + 1
 
-  defp start_board_image_fetch(url, game_id, attempt, poller) do
+  defp start_board_image_fetch(url, turn_id, game_id, attempt, poller) do
     Task.start(fn ->
       case HTTPoison.get(url, [], timeout: 60_000, recv_timeout: 60_000) do
         {:ok, %{status_code: 200, body: body, headers: headers}} ->
-          GameMaps.upsert(game_id, body, board_image_content_type(headers))
+          GameMaps.upsert(game_id, turn_id, body, board_image_content_type(headers))
 
         _ when attempt + 1 < @max_attempts ->
           backoff = Enum.at(@backoff_ms, attempt)
-          Process.send_after(poller, {:retry_board_image, url, attempt + 1}, backoff)
+          Process.send_after(poller, {:retry_board_image, url, turn_id, attempt + 1}, backoff)
 
         _ ->
           Logger.warning("#{__MODULE__} board image fetch failed for game #{game_id}")

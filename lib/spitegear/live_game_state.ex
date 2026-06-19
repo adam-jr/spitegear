@@ -176,7 +176,12 @@ defmodule Spitegear.LiveGameState do
 
   def fetch_board_image_if_advanced(%__MODULE__{} = state) do
     url = state.current_view_screen.board_image_url
-    if url, do: GenServer.cast(GamePoller.name(state.game_id), {:fetch_board_image, url})
+    turn_id = state.current_turn && state.current_turn.id
+
+    if url && turn_id do
+      GenServer.cast(GamePoller.name(state.game_id), {:fetch_board_image, url, turn_id})
+    end
+
     state
   end
 

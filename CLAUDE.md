@@ -26,39 +26,72 @@ A Phoenix/Elixir bot that monitors board games on wargear.net and sends Slack no
 
 **Startup sequence** (`application.ex`):
 1. `Spitegear.Repo` starts the Postgres connection pool.
-2. A one-shot `Task` calls `Spitegear.Games.resume_games/0`, which queries for all games where `finished IS NULL` and starts a `GamePoller` for each.
+2. A one-shot `Task` calls `Spitegear.Games.resume_games/0`, which queries for all games where `finished IS NULL` and starts a `GamePoller` + `GameManager` pair for each.
 3. `Spitegear.Worker.SlackMessenger` (GenServer) subscribes to the `"slack_messages"` PubSub topic and forwards messages to the Slack API.
+4. `Spitegear.Logger.SlackErrorHandler` is added to the Erlang logger and posts `:error`-level log events to Slack.
 
-**Per-game polling** (`Worker.GamePoller`):
-- One `GamePoller` GenServer per active game, supervised under `GameSupervisor` (DynamicSupervisor).
-- Two-layer detection: polls `Wargear.History` (REST API `/rest/GetHistoryUpdate/:id`) every 20 seconds for cheap turn-change detection; only fetches the full `HTML.ViewScreen` (HTTPoison + Floki scrape of `/games/view/:id`) when a new `turnid` is detected or for up to 10 minutes of 1-minute polls after a turn change.
-- Detects turn changes, new eliminations, and winners; publishes to PubSub for Slack delivery.
-- Sends reminder messages every 3 hours (waking hours, America/Chicago) if no new turn has started.
-- On game completion, stops itself (`:stop, :normal`).
-- Seeds `last_round` from DB on init so restarts don't re-announce already-completed rounds.
+**Per-game worker pair** (two GenServers per game, both supervised under `GameSupervisor` (DynamicSupervisor)):
 
-**Round tracking** (`Games.completed_rounds/1`):
-- Walks `turn_history` chronologically and detects cycle boundaries when a player reappears — no dependency on `game_deaths`.
-- Posts a "round complete" announcement to `#spitegear` at each round end; posts turn stats every 5 rounds to `#spitegear_test`.
+- `Worker.GamePoller` — handles all HTTP I/O. Polls `Wargear.HTTP.History` every 20 seconds for cheap turn-change detection; fetches the full `Wargear.HTTP.ViewScreen` on a new `turnid` or for up to 10 one-minute polls after a turn change. Also dispatches async board image fetches (with exponential backoff) when a turn advances on an unfogged game. Notifies `GameManager` via cast on every successful fetch.
+- `Worker.GameManager` — owns all game state. Receives fetch notifications from `GamePoller` and runs them through the `LiveGameState` pipeline. Dispatches async log re-fetches after turn advances. Stops itself on game completion (`:finish_game` cast).
 
-**Cookie management** (`Wargear.Login`):
+**`LiveGameState` pipeline** (`live_game_state.ex`):
+
+`LiveGameState` is a struct with current/prev snapshots of DB-persisted turns, view screens, and history API responses. Business logic runs as a chain of functions that each return the updated struct (no-ops when their precondition fails):
+
+- History pipeline: `record_changed_history_response → send_reminder → announce_moving`
+- View screen pipeline: `record_changed_view_screen_db → advance_turn → fetch_board_image_if_advanced → fetch_log_if_unfogged → announce_next_round → announce_next_turn → infer_deaths_from_skip → detect_eliminations → announce_winners`
+
+Fogged games use `infer_deaths_from_skip` (detects eliminations from skipped positions in turn order); unfogged games use `detect_eliminations` (reads the view screen directly).
+
+**Game log subsystem** (`game_log/`):
+
+- `Wargear.HTTP.LogSnapshot` — fetches raw HTML log from wargear.net; stored in `game_log_snapshots`.
+- `GameLog.Parser` — parses individual log rows into typed `GameLogEvent` attrs.
+- `GameLog.Processor` — processes/upserts snapshots into `game_log_events`. Key entry points: `process_all/0`, `reprocess_unrecognized/0`, `refetch_and_process/1` (called automatically after each turn advance on unfogged games), `fill_defenders/0` (second-pass extraction of defender/territory fields).
+
+**Cookie management** (`Wargear.HTTP.Login`):
 - Biweekly Quantum cron job (`0 3 1,15 * *`) logs out and back in to refresh the wargear.net session cookie, stored in the `settings` table.
-- Login requires a two-step flow: GET `/player/login` first (to collect tracking cookies), then POST credentials with those cookies.
-- `ViewScreen.get_game` auto-recovers from expired sessions: detects `login_required=1` in the response, calls `Login.refresh_cookie()`, and retries once.
+- Login requires a two-step flow: GET `/player/login` first, then POST credentials with those cookies.
+- `ViewScreen.get_game` auto-recovers from expired sessions by detecting `login_required=1`, calling `Login.refresh_cookie()`, and retrying once.
 
 **Slack integration:**
-- Incoming events arrive at `POST /api/slack/events`. A wargear.net game URL in a Slack message triggers a new `GamePoller`.
+- Incoming events arrive at `POST /api/slack/events`. A wargear.net game URL in a message triggers a new `GamePoller`/`GameManager` pair.
 - Outbound messages go through `Spitegear.PubSub.msg/2` → PubSub → `SlackMessenger` → `Slack.API`.
-- Message text templates are in `Slack.Message`.
+- Message text templates are in `Slack.Message`; the DB-editable versions are in `MessageTemplates` / `message_templates` table.
 
 **Persistence** (`Spitegear.Games` context):
 - `games` — one row per wargear game; `finished IS NULL` means active.
-- `turns` — one row per game (the *current* turn); upserted by `game_id`.
-- `turn_history` — append-only log of completed turns; used for round counting and turn stats.
-- `game_deaths` — one row per eliminated player per game.
-- `settings` — key/value store for runtime config (e.g. `wargear_cookie`, `wargear_api_key`). Accessed via `Spitegear.Settings.get/put`.
+- `live_game_state_turns` — open/closed turn records (current player, start/end time, reminder state). Queried via `LiveGameState.Turns`.
+- `live_game_state_view_screens` — append-only snapshots of scraped view screen data.
+- `live_game_state_history_responses` — append-only snapshots of History API responses.
+- `turn_history` — legacy append-only log of completed turns; used for round counting.
+- `game_deaths` — one row per eliminated player per game; `inferred: true` for fog-of-war inference.
+- `game_log_snapshots` — raw HTML log fetched from wargear.net.
+- `game_log_events` — structured events parsed from snapshots (upserted by `game_id` + `log_seq`).
+- `game_map_images` — board image binary stored per game; served at `GET /games/:game_id/map`.
+- `message_templates` — editable Slack message templates.
+- `settings` — key/value store (e.g. `wargear_cookie`, `wargear_api_key`). Accessed via `Spitegear.Settings.get/put`.
 
-**Admin UI**: LiveView pages at `/admin`, `/admin/games`, `/admin/games/:game_id`.
+**Web routes:**
+
+Public (no auth):
+- `GET /` — landing page
+- `GET /games` — live game index
+- `GET /games/:game_id` — public game detail
+- `GET /games/:game_id/map` — board image
+
+Admin (HTTP Basic Auth against `users` table):
+- `GET /admin` — admin home
+- `GET /admin/games` — game list with controls
+- `GET /admin/games/:game_id` — game detail + poller controls
+- `GET /admin/games/:game_id/log` — game log events viewer
+- `GET /admin/logs` — server logs
+- `GET /admin/templates` and `/admin/games/:game_id/templates` — message template editor
+
+API:
+- `POST /api/slack/events` — Slack event webhook
+- `POST /api/sleeper/draftpick` — Sleeper fantasy draft pick webhook
 
 ## Required environment variables
 

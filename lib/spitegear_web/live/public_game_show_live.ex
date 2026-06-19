@@ -66,16 +66,16 @@ defmodule SpitegearWeb.PublicGameShowLive do
 
   def render(assigns) do
     ~H"""
-    <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-[#0d1117] text-gray-100 flex flex-col">
+    <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
       <%!-- Winner banner --%>
       <%= if @game.finished && Enum.any?(@game.winners) do %>
-        <div class="bg-amber-950/60 border-b border-amber-800/40 px-6 py-4 flex items-center gap-4">
+        <div class="bg-amber-50 border-b border-amber-200 px-6 py-4 flex items-center gap-4">
           <span class="text-2xl">🏆</span>
           <div>
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-600 mb-0.5">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-500 mb-0.5">
               Winner
             </p>
-            <p class="text-lg font-bold text-amber-300">{Enum.join(@game.winners, " & ")}</p>
+            <p class="text-lg font-bold text-amber-700">{Enum.join(@game.winners, " & ")}</p>
           </div>
         </div>
       <% end %>
@@ -83,84 +83,84 @@ defmodule SpitegearWeb.PublicGameShowLive do
       <%!-- Command view: left rail + map --%>
       <div class="flex flex-1 min-h-screen">
         <%!-- Left rail --%>
-        <aside class="w-60 shrink-0 border-r border-gray-800 flex flex-col overflow-y-auto">
+        <aside class="w-60 shrink-0 border-r border-gray-200 flex flex-col overflow-y-auto bg-white">
           <%!-- Nav + title --%>
           <div class="px-5 pt-5 pb-4">
-            <a href="/" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+            <a href="/" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
               ← Games
             </a>
-            <h1 class="text-base font-bold text-white leading-snug mt-3">
+            <h1 class="text-base font-bold text-gray-900 leading-snug mt-3">
               {@game.board_name || "Game #{@game_id}"}
             </h1>
             <%= if @game.game_name do %>
               <p class="text-xs text-gray-500 mt-1 leading-snug">{@game.game_name}</p>
             <% end %>
             <%= if @current_round && @turn_within_round do %>
-              <p class="text-[10px] font-mono tracking-widest text-gray-600 mt-3 uppercase">
+              <p class="text-[10px] font-mono tracking-widest text-gray-400 mt-3 uppercase">
                 Round {@current_round} · Day {game_day(@game.created)} · Turn {@turn_within_round}
               </p>
             <% end %>
           </div>
 
-          <div class="mx-5 border-t border-gray-800"></div>
+          <div class="mx-5 border-t border-gray-100"></div>
 
           <%!-- Summary stats --%>
           <div class="px-5 py-4 flex flex-col gap-2.5">
             <%= if @game.created do %>
               <div class="flex justify-between items-baseline">
-                <span class="text-xs text-gray-600">Days Elapsed</span>
-                <span class="text-sm font-mono text-gray-300 tabular-nums">
+                <span class="text-xs text-gray-500">Days Elapsed</span>
+                <span class="text-sm font-mono text-gray-700 tabular-nums">
                   {game_day(@game.created)}
                 </span>
               </div>
             <% end %>
             <div class="flex justify-between items-baseline">
-              <span class="text-xs text-gray-600">Total Turns</span>
-              <span class="text-sm font-mono text-gray-300 tabular-nums">
+              <span class="text-xs text-gray-500">Total Turns</span>
+              <span class="text-sm font-mono text-gray-700 tabular-nums">
                 {@log_summary.turn_count}
               </span>
             </div>
             <div class="flex justify-between items-baseline">
-              <span class="text-xs text-gray-600">Log Events</span>
-              <span class="text-sm font-mono text-gray-300 tabular-nums">
+              <span class="text-xs text-gray-500">Log Events</span>
+              <span class="text-sm font-mono text-gray-700 tabular-nums">
                 {@log_summary.max_seq}
               </span>
             </div>
             <%= if @view_screen && @view_screen.players do %>
               <div class="flex justify-between items-baseline">
-                <span class="text-xs text-gray-600">Players</span>
-                <span class="text-sm font-mono text-gray-300 tabular-nums">
+                <span class="text-xs text-gray-500">Players</span>
+                <span class="text-sm font-mono text-gray-700 tabular-nums">
                   {length(@view_screen.players)}
                 </span>
               </div>
             <% end %>
             <%= if @game.finished && @days do %>
               <div class="flex justify-between items-baseline">
-                <span class="text-xs text-gray-600">Duration</span>
-                <span class="text-sm font-mono text-gray-300 tabular-nums">{@days}d</span>
+                <span class="text-xs text-gray-500">Duration</span>
+                <span class="text-sm font-mono text-gray-700 tabular-nums">{@days}d</span>
               </div>
             <% end %>
           </div>
 
-          <div class="mx-5 border-t border-gray-800"></div>
+          <div class="mx-5 border-t border-gray-100"></div>
 
           <%!-- Current turn player list --%>
           <%= if @view_screen && Enum.any?(@view_screen.players || []) do %>
             <div class="px-5 py-4 flex flex-col flex-1">
-              <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-600 mb-3">
+              <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">
                 Current Turn
               </p>
               <div class="flex flex-col gap-0.5">
                 <%= for {player, idx} <- Enum.with_index(@view_screen.players, 1) do %>
                   <%= if player.current_turn? do %>
-                    <div class="rounded px-3 py-2.5 bg-orange-950/50 border border-orange-800/30 mb-1">
+                    <div class="rounded px-3 py-2.5 bg-orange-50 border border-orange-200 mb-1">
                       <div class="flex items-center gap-2">
-                        <span class="text-xs text-orange-700 tabular-nums w-4 shrink-0">{idx}</span>
-                        <span class="text-sm font-semibold text-orange-300 truncate">
+                        <span class="text-xs text-orange-400 tabular-nums w-4 shrink-0">{idx}</span>
+                        <span class="text-sm font-semibold text-orange-900 truncate">
                           {player.name}
                         </span>
                       </div>
-                      <p class="text-xs text-orange-700/80 mt-0.5 ml-6">
+                      <p class="text-xs text-orange-600 mt-0.5 ml-6">
                         <%= if @current_round && @turn_within_round do %>
                           Turn {@current_round}.{@turn_within_round}
                         <% end %>
@@ -172,14 +172,14 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   <% else %>
                     <div class={[
                       "flex items-center gap-2 px-3 py-1 rounded",
-                      if(player.eliminated?, do: "opacity-30", else: "")
+                      if(player.eliminated?, do: "opacity-40", else: "")
                     ]}>
-                      <span class="text-xs text-gray-700 tabular-nums w-4 shrink-0">{idx}</span>
+                      <span class="text-xs text-gray-400 tabular-nums w-4 shrink-0">{idx}</span>
                       <span class={[
                         "text-sm truncate",
                         if(player.eliminated?,
-                          do: "line-through text-gray-600",
-                          else: "text-gray-400"
+                          do: "line-through text-gray-400",
+                          else: "text-gray-700"
                         )
                       ]}>
                         {player.name}
@@ -197,7 +197,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
           <a
             href={"https://www.wargear.net/games/view/#{@game_id}"}
             target="_blank"
-            class="absolute top-4 right-4 text-xs text-gray-700 hover:text-gray-500 z-10 transition-colors"
+            class="absolute top-4 right-4 text-xs text-gray-400 hover:text-gray-600 z-10 transition-colors"
           >
             wargear.net ↗
           </a>
@@ -210,22 +210,22 @@ defmodule SpitegearWeb.PublicGameShowLive do
               class="max-h-[70vh] max-w-full object-contain cursor-pointer transition-all duration-300"
             />
           <% else %>
-            <p class="text-gray-700 text-sm">No map available</p>
+            <p class="text-gray-400 text-sm">No map available</p>
           <% end %>
         </div>
       </div>
 
       <%!-- Charts section — below the fold --%>
-      <div class="border-t border-gray-800">
+      <div class="border-t border-gray-200">
         <%= if @view_screen && @view_screen.fogged? && !@game.finished do %>
           <div class="px-8 py-14 text-center">
             <p class="text-3xl mb-3">🌫️</p>
-            <p class="text-sm font-medium text-gray-500">Stats hidden — game is fogged</p>
-            <p class="text-xs text-gray-700 mt-1">Available after the game ends</p>
+            <p class="text-sm font-medium text-gray-600">Stats hidden — game is fogged</p>
+            <p class="text-xs text-gray-400 mt-1">Available after the game ends</p>
           </div>
         <% else %>
           <div class="px-8 pt-8 pb-2">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
               Game Stats
             </p>
           </div>
@@ -234,17 +234,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@total_board_units_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Army Strength Over Time
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#total-board-units-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">
+                <p class="text-xs text-gray-400 mb-3">
                   Total forces currently in play across all factions. Drag to zoom, double-click to reset.
                 </p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[220px] sm:h-[300px]">
@@ -264,17 +264,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@net_units_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Net Units Over Time
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#net-units-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">
+                <p class="text-xs text-gray-400 mb-3">
                   Each player's unit count after gains and losses. Drag to zoom, double-click to reset.
                 </p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[260px] sm:h-[420px]">
@@ -293,12 +293,12 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 </div>
                 <%!-- Placement leaderboard --%>
                 <%= if map_size(@placement_scores) > 0 do %>
-                  <div class="mt-4 border border-gray-800 rounded-lg divide-y divide-gray-800">
+                  <div class="mt-4 bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
                     <div class="px-5 py-3">
-                      <h3 class="text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+                      <h3 class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
                         Leaderboard
                       </h3>
-                      <p class="text-xs text-gray-700 mt-0.5">
+                      <p class="text-xs text-gray-400 mt-0.5">
                         Area under the units curve — higher = more units held longer.
                       </p>
                     </div>
@@ -307,10 +307,10 @@ defmodule SpitegearWeb.PublicGameShowLive do
                         |> Enum.sort_by(&elem(&1, 1), :desc)
                         |> Enum.with_index(1) do %>
                       <div class="flex items-center gap-3 px-5 py-2.5">
-                        <span class="text-xs text-gray-700 w-6 tabular-nums shrink-0">
+                        <span class="text-xs text-gray-400 w-6 tabular-nums shrink-0">
                           #{rank}
                         </span>
-                        <span class="flex-1 text-sm font-medium text-gray-300">{player}</span>
+                        <span class="flex-1 text-sm font-medium text-gray-800">{player}</span>
                         <span class="text-sm font-mono tabular-nums text-gray-500">
                           {format_score(score)}
                         </span>
@@ -325,17 +325,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@units_received_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Units Received Over Time
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#units-received-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">Drag to zoom, double-click to reset.</p>
+                <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[260px] sm:h-[420px]">
                   <canvas
                     id="units-received-chart"
@@ -357,17 +357,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@units_killed_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Units Killed Over Time
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#units-killed-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">Drag to zoom, double-click to reset.</p>
+                <p class="text-xs text-gray-400 mb-3">Drag to zoom, double-click to reset.</p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[260px] sm:h-[420px]">
                   <canvas
                     id="units-killed-chart"
@@ -389,17 +389,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@luck_delta_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Luck Over Time
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#luck-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">
+                <p class="text-xs text-gray-400 mb-3">
                   Cumulative troops gained or lost due to luck vs. expected dice outcomes. Positive = luckier than average, negative = unluckier. Drag to zoom, double-click to reset.
                 </p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[260px] sm:h-[420px]">
@@ -423,17 +423,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@attacks_received_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Attacks Received Over Time
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#attacks-received-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">
+                <p class="text-xs text-gray-400 mb-3">
                   Cumulative attacker dice directed at each player — a proxy for attacking pressure received. Drag to zoom, double-click to reset.
                 </p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[260px] sm:h-[420px]">
@@ -457,17 +457,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@jormp_jomps_received_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Cumulative Jormp Jomps Received
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#jormp-jomps-received-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">
+                <p class="text-xs text-gray-400 mb-3">
                   3-dice attack → 2 attacker losses, 0 defender losses. The attacker got jormp jomped.
                 </p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[260px] sm:h-[420px]">
@@ -491,17 +491,17 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%= if map_size(@jormp_jomps_delivered_series) > 0 do %>
               <section>
                 <div class="flex items-center justify-between mb-1">
-                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
                     Cumulative Jormp Jomps Delivered
                   </h2>
                   <button
                     phx-click={JS.dispatch("reset-zoom", to: "#jormp-jomps-delivered-chart")}
-                    class="text-xs text-gray-700 hover:text-gray-500 transition-colors"
+                    class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     Reset Zoom
                   </button>
                 </div>
-                <p class="text-xs text-gray-700 mb-3">
+                <p class="text-xs text-gray-400 mb-3">
                   Times this player's defense caused 2 attacker losses with 0 defender losses on a 3-dice attack.
                 </p>
                 <div class="bg-white border border-gray-200 rounded-lg p-2 relative h-[260px] sm:h-[420px]">

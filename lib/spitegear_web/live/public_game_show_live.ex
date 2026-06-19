@@ -217,13 +217,13 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <%!-- Map image --%>
             <%= if @has_map_image do %>
               <div class="md:flex-1 min-w-0">
-                <a href={"/games/#{@game_id}/map"} target="_blank" title="View full resolution">
-                  <img
-                    src={"/games/#{@game_id}/map"}
-                    alt="Game map"
-                    class="w-full max-h-[480px] object-contain rounded-xl border border-gray-200 shadow-sm cursor-zoom-in"
-                  />
-                </a>
+                <img
+                  id="game-map-img"
+                  src={"/games/#{@game_id}/map"}
+                  alt="Game map"
+                  phx-click={JS.toggle_class("max-h-[480px] object-contain", to: "#game-map-img")}
+                  class="w-full max-h-[480px] object-contain rounded-xl border border-gray-200 shadow-sm cursor-pointer transition-all duration-300"
+                />
               </div>
             <% end %>
           </div>

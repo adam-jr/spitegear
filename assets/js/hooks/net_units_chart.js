@@ -10,17 +10,6 @@ function toHex(r, g, b) {
   return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
 }
 
-function toRgba(color, alpha) {
-  if (color && color.startsWith('#') && color.length >= 7) {
-    const [r, g, b] = parseHex(color)
-    return `rgba(${r},${g},${b},${alpha})`
-  }
-  if (color && color.startsWith('rgb(')) {
-    return color.replace('rgb(', 'rgba(').replace(')', `,${alpha})`)
-  }
-  return color
-}
-
 // Adjusts a player color for chart visibility:
 //   - near-white → medium gray (would be invisible on white background)
 //   - pure black → unchanged (user explicitly has a black player)
@@ -64,8 +53,6 @@ const NetUnitsChart = {
   mounted() {
     this.renderChart()
     this.el.addEventListener("reset-zoom", () => this._resetZoom())
-    this._onPlayerSelected = (e) => this._applyHighlight(e.detail.player)
-    window.addEventListener('player-selected', this._onPlayerSelected)
   },
   updated() {
     this._destroyChart()
@@ -73,27 +60,6 @@ const NetUnitsChart = {
   },
   destroyed() {
     this._destroyChart()
-    window.removeEventListener('player-selected', this._onPlayerSelected)
-  },
-
-  _applyHighlight(selectedPlayer) {
-    if (!this.chart) return
-    this.chart.data.datasets.forEach(ds => {
-      if (!selectedPlayer) {
-        ds.borderColor = ds._originalColor
-        ds.backgroundColor = ds._originalColor
-        ds.borderWidth = 2
-      } else if (ds.fullName === selectedPlayer) {
-        ds.borderColor = ds._originalColor
-        ds.backgroundColor = ds._originalColor
-        ds.borderWidth = 2.5
-      } else {
-        ds.borderColor = toRgba(ds._originalColor, 0.2)
-        ds.backgroundColor = toRgba(ds._originalColor, 0.2)
-        ds.borderWidth = 1
-      }
-    })
-    this.chart.update('none')
   },
 
   renderChart() {
@@ -113,7 +79,6 @@ const NetUnitsChart = {
         return {
           label: player,
           fullName: player,
-          _originalColor: color,
           data: points.map(p => ({ x: p.seq, y: p.net_units, event_type: p.event_type, source_player: p.source_player, defender: p.defender })),
           borderColor: color,
           backgroundColor: color,

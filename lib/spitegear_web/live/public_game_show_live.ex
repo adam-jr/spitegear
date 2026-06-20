@@ -555,7 +555,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
           class="fixed bottom-0 left-0 right-0 z-50 sm:hidden"
           style="transform: translateY(100%); transition: transform 300ms ease-out;"
         >
-          <div class="bg-gray-900/95 backdrop-blur-sm border-t border-gray-700 rounded-t-2xl shadow-2xl overflow-hidden">
+          <div class="bg-black border-t border-gray-800 rounded-t-2xl shadow-2xl overflow-hidden">
             <%!-- Expanded content --%>
             <div
               data-tray-content

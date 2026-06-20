@@ -91,18 +91,16 @@ defmodule SpitegearWeb.AdminConsoleLive do
   end
 
   defp safe_eval(code, bindings) do
-    try do
-      {value, new_bindings} = Code.eval_string(@preamble <> "\n" <> code, bindings)
-      {{:ok, inspect(value, pretty: true, limit: 200, printable_limit: :infinity)}, new_bindings}
-    rescue
-      e ->
-        msg = Exception.format(:error, e, __STACKTRACE__)
-        {{:error, msg}, bindings}
-    catch
-      kind, reason ->
-        msg = Exception.format(kind, reason, __STACKTRACE__)
-        {{:error, msg}, bindings}
-    end
+    {value, new_bindings} = Code.eval_string(@preamble <> "\n" <> code, bindings)
+    {{:ok, inspect(value, pretty: true, limit: 200, printable_limit: :infinity)}, new_bindings}
+  rescue
+    e ->
+      msg = Exception.format(:error, e, __STACKTRACE__)
+      {{:error, msg}, bindings}
+  catch
+    kind, reason ->
+      msg = Exception.format(kind, reason, __STACKTRACE__)
+      {{:error, msg}, bindings}
   end
 
   def render(assigns) do

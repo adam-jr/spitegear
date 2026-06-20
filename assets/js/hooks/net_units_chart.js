@@ -1,17 +1,5 @@
 import Chart from "../../vendor/chart.umd.min.js"
 
-// Abbreviates a player name for compact mobile legend labels.
-// Multi-word: first word ("adam jormp jomp" → "adam", "pants off vant hof" → "pants")
-// CamelCase:  initials  ("ZachClash" → "ZC")
-// Single word: first 4 chars lowercase ("Tallness" → "tall", "dandodd" → "dand")
-function abbreviate(name) {
-  const words = name.trim().split(/\s+/)
-  if (words.length > 1) return words[0]
-  const parts = name.match(/[A-Z][a-z]*/g)
-  if (parts && parts.length > 1) return parts.map(p => p[0]).join('')
-  return name.slice(0, 4).toLowerCase()
-}
-
 // Parses a hex color string (#rrggbb) and returns [r, g, b].
 function parseHex(hex) {
   const h = hex.replace('#', '')
@@ -20,6 +8,17 @@ function parseHex(hex) {
 
 function toHex(r, g, b) {
   return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+}
+
+function toRgba(color, alpha) {
+  if (color && color.startsWith('#') && color.length >= 7) {
+    const [r, g, b] = parseHex(color)
+    return `rgba(${r},${g},${b},${alpha})`
+  }
+  if (color && color.startsWith('rgb(')) {
+    return color.replace('rgb(', 'rgba(').replace(')', `,${alpha})`)
+  }
+  return color
 }
 
 // Adjusts a player color for chart visibility:
@@ -65,6 +64,8 @@ const NetUnitsChart = {
   mounted() {
     this.renderChart()
     this.el.addEventListener("reset-zoom", () => this._resetZoom())
+    this._onPlayerSelected = (e) => this._applyHighlight(e.detail.player)
+    window.addEventListener('player-selected', this._onPlayerSelected)
   },
   updated() {
     this._destroyChart()
@@ -72,13 +73,33 @@ const NetUnitsChart = {
   },
   destroyed() {
     this._destroyChart()
+    window.removeEventListener('player-selected', this._onPlayerSelected)
+  },
+
+  _applyHighlight(selectedPlayer) {
+    if (!this.chart) return
+    this.chart.data.datasets.forEach(ds => {
+      if (!selectedPlayer) {
+        ds.borderColor = ds._originalColor
+        ds.backgroundColor = ds._originalColor
+        ds.borderWidth = 2
+      } else if (ds.fullName === selectedPlayer) {
+        ds.borderColor = ds._originalColor
+        ds.backgroundColor = ds._originalColor
+        ds.borderWidth = 2.5
+      } else {
+        ds.borderColor = toRgba(ds._originalColor, 0.2)
+        ds.backgroundColor = toRgba(ds._originalColor, 0.2)
+        ds.borderWidth = 1
+      }
+    })
+    this.chart.update('none')
   },
 
   renderChart() {
     const series = JSON.parse(this.el.dataset.series)
     const gameColors = this.el.dataset.colors ? JSON.parse(this.el.dataset.colors) : {}
     const order = this.el.dataset.order ? JSON.parse(this.el.dataset.order) : []
-    const mobile = window.innerWidth < 640
     const datasets = Object.entries(series)
       .sort(([a], [b]) => {
         const ai = order.indexOf(a), bi = order.indexOf(b)
@@ -90,8 +111,9 @@ const NetUnitsChart = {
       .map(([player, points], i) => {
         const color = sanitizeColor(gameColors[player]) || COLORS[i % COLORS.length]
         return {
-          label: mobile ? abbreviate(player) : player,
+          label: player,
           fullName: player,
+          _originalColor: color,
           data: points.map(p => ({ x: p.seq, y: p.net_units, event_type: p.event_type, source_player: p.source_player, defender: p.defender })),
           borderColor: color,
           backgroundColor: color,
@@ -115,10 +137,7 @@ const NetUnitsChart = {
         },
         plugins: {
           legend: {
-            position: mobile ? "top" : "right",
-            labels: mobile
-              ? { usePointStyle: true, pointStyle: 'circle', boxWidth: 6, padding: 6, font: { size: 11 } }
-              : {},
+            display: false,
           },
           tooltip: {
             callbacks: {

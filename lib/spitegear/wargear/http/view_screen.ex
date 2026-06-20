@@ -217,7 +217,13 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
   defp with_hires_size(url) do
     uri = URI.parse(url)
     query = URI.decode_query(uri.query || "")
-    new_query = query |> Map.put("width", @board_image_width) |> Map.put("height", @board_image_height) |> URI.encode_query()
+
+    new_query =
+      query
+      |> Map.put("width", @board_image_width)
+      |> Map.put("height", @board_image_height)
+      |> URI.encode_query()
+
     URI.to_string(%{uri | query: new_query})
   end
 

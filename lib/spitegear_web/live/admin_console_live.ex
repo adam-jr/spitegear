@@ -42,9 +42,30 @@ defmodule SpitegearWeb.AdminConsoleLive do
 
   @context [
     {"DB", ["Repo", "import Ecto.Query"]},
-    {"Schemas", ["Game", "GameDeath", "GameLogEvent", "GameLogSnapshot", "GameMapImage", "MessageTemplate", "Setting", "TurnHistory", "Turn", "User"]},
+    {"Schemas",
+     [
+       "Game",
+       "GameDeath",
+       "GameLogEvent",
+       "GameLogSnapshot",
+       "GameMapImage",
+       "MessageTemplate",
+       "Setting",
+       "TurnHistory",
+       "Turn",
+       "User"
+     ]},
     {"Contexts", ["Games", "GameDeaths", "GameMaps", "MessageTemplates", "Settings", "Accounts"]},
-    {"LiveGameState", ["LiveGameState", "Turns", "ViewScreen", "ViewScreens", "HistoryResponses", "WargearViewScreenDb", "WargearHistoryApiResponseDb"]},
+    {"LiveGameState",
+     [
+       "LiveGameState",
+       "Turns",
+       "ViewScreen",
+       "ViewScreens",
+       "HistoryResponses",
+       "WargearViewScreenDb",
+       "WargearHistoryApiResponseDb"
+     ]},
     {"Workers", ["GameManager", "GamePoller", "SlackMessenger"]},
     {"Wargear HTTP", ["WargearHistory", "WargearLogin", "WargearLogSnapshot"]},
     {"Game Log", ["LogParser", "LogProcessor"]},
@@ -60,7 +81,9 @@ defmodule SpitegearWeb.AdminConsoleLive do
   def handle_event("eval", %{"code" => code}, socket) do
     {result, new_bindings} = safe_eval(code, socket.assigns.bindings)
     history = [%{code: code, result: result} | socket.assigns.history] |> Enum.take(30)
-    {:noreply, assign(socket, code: code, result: result, history: history, bindings: new_bindings)}
+
+    {:noreply,
+     assign(socket, code: code, result: result, history: history, bindings: new_bindings)}
   end
 
   def handle_event("clear", _params, socket) do
@@ -97,9 +120,9 @@ defmodule SpitegearWeb.AdminConsoleLive do
         <div class="px-4 pb-4 pt-2 grid grid-cols-2 gap-x-8 gap-y-3 text-sm font-mono">
           <%= for {group, names} <- @context do %>
             <div>
-              <div class="text-xs text-gray-400 uppercase tracking-wide mb-1"><%= group %></div>
+              <div class="text-xs text-gray-400 uppercase tracking-wide mb-1">{group}</div>
               <%= for name <- names do %>
-                <div class="text-gray-700"><%= name %></div>
+                <div class="text-gray-700">{name}</div>
               <% end %>
             </div>
           <% end %>
@@ -116,13 +139,15 @@ defmodule SpitegearWeb.AdminConsoleLive do
           placeholder="Repo.all(Game) |> length()"
         ><%= @code %></textarea>
         <div class="flex items-center gap-4 mt-2">
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-            Run
-            <span class="text-blue-200 text-xs ml-1">⌘↵</span>
+          <button
+            type="submit"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+          >
+            Run <span class="text-blue-200 text-xs ml-1">⌘↵</span>
           </button>
           <%= if @bindings != [] do %>
             <span class="text-xs text-gray-500 font-mono">
-              bound: <%= Enum.map_join(@bindings, ", ", fn {k, _} -> to_string(k) end) %>
+              bound: {Enum.map_join(@bindings, ", ", fn {k, _} -> to_string(k) end)}
             </span>
           <% end %>
           <%= if @history != [] do %>
@@ -140,13 +165,16 @@ defmodule SpitegearWeb.AdminConsoleLive do
       <%= for %{code: code, result: result} <- @history do %>
         <div class="border border-gray-200 rounded overflow-hidden text-sm font-mono">
           <div class="bg-gray-50 px-3 py-2 text-gray-800 whitespace-pre-wrap border-b border-gray-200">
-            <%= code %>
+            {code}
           </div>
           <div class={[
             "px-3 py-2 whitespace-pre-wrap break-all",
-            if(match?({:ok, _}, result), do: "text-green-800 bg-green-50", else: "text-red-800 bg-red-50")
+            if(match?({:ok, _}, result),
+              do: "text-green-800 bg-green-50",
+              else: "text-red-800 bg-red-50"
+            )
           ]}>
-            <%= elem(result, 1) %>
+            {elem(result, 1)}
           </div>
         </div>
       <% end %>

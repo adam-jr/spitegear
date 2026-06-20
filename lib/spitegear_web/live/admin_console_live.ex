@@ -73,17 +73,44 @@ defmodule SpitegearWeb.AdminConsoleLive do
   ]
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, code: "", result: nil, history: [], bindings: [], context: @context)}
+    cmd_history = Spitegear.ConsoleHistory.list_recent()
+
+    socket =
+      assign(socket,
+        code: "",
+        result: nil,
+        history: [],
+        bindings: [],
+        context: @context,
+        cmd_history: cmd_history
+      )
+
+    socket =
+      if connected?(socket),
+        do: push_event(socket, "history_updated", %{history: cmd_history}),
+        else: socket
+
+    {:ok, socket}
   end
 
   def handle_event("eval", %{"code" => ""}, socket), do: {:noreply, socket}
 
   def handle_event("eval", %{"code" => code}, socket) do
     {result, new_bindings} = safe_eval(code, socket.assigns.bindings)
+    Spitegear.ConsoleHistory.save(code)
+    new_cmd_history = [code | socket.assigns.cmd_history] |> Enum.take(200)
     history = [%{code: code, result: result} | socket.assigns.history] |> Enum.take(30)
 
     {:noreply,
-     assign(socket, code: code, result: result, history: history, bindings: new_bindings)}
+     socket
+     |> assign(
+       code: code,
+       result: result,
+       history: history,
+       bindings: new_bindings,
+       cmd_history: new_cmd_history
+     )
+     |> push_event("history_updated", %{history: new_cmd_history})}
   end
 
   def handle_event("clear", _params, socket) do

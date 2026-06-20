@@ -252,7 +252,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
         </div>
 
         <%!-- Charts --%>
-        <div class="flex flex-col gap-6 sm:gap-8">
+        <div id="charts-section" class="flex flex-col gap-6 sm:gap-8">
           <%!-- Total Board Units Chart --%>
           <%= if map_size(@total_board_units_series) > 0 do %>
             <section>
@@ -544,6 +544,41 @@ defmodule SpitegearWeb.PublicGameShowLive do
           <% end %>
         </div>
       </main>
+
+      <%!-- Mobile sticky player tray — visible only while charts are on screen --%>
+      <%= if @view_screen && Enum.any?(@view_screen.players || []) && map_size(@net_units_series) > 0 do %>
+        <div
+          id="player-tray"
+          phx-hook="PlayerTray"
+          data-players={Jason.encode!(Enum.map(@view_screen.players, & &1.name))}
+          data-colors={Jason.encode!(@game.player_colors || %{})}
+          class="fixed bottom-0 left-0 right-0 z-50 sm:hidden"
+          style="transform: translateY(100%); transition: transform 300ms ease-out;"
+        >
+          <div class="bg-black border-t border-gray-800 rounded-t-2xl shadow-2xl overflow-hidden">
+            <%!-- Expanded content --%>
+            <div
+              data-tray-content
+              style="max-height: 0; overflow: hidden; transition: max-height 250ms ease-out;"
+            >
+              <div class="px-4 pt-3 pb-1">
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">
+                  Players
+                </p>
+                <div data-tray-chips class="flex flex-wrap gap-2 max-h-44 overflow-y-auto pb-2"></div>
+              </div>
+            </div>
+            <%!-- Collapsed header (always visible) --%>
+            <div class="flex items-center justify-between px-4 py-2.5 cursor-pointer select-none">
+              <div class="flex items-center gap-1.5">
+                <span data-tray-dots class="flex items-center gap-1"></span>
+                <span data-tray-count class="text-xs text-gray-300 ml-1"></span>
+              </div>
+              <span data-tray-arrow class="text-sm text-gray-400">▲</span>
+            </div>
+          </div>
+        </div>
+      <% end %>
     </div>
     """
   end

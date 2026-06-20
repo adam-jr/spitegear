@@ -14,7 +14,10 @@ defmodule SpitegearWeb.AdminSessionController do
       |> put_session(:admin_logged_in, true)
       |> redirect(to: ~p"/admin")
     else
-      render(conn, :new, layout: {SpitegearWeb.Layouts, :root}, error: "Invalid username or password.")
+      render(conn, :new,
+        layout: {SpitegearWeb.Layouts, :root},
+        error: "Invalid username or password."
+      )
     end
   end
 

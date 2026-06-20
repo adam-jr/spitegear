@@ -49,7 +49,7 @@ defmodule SpitegearWeb.PublicLandingLive do
     <div id="page-root" phx-hook="Timezone" class="min-h-screen bg-gray-50 text-gray-900">
       <header class="bg-black">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <h1 class="text-lg font-bold tracking-tight text-white">⚙️ Spitegear</h1>
+          <h1 class="font-wordmark text-3xl leading-none"><span class="text-[#9B3A2E]">spite</span><span class="text-[#EDE8DF]">gear</span></h1>
           <a
             href="https://www.wargear.net"
             target="_blank"

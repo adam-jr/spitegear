@@ -49,7 +49,7 @@ defmodule SpitegearWeb.PublicGamesIndexLive do
               ← Home
             </a>
             <span class="text-gray-600">|</span>
-            <h1 class="text-lg font-bold tracking-tight text-white">All Games</h1>
+            <h1 class="font-wordmark text-3xl leading-none"><span class="text-[#9B3A2E]">spite</span><span class="text-[#EDE8DF]">gear</span></h1>
           </div>
           <a
             href="https://www.wargear.net"

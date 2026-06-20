@@ -24,17 +24,10 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
 
   def get_game(game_id), do: fetch_game(game_id, false)
 
-  defp fetch_game(game_id, retried) do
-    url_string = "https://www.wargear.net/games/view/#{game_id}"
-    url = URI.parse(url_string)
+  def parse(body, game_id) do
+    url = URI.parse("https://www.wargear.net/games/view/#{game_id}")
 
-    with {:ok, %{body: body}} <-
-           HTTPoison.get(url_string, [{"Cookie", wargear_cookie()}],
-             timeout: 30_000,
-             recv_timeout: 30_000
-           ),
-         :ok <- check_session(body),
-         {:ok, document} <- Floki.parse_document(body),
+    with {:ok, document} <- Floki.parse_document(body),
          {:ok, card} <- get_next_card(document),
          {:ok, game_name} <- game_name(document),
          {:ok, board_name} <- board_name(document),
@@ -62,6 +55,22 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
          winners: Enum.filter(players, & &1.winner?),
          fogged?: Enum.any?(players, & &1.fogged?)
        }}
+    else
+      _ -> :error
+    end
+  end
+
+  defp fetch_game(game_id, retried) do
+    url_string = "https://www.wargear.net/games/view/#{game_id}"
+
+    with {:ok, %{body: body}} <-
+           HTTPoison.get(url_string, [{"Cookie", wargear_cookie()}],
+             timeout: 30_000,
+             recv_timeout: 30_000
+           ),
+         :ok <- check_session(body),
+         {:ok, vs} <- parse(body, game_id) do
+      {:ok, vs}
     else
       :session_expired when not retried ->
         Logger.info("#{__MODULE__} session expired, refreshing cookie and retrying")

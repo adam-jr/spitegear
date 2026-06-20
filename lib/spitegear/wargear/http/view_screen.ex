@@ -130,30 +130,19 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
   end
 
   def get_next_card(document) do
-    card_trs = [
-      Floki.find(document, "tr:nth-child(15)"),
-      Floki.find(document, "tr:nth-child(14)")
-    ]
+    amount =
+      document
+      |> Floki.find("tr")
+      |> Enum.find_value(fn
+        {_, _, [label_td, {_, _, [{"font", _color, [{"b", [], [amount]}]} | _]} | _]} ->
+          if String.trim(Floki.text(label_td)) == "Next Card Set Worth", do: amount
 
-    case Enum.map(card_trs, &get_card_amount/1) do
-      [:error, :error] -> {:ok, nil}
-      [{:ok, amount}, :error] -> {:ok, amount}
-      [:error, {:ok, amount}] -> {:ok, amount}
-    end
+        _ ->
+          nil
+      end)
+
+    {:ok, amount}
   end
-
-  def get_card_amount([tr]) do
-    with {"tr", [], tds} <- tr,
-         [_tile, amounts] <- tds,
-         {"td", [], details} <- amounts,
-         [{"font", _color, [{"b", [], [amount]}]}, _rest] <- details do
-      {:ok, amount}
-    else
-      _ -> :error
-    end
-  end
-
-  def get_card_amount(_), do: :error
 
   def get_players(document) do
     document

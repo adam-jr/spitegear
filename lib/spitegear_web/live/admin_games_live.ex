@@ -99,7 +99,7 @@ defmodule SpitegearWeb.AdminGamesLive do
                     </a>
                   </td>
                   <td class="py-2 pr-4">{game.game_name || "—"}</td>
-                  <td class="py-2 pr-4">{if turn, do: turn.player.name, else: "—"}</td>
+                  <td class="py-2 pr-4">{if turn, do: turn.player_name, else: "—"}</td>
                   <td class="py-2 pr-4">
                     <span class={if running, do: "text-green-600", else: "text-gray-400"}>
                       {if running, do: "running", else: "stopped"}

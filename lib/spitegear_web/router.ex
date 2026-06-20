@@ -46,6 +46,7 @@ defmodule SpitegearWeb.Router do
     live "/logs", AdminLogsLive
     live "/templates", AdminTemplatesLive
     live "/games/:game_id/templates", AdminTemplatesLive
+    live "/console", AdminConsoleLive
   end
 
   # Other scopes may use custom stacks.

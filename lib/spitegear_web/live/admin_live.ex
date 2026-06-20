@@ -54,6 +54,7 @@ defmodule SpitegearWeb.AdminLive do
           <a href="/admin/templates" class="text-sm text-blue-600 hover:underline">Templates →</a>
           <a href="/admin/logs" class="text-sm text-blue-600 hover:underline">Logs →</a>
           <a href="/admin/games" class="text-sm text-blue-600 hover:underline">Games →</a>
+          <a href="/admin/console" class="text-sm text-blue-600 hover:underline">Console →</a>
           <form action="/admin/logout" method="post">
             <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
             <button type="submit" class="text-sm text-gray-400 hover:text-gray-600">Sign out</button>

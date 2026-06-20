@@ -15,6 +15,7 @@ defmodule Spitegear.HTML.Player do
 
     field(:color, :string, virtual: true)
     field(:seat_number, :integer, virtual: true)
+    field(:card_count, :integer, virtual: true)
     field(:current_turn?, :boolean, virtual: true)
     field(:eliminated?, :boolean, virtual: true)
     field(:winner?, :boolean, virtual: true)
@@ -50,6 +51,7 @@ defmodule Spitegear.HTML.Player do
     %{
       player
       | color: player_color(tr),
+        card_count: card_count(tr),
         current_turn?: current_turn?(tr),
         eliminated?: eliminated?(tr),
         winner?: winner?(tr),
@@ -149,6 +151,16 @@ defmodule Spitegear.HTML.Player do
 
       _ ->
         nil
+    end
+  end
+
+  defp card_count(tr) do
+    {"tr", [], tds} = tr
+    text = tds |> Enum.at(4) |> Floki.text() |> String.trim()
+
+    case Regex.run(~r/^\d+/, text) do
+      [n] -> String.to_integer(n)
+      nil -> 0
     end
   end
 

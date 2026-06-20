@@ -49,7 +49,7 @@ defmodule SpitegearWeb.PublicGamesIndexLive do
               ← Home
             </a>
             <span class="text-gray-600">|</span>
-            <h1 class="text-lg font-bold tracking-tight text-white">All Games</h1>
+            <img src="/images/spitegear.png" alt="Spitegear" class="h-12 w-auto" />
           </div>
           <a
             href="https://www.wargear.net"

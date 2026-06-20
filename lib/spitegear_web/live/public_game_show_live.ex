@@ -73,7 +73,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <a href="/" class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
               ← Home
             </a>
-            <h1 class="text-lg font-bold tracking-tight text-white">⚙️ Spitegear</h1>
+            <img src="/images/spitegear.png" alt="Spitegear" class="h-12 w-auto" />
           </div>
           <a
             href={"https://www.wargear.net/games/view/#{@game_id}"}

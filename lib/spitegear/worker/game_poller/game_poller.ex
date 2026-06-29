@@ -184,12 +184,8 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp board_image_content_type(headers) do
-    headers
-    |> Enum.find_value("image/png", fn
-      {"Content-Type", v} -> v
-      {"content-type", v} -> v
-      _ -> nil
-    end)
+    (headers["content-type"] || ["image/png"])
+    |> List.first()
     |> String.split(";")
     |> List.first()
     |> String.trim()

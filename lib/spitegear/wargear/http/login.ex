@@ -46,7 +46,7 @@ defmodule Spitegear.Wargear.HTTP.Login do
            {"Cookie", initial_cookies}
          ],
          {:ok, %{headers: resp_headers}} <-
-           HTTPoison.post(@base_url <> "/player/login", body, headers, follow_redirect: false),
+           Req.post(@base_url <> "/player/login", body: body, headers: headers, redirect: false),
          cookie when cookie != "" <- extract_cookie(resp_headers) do
       {:ok, cookie}
     else
@@ -56,7 +56,7 @@ defmodule Spitegear.Wargear.HTTP.Login do
   end
 
   defp get_initial_cookies do
-    case HTTPoison.get(@base_url <> "/player/login", [], timeout: 15_000, recv_timeout: 15_000) do
+    case Req.get(@base_url <> "/player/login", receive_timeout: 15_000) do
       {:ok, %{headers: headers}} -> {:ok, extract_cookie(headers)}
       {:error, reason} -> {:error, reason}
     end

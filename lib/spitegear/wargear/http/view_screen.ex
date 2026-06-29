@@ -64,9 +64,10 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
     url_string = "https://www.wargear.net/games/view/#{game_id}"
 
     with {:ok, %{body: body}} <-
-           HTTPoison.get(url_string, [{"Cookie", wargear_cookie()}],
-             timeout: 30_000,
-             recv_timeout: 30_000
+           Req.get(url_string,
+             headers: [{"Cookie", wargear_cookie()}],
+             receive_timeout: 30_000,
+             decode_body: false
            ),
          :ok <- check_session(body),
          {:ok, vs} <- parse(body, game_id) do

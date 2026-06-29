@@ -31,9 +31,14 @@ defmodule Spitegear.QuickChart do
         backgroundColor: "white"
       })
 
-    case HTTPoison.post(@url, body, [{"Content-Type", "application/json"}], recv_timeout: 20_000) do
-      {:ok, %{status_code: 200, body: png}} -> {:ok, png}
-      {:ok, %{status_code: code}} -> {:error, "QuickChart returned HTTP #{code}"}
+    case Req.post(@url,
+           body: body,
+           headers: [{"Content-Type", "application/json"}],
+           receive_timeout: 20_000,
+           decode_body: false
+         ) do
+      {:ok, %{status: 200, body: png}} -> {:ok, png}
+      {:ok, %{status: code}} -> {:error, "QuickChart returned HTTP #{code}"}
       {:error, reason} -> {:error, inspect(reason)}
     end
   end

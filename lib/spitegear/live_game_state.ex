@@ -28,6 +28,7 @@ defmodule Spitegear.LiveGameState do
       |> LiveGameState.infer_deaths_from_skip()
       |> LiveGameState.detect_eliminations()
       |> LiveGameState.announce_winners()
+      |> LiveGameState.fetch_board_image_if_finished()
 
   Each step is a no-op when its precondition is not met, so the pipeline
   always returns a valid struct.
@@ -483,6 +484,38 @@ defmodule Spitegear.LiveGameState do
 
     PubSub.msg(:spitegear, type: :game_winners, payload: {blocks, fallback})
     GenServer.cast(self(), :finish_game)
+    state
+  end
+
+  @doc """
+  Dispatches an async board image fetch to `GamePoller` when the game just
+  finished (winners present) on an unfogged game. Stores the image with
+  `turn_id: nil` so it occupies its own slot distinct from per-turn snapshots.
+
+  No-op when `view_screen_changed` is `false`, `current_view_screen` is `nil`,
+  `winners` is empty, the game is fogged, or `board_image_url` is nil.
+  """
+  @spec fetch_board_image_if_finished(t()) :: t()
+  def fetch_board_image_if_finished(%__MODULE__{view_screen_changed: false} = state), do: state
+  def fetch_board_image_if_finished(%__MODULE__{current_view_screen: nil} = state), do: state
+
+  def fetch_board_image_if_finished(
+        %__MODULE__{current_view_screen: %ViewScreen{winners: []}} = state
+      ),
+      do: state
+
+  def fetch_board_image_if_finished(
+        %__MODULE__{current_view_screen: %ViewScreen{fogged?: true}} = state
+      ),
+      do: state
+
+  def fetch_board_image_if_finished(%__MODULE__{} = state) do
+    url = state.current_view_screen.board_image_url
+
+    if url do
+      GenServer.cast(GamePoller.name(state.game_id), {:fetch_board_image, url, nil})
+    end
+
     state
   end
 

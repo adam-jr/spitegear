@@ -101,6 +101,7 @@ defmodule Spitegear.Worker.GameManager do
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
       |> LiveGameState.announce_winners()
+      |> LiveGameState.fetch_board_image_if_finished()
 
     {:noreply, %{state | game_state: game_state}}
   end

@@ -82,7 +82,12 @@ defmodule Spitegear.Slack.API do
   end
 
   defp put_file(upload_url, png_bytes) do
-    case Req.put(upload_url, body: png_bytes, headers: [{"Content-Type", "image/png"}], receive_timeout: 20_000, decode_body: false) do
+    case Req.put(upload_url,
+           body: png_bytes,
+           headers: [{"Content-Type", "image/png"}],
+           receive_timeout: 20_000,
+           decode_body: false
+         ) do
       {:ok, %{status: code}} when code in 200..299 -> :ok
       {:ok, %{status: code}} -> {:error, "upload PUT returned HTTP #{code}"}
       {:error, reason} -> {:error, inspect(reason)}
@@ -99,7 +104,11 @@ defmodule Spitegear.Slack.API do
         channel_id: channel_id
       })
 
-    case Req.post(url, body: body, headers: [{"Content-Type", "application/json"} | auth], receive_timeout: 15_000) do
+    case Req.post(url,
+           body: body,
+           headers: [{"Content-Type", "application/json"} | auth],
+           receive_timeout: 15_000
+         ) do
       {:ok, %{status: 200, body: %{"ok" => true}}} ->
         :ok
 

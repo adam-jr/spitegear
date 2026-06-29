@@ -169,8 +169,8 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp start_board_image_fetch(url, turn_id, game_id, attempt, poller) do
     Task.start(fn ->
-      case HTTPoison.get(url, [], timeout: 60_000, recv_timeout: 60_000) do
-        {:ok, %{status_code: 200, body: body, headers: headers}} ->
+      case Req.get(url, receive_timeout: 60_000, decode_body: false) do
+        {:ok, %{status: 200, body: body, headers: headers}} ->
           GameMaps.upsert(game_id, turn_id, body, board_image_content_type(headers))
 
         _ when attempt + 1 < @max_attempts ->

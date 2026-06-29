@@ -7,12 +7,11 @@ defmodule Spitegear.Wargear.HTTP.History do
   def get(game_id) do
     api_key = Settings.get("wargear_api_key")
 
-    with {:ok, %{body: body, status_code: 200}} <-
-           HTTPoison.get(url(game_id), [], params: [api_key: api_key, format: "json"]),
-         {:ok, %{"history" => %{"turn" => turns}}} <- Jason.decode(body) do
+    with {:ok, %{status: 200, body: %{"history" => %{"turn" => turns}}}} <-
+           Req.get(url(game_id), params: [api_key: api_key, format: "json"]) do
       {:ok, Enum.map(turns, & &1["@attributes"])}
     else
-      {:ok, %{status_code: status}} -> {:error, {:http, status}}
+      {:ok, %{status: status}} -> {:error, {:http, status}}
       {:error, reason} -> {:error, reason}
     end
   end

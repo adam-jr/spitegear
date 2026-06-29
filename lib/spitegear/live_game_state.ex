@@ -207,6 +207,12 @@ defmodule Spitegear.LiveGameState do
   def advance_turn(%__MODULE__{current_view_screen: nil} = state),
     do: %{state | turn_advanced: false}
 
+  # Game over — no current player means winners are present; let announce_winners handle it.
+  def advance_turn(
+        %__MODULE__{current_view_screen: %ViewScreen{current_player_name: nil}} = state
+      ),
+      do: %{state | turn_advanced: false}
+
   def advance_turn(
         %__MODULE__{
           current_view_screen: %ViewScreen{current_player_name: player_name},

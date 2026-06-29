@@ -322,6 +322,31 @@ defmodule Spitegear.LiveGameStateTest do
       assert result.current_turn.player_name == "adam"
       assert result.prev_turn == nil
     end
+
+    test "no-op when current_player_name is nil (game over)" do
+      open_turn = insert_turn(player_name: "adam", ended_at: nil)
+
+      vs = %ViewScreen{
+        game_id: "11111",
+        current_player_name: nil,
+        players: [],
+        eliminated: [],
+        winners: [],
+        fogged?: false
+      }
+
+      state = %LiveGameState{
+        game_id: "11111",
+        current_view_screen: vs,
+        current_turn: open_turn,
+        view_screen_changed: true
+      }
+
+      result = LiveGameState.advance_turn(state)
+
+      assert result.turn_advanced == false
+      assert Repo.aggregate(Turn, :count) == 1
+    end
   end
 
   describe "announce_next_round/1" do

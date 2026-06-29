@@ -86,11 +86,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
     Task.start(fn ->
       result =
-        case HTTPoison.get(url, [], timeout: 60_000, recv_timeout: 60_000) do
-          {:ok, %{status_code: 200, body: body, headers: headers}} ->
+        case Req.get(url, receive_timeout: 60_000, decode_body: false) do
+          {:ok, %{status: 200, body: body, headers: headers}} ->
             GameMaps.upsert(game_id, body, parse_content_type(headers))
 
-          {:ok, %{status_code: status}} ->
+          {:ok, %{status: status}} ->
             {:error, "HTTP #{status}"}
 
           {:error, reason} ->

@@ -11,7 +11,7 @@ defmodule Spitegear.Slack.API do
       %{text: text, channel: channel_id(channel), username: @bot_name}
       |> Jason.encode!()
 
-    HTTPoison.post(url, body, headers())
+    Req.post(url, body: body, headers: headers())
   end
 
   def post_blocks(blocks, fallback_text, channel \\ :spitegear) do
@@ -23,7 +23,7 @@ defmodule Spitegear.Slack.API do
       %{channel: channel_id(channel), blocks: blocks, text: fallback_text, username: @bot_name}
       |> Jason.encode!()
 
-    HTTPoison.post(url, body, headers())
+    Req.post(url, body: body, headers: headers())
   end
 
   def post_dm(text, recipient) do
@@ -31,14 +31,13 @@ defmodule Spitegear.Slack.API do
 
     %URI{} = base = config[:url]
     url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
-    headers = headers()
 
     body =
       %{text: text}
       |> Map.put(:channel, dm_id(recipient))
       |> Jason.encode!()
 
-    HTTPoison.post(url, body, headers)
+    Req.post(url, body: body, headers: headers())
   end
 
   @doc """
@@ -64,15 +63,17 @@ defmodule Spitegear.Slack.API do
     url = %{base_url | path: "/api/files.getUploadURLExternal"} |> URI.to_string()
     params = [filename: filename, length: length]
 
-    case HTTPoison.get(url, auth, params: params, recv_timeout: 15_000) do
-      {:ok, %{status_code: 200, body: body}} ->
-        case Jason.decode(body) do
-          {:ok, %{"ok" => true} = resp} -> {:ok, resp}
-          {:ok, %{"ok" => false, "error" => err}} -> {:error, err}
-          _ -> {:error, "unexpected response from getUploadURLExternal"}
-        end
+    case Req.get(url, headers: auth, params: params, receive_timeout: 15_000) do
+      {:ok, %{status: 200, body: %{"ok" => true} = resp}} ->
+        {:ok, resp}
 
-      {:ok, %{status_code: code}} ->
+      {:ok, %{status: 200, body: %{"ok" => false, "error" => err}}} ->
+        {:error, err}
+
+      {:ok, %{status: 200}} ->
+        {:error, "unexpected response from getUploadURLExternal"}
+
+      {:ok, %{status: code}} ->
         {:error, "Slack returned HTTP #{code} on getUploadURLExternal"}
 
       {:error, reason} ->
@@ -81,11 +82,14 @@ defmodule Spitegear.Slack.API do
   end
 
   defp put_file(upload_url, png_bytes) do
-    case HTTPoison.put(upload_url, png_bytes, [{"Content-Type", "image/png"}],
-           recv_timeout: 20_000
+    case Req.put(upload_url,
+           body: png_bytes,
+           headers: [{"Content-Type", "image/png"}],
+           receive_timeout: 20_000,
+           decode_body: false
          ) do
-      {:ok, %{status_code: code}} when code in 200..299 -> :ok
-      {:ok, %{status_code: code}} -> {:error, "upload PUT returned HTTP #{code}"}
+      {:ok, %{status: code}} when code in 200..299 -> :ok
+      {:ok, %{status: code}} -> {:error, "upload PUT returned HTTP #{code}"}
       {:error, reason} -> {:error, inspect(reason)}
     end
   end
@@ -100,17 +104,21 @@ defmodule Spitegear.Slack.API do
         channel_id: channel_id
       })
 
-    case HTTPoison.post(url, body, [{"Content-Type", "application/json"} | auth],
-           recv_timeout: 15_000
+    case Req.post(url,
+           body: body,
+           headers: [{"Content-Type", "application/json"} | auth],
+           receive_timeout: 15_000
          ) do
-      {:ok, %{status_code: 200, body: resp_body}} ->
-        case Jason.decode(resp_body) do
-          {:ok, %{"ok" => true}} -> :ok
-          {:ok, %{"ok" => false, "error" => err}} -> {:error, err}
-          _ -> {:error, "unexpected response from completeUploadExternal"}
-        end
+      {:ok, %{status: 200, body: %{"ok" => true}}} ->
+        :ok
 
-      {:ok, %{status_code: code}} ->
+      {:ok, %{status: 200, body: %{"ok" => false, "error" => err}}} ->
+        {:error, err}
+
+      {:ok, %{status: 200}} ->
+        {:error, "unexpected response from completeUploadExternal"}
+
+      {:ok, %{status: code}} ->
         {:error, "Slack returned HTTP #{code} on completeUploadExternal"}
 
       {:error, reason} ->
@@ -121,11 +129,12 @@ defmodule Spitegear.Slack.API do
   def new_messages(channel, timestamp \\ nil)
 
   def new_messages(channel, nil) do
-    HTTPoison.get(url(:read_channel), headers(), params: %{channel: channel_id(channel)})
+    Req.get(url(:read_channel), headers: headers(), params: %{channel: channel_id(channel)})
   end
 
   def new_messages(channel, timestamp) do
-    HTTPoison.get(url(:read_channel), headers(),
+    Req.get(url(:read_channel),
+      headers: headers(),
       params: %{channel: channel_id(channel), oldest: timestamp}
     )
   end

@@ -2,6 +2,7 @@ defmodule Spitegear.Wargear.HTTP.Login do
   @moduledoc false
   require Logger
 
+  alias Spitegear.PubSub
   alias Spitegear.Settings
 
   @base_url "https://www.wargear.net"
@@ -14,6 +15,12 @@ defmodule Spitegear.Wargear.HTTP.Login do
       {:ok, cookie} ->
         Settings.put("wargear_cookie", cookie)
         Logger.info("#{__MODULE__} cookie refreshed successfully")
+
+        PubSub.msg(
+          :spitegear_alerts,
+          ":white_check_mark: wargear.net cookie refreshed successfully"
+        )
+
         :ok
 
       {:error, reason} ->
@@ -25,7 +32,11 @@ defmodule Spitegear.Wargear.HTTP.Login do
   def extract_cookie(headers) do
     headers
     |> Enum.filter(fn {name, _} -> String.downcase(name) == "set-cookie" end)
-    |> Enum.map_join("; ", fn {_, value} ->
+    |> Enum.flat_map(fn
+      {_, values} when is_list(values) -> values
+      {_, value} -> [value]
+    end)
+    |> Enum.map_join("; ", fn value ->
       value |> String.split(";") |> List.first() |> String.trim()
     end)
   end

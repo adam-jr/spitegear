@@ -16,9 +16,25 @@ defmodule Spitegear.GameMaps do
     )
   end
 
-  @spec upsert(String.t(), integer(), binary(), String.t()) ::
+  @spec upsert(String.t(), integer() | nil, binary(), String.t()) ::
           {:ok, GameMapImage.t()} | {:error, Ecto.Changeset.t()}
-  def upsert(game_id, turn_id, image_bytes, content_type \\ "image/png") do
+  def upsert(game_id, turn_id, image_bytes, content_type \\ "image/png")
+
+  def upsert(game_id, nil, image_bytes, content_type) do
+    %GameMapImage{}
+    |> Ecto.Changeset.change(%{
+      game_id: game_id,
+      turn_id: nil,
+      image: image_bytes,
+      content_type: content_type
+    })
+    |> Repo.insert(
+      on_conflict: {:replace, [:image, :content_type, :updated_at]},
+      conflict_target: {:unsafe_fragment, "(game_id) WHERE turn_id IS NULL"}
+    )
+  end
+
+  def upsert(game_id, turn_id, image_bytes, content_type) do
     %GameMapImage{}
     |> Ecto.Changeset.change(%{
       game_id: game_id,
@@ -28,7 +44,7 @@ defmodule Spitegear.GameMaps do
     })
     |> Repo.insert(
       on_conflict: {:replace, [:image, :content_type, :updated_at]},
-      conflict_target: [:game_id, :turn_id]
+      conflict_target: {:unsafe_fragment, "(game_id, turn_id) WHERE turn_id IS NOT NULL"}
     )
   end
 end

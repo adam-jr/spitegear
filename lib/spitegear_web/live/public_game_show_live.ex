@@ -118,7 +118,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 <img
                   src="/images/fog-of-war.jpg"
                   alt="The Fog of War"
-                  class="max-h-[420px] rounded-xl border border-gray-200 shadow-sm"
+                  class="max-h-[210px] rounded-xl border border-gray-200 shadow-sm"
                 />
                 <p class="text-xs text-gray-400 text-center">
                   No map & no stats til the game ends, game is fogged bro

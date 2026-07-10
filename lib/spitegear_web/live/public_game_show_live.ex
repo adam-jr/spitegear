@@ -114,14 +114,15 @@ defmodule SpitegearWeb.PublicGameShowLive do
             </div>
           <% else %>
             <%= if @view_screen && @view_screen.fogged? do %>
-              <div class="md:flex-1 min-w-0">
-                <div class="w-full aspect-[4/3] rounded-xl border border-gray-200 shadow-sm bg-gray-100 flex flex-col items-center justify-center gap-2 text-gray-400">
-                  <span class="text-4xl" aria-hidden="true">🌫️</span>
-                  <p class="text-sm font-medium text-gray-500">Fog of War</p>
-                  <p class="text-xs text-gray-400 max-w-xs text-center px-6">
-                    This game has fog of war enabled, so no map image is available.
-                  </p>
-                </div>
+              <div class="md:flex-1 min-w-0 flex flex-col items-center gap-2">
+                <img
+                  src="/images/fog-of-war.jpg"
+                  alt="The Fog of War"
+                  class="max-h-[420px] rounded-xl border border-gray-200 shadow-sm"
+                />
+                <p class="text-xs text-gray-400 text-center">
+                  This game has fog of war enabled, so no map image is available.
+                </p>
               </div>
             <% end %>
           <% end %>

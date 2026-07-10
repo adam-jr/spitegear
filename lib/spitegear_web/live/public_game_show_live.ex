@@ -121,7 +121,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   class="max-h-[420px] rounded-xl border border-gray-200 shadow-sm"
                 />
                 <p class="text-xs text-gray-400 text-center">
-                  This game has fog of war enabled, so no map image is available.
+                  No map & no stats til the game ends, game is fogged bro
                 </p>
               </div>
             <% end %>

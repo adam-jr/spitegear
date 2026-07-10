@@ -112,6 +112,19 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 class="w-full rounded-xl border border-gray-200 shadow-sm"
               />
             </div>
+          <% else %>
+            <%= if @view_screen && @view_screen.fogged? do %>
+              <div class="md:flex-1 min-w-0 flex flex-col items-center gap-2">
+                <img
+                  src="/images/fog-of-war.jpg"
+                  alt="The Fog of War"
+                  class="max-h-[420px] rounded-xl border border-gray-200 shadow-sm"
+                />
+                <p class="text-xs text-gray-400 text-center">
+                  No map & no stats til the game ends, game is fogged bro
+                </p>
+              </div>
+            <% end %>
           <% end %>
 
           <%!-- Right column: combined summary + turn panel --%>

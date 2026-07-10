@@ -118,7 +118,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                 <img
                   src="/images/fog-of-war.jpg"
                   alt="The Fog of War"
-                  class="max-h-[210px] rounded-xl border border-gray-200 shadow-sm"
+                  class="max-h-[800px] rounded-xl border border-gray-200 shadow-sm"
                 />
                 <p class="text-xs text-gray-400 text-center">
                   No map & no stats til the game ends, game is fogged bro
@@ -139,6 +139,9 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   class="flex items-center gap-2 no-underline group"
                 >
                   <h2 class="text-base font-bold text-gray-900 leading-snug group-hover:text-gray-600 transition-colors">
+                    <%= if @view_screen && @view_screen.fogged? do %>
+                      <span aria-hidden="true">☁️</span>
+                    <% end %>
                     {@game.board_name || "Game #{@game_id}"}
                   </h2>
                   <svg

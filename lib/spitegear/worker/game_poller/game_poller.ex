@@ -10,6 +10,7 @@ defmodule Spitegear.Worker.GamePoller do
   require Logger
 
   @interval :timer.seconds(20)
+  @max_backoff :timer.minutes(5)
   @view_screen_interval :timer.minutes(1)
   @view_screen_max_polls 10
 
@@ -17,7 +18,8 @@ defmodule Spitegear.Worker.GamePoller do
     game_id: nil,
     last_turn_id: nil,
     view_screen_timer: nil,
-    view_screen_polls_remaining: 0
+    view_screen_polls_remaining: 0,
+    consecutive_failures: 0
   }
 
   def child_spec(game_id: game_id) do
@@ -50,11 +52,10 @@ defmodule Spitegear.Worker.GamePoller do
       {:ok, %{"turnid" => turn_id} = turn_data} ->
         GameManager.notify_history_fetched(game_id, turn_data)
         schedule_work()
-        {:noreply, %{state | last_turn_id: turn_id}}
+        {:noreply, %{state | last_turn_id: turn_id, consecutive_failures: 0}}
 
-      _ ->
-        schedule_work()
-        {:noreply, state}
+      error ->
+        handle_history_failure(error, state)
     end
   end
 
@@ -63,7 +64,7 @@ defmodule Spitegear.Worker.GamePoller do
       {:ok, %{"turnid" => ^last_turn_id} = turn_data} ->
         GameManager.notify_history_fetched(game_id, turn_data)
         schedule_work()
-        {:noreply, state}
+        {:noreply, %{state | consecutive_failures: 0}}
 
       {:ok, %{"turnid" => turn_id} = turn_data} ->
         GameManager.notify_history_fetched(game_id, turn_data)
@@ -73,7 +74,8 @@ defmodule Spitegear.Worker.GamePoller do
           state
           | last_turn_id: turn_id,
             view_screen_timer: nil,
-            view_screen_polls_remaining: @view_screen_max_polls
+            view_screen_polls_remaining: @view_screen_max_polls,
+            consecutive_failures: 0
         }
 
         case fetch_view_screen(state) do
@@ -85,9 +87,8 @@ defmodule Spitegear.Worker.GamePoller do
             {:noreply, state}
         end
 
-      _ ->
-        schedule_work()
-        {:noreply, state}
+      error ->
+        handle_history_failure(error, state)
     end
   end
 
@@ -104,7 +105,11 @@ defmodule Spitegear.Worker.GamePoller do
         GameManager.notify_view_screen_fetched(state.game_id, view_screen)
         {:noreply, state}
 
-      _ ->
+      error ->
+        Logger.error(
+          "#{__MODULE__} initial ViewScreen.get_game failed for game #{state.game_id}: #{inspect(error)}"
+        )
+
         {:noreply, state}
     end
   end
@@ -162,7 +167,24 @@ defmodule Spitegear.Worker.GamePoller do
 
   defp maybe_schedule_view_screen_poll(_), do: {nil, 0}
 
-  defp schedule_work, do: Process.send_after(self(), :work, @interval)
+  defp handle_history_failure(error, state) do
+    failures = state.consecutive_failures + 1
+
+    Logger.error(
+      "#{__MODULE__} History.latest_turn failed for game #{state.game_id} (#{failures} consecutive failure(s)): #{inspect(error)}"
+    )
+
+    schedule_work(failures)
+    {:noreply, %{state | consecutive_failures: failures}}
+  end
+
+  defp schedule_work(failures \\ 0)
+  defp schedule_work(0), do: Process.send_after(self(), :work, @interval)
+
+  defp schedule_work(failures) do
+    delay = min(@interval * Integer.pow(2, min(failures, 10)), @max_backoff)
+    Process.send_after(self(), :work, delay)
+  end
 
   @backoff_ms [5_000, 15_000, 30_000]
   @max_attempts length(@backoff_ms) + 1

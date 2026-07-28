@@ -63,7 +63,7 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
   defp fetch_game(game_id, retried) do
     url_string = "https://www.wargear.net/games/view/#{game_id}"
 
-    with {:ok, %{body: body}} <-
+    with {:ok, %{status: 200, body: body}} <-
            Req.get(url_string,
              headers: [{"Cookie", wargear_cookie()}],
              receive_timeout: 30_000,
@@ -78,7 +78,12 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
         Login.refresh_cookie()
         fetch_game(game_id, true)
 
-      _ ->
+      {:ok, %{status: status}} ->
+        Logger.error("#{__MODULE__} fetch_game failed for game #{game_id}: HTTP #{status}")
+        :error
+
+      other ->
+        Logger.error("#{__MODULE__} fetch_game failed for game #{game_id}: #{inspect(other)}")
         :error
     end
   end

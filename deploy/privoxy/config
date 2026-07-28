@@ -1,0 +1,14 @@
+# Plain HTTP-proxy front end for the warp sidecar's SOCKS5 port.
+#
+# Deliberately loads no actionsfile/filterfile: this must be a dumb pipe.
+# Privoxy's default config enables ad-blocking/content-rewriting via
+# default.action, which would silently mangle the HTML we scrape from
+# wargear.net. Do not add actionsfile/filterfile directives here.
+
+listen-address  0.0.0.0:8118
+
+enable-remote-toggle 0
+enable-edit-actions 0
+enable-remote-http-toggle 0
+
+forward-socks5t   /   warp:1080   .

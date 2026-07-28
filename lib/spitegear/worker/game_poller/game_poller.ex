@@ -16,6 +16,10 @@ defmodule Spitegear.Worker.GamePoller do
   @view_screen_interval :timer.minutes(1)
   @view_screen_max_polls 10
 
+  # Applied to every delay before a wargear.net request, so many games
+  # polling in parallel don't all hit it on the same fixed cadence.
+  @jitter_fraction 0.15
+
   @state %{
     game_id: nil,
     last_turn_id: nil,
@@ -182,7 +186,7 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp maybe_schedule_view_screen_poll(remaining) when remaining > 0 do
-    {Process.send_after(self(), :poll_view_screen, @view_screen_interval), remaining}
+    {Process.send_after(self(), :poll_view_screen, jitter(@view_screen_interval)), remaining}
   end
 
   defp maybe_schedule_view_screen_poll(_), do: {nil, 0}
@@ -199,11 +203,18 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp schedule_work(failures \\ 0)
-  defp schedule_work(0), do: Process.send_after(self(), :work, @interval)
+  defp schedule_work(0), do: Process.send_after(self(), :work, jitter(@interval))
 
   defp schedule_work(failures) do
     delay = min(@interval * Integer.pow(2, min(failures, 20)), @max_backoff)
-    Process.send_after(self(), :work, delay)
+    Process.send_after(self(), :work, jitter(delay))
+  end
+
+  @doc false
+  @spec jitter(pos_integer()) :: pos_integer()
+  def jitter(ms) do
+    spread = trunc(ms * @jitter_fraction)
+    ms + Enum.random(-spread..spread)
   end
 
   @backoff_ms [5_000, 15_000, 30_000]

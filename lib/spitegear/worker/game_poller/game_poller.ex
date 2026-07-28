@@ -9,8 +9,10 @@ defmodule Spitegear.Worker.GamePoller do
 
   require Logger
 
-  @interval :timer.seconds(20)
-  @max_backoff :timer.minutes(5)
+  @interval :timer.seconds(60)
+  @max_backoff :timer.hours(24)
+  @night_recheck_interval :timer.minutes(30)
+  @waking_hour 7
   @view_screen_interval :timer.minutes(1)
   @view_screen_max_polls 10
 
@@ -47,48 +49,12 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   @impl true
-  def handle_info(:work, %{game_id: game_id, last_turn_id: nil} = state) do
-    case History.latest_turn(game_id) do
-      {:ok, %{"turnid" => turn_id} = turn_data} ->
-        GameManager.notify_history_fetched(game_id, turn_data)
-        schedule_work()
-        {:noreply, %{state | last_turn_id: turn_id, consecutive_failures: 0}}
-
-      error ->
-        handle_history_failure(error, state)
-    end
-  end
-
-  def handle_info(:work, %{game_id: game_id, last_turn_id: last_turn_id} = state) do
-    case History.latest_turn(game_id) do
-      {:ok, %{"turnid" => ^last_turn_id} = turn_data} ->
-        GameManager.notify_history_fetched(game_id, turn_data)
-        schedule_work()
-        {:noreply, %{state | consecutive_failures: 0}}
-
-      {:ok, %{"turnid" => turn_id} = turn_data} ->
-        GameManager.notify_history_fetched(game_id, turn_data)
-        if state.view_screen_timer, do: Process.cancel_timer(state.view_screen_timer)
-
-        state = %{
-          state
-          | last_turn_id: turn_id,
-            view_screen_timer: nil,
-            view_screen_polls_remaining: @view_screen_max_polls,
-            consecutive_failures: 0
-        }
-
-        case fetch_view_screen(state) do
-          {:stop, state} ->
-            {:stop, :normal, state}
-
-          {:continue, state} ->
-            schedule_work()
-            {:noreply, state}
-        end
-
-      error ->
-        handle_history_failure(error, state)
+  def handle_info(:work, state) do
+    if night?() do
+      Process.send_after(self(), :work, @night_recheck_interval)
+      {:noreply, state}
+    else
+      do_work(state)
     end
   end
 
@@ -136,6 +102,60 @@ defmodule Spitegear.Worker.GamePoller do
 
   def name(game_id), do: :"#{__MODULE__}_#{game_id}"
 
+  defp do_work(%{game_id: game_id, last_turn_id: nil} = state) do
+    case History.latest_turn(game_id) do
+      {:ok, %{"turnid" => turn_id} = turn_data} ->
+        GameManager.notify_history_fetched(game_id, turn_data)
+        schedule_work()
+        {:noreply, %{state | last_turn_id: turn_id, consecutive_failures: 0}}
+
+      error ->
+        handle_history_failure(error, state)
+    end
+  end
+
+  defp do_work(%{game_id: game_id, last_turn_id: last_turn_id} = state) do
+    case History.latest_turn(game_id) do
+      {:ok, %{"turnid" => ^last_turn_id} = turn_data} ->
+        GameManager.notify_history_fetched(game_id, turn_data)
+        schedule_work()
+        {:noreply, %{state | consecutive_failures: 0}}
+
+      {:ok, %{"turnid" => turn_id} = turn_data} ->
+        GameManager.notify_history_fetched(game_id, turn_data)
+        if state.view_screen_timer, do: Process.cancel_timer(state.view_screen_timer)
+
+        state = %{
+          state
+          | last_turn_id: turn_id,
+            view_screen_timer: nil,
+            view_screen_polls_remaining: @view_screen_max_polls,
+            consecutive_failures: 0
+        }
+
+        case fetch_view_screen(state) do
+          {:stop, state} ->
+            {:stop, :normal, state}
+
+          {:continue, state} ->
+            schedule_work()
+            {:noreply, state}
+        end
+
+      error ->
+        handle_history_failure(error, state)
+    end
+  end
+
+  defp night?, do: night?(DateTime.utc_now())
+
+  defp night?(now) do
+    case DateTime.shift_zone(now, "America/Chicago") do
+      {:ok, chicago} -> chicago.hour < @waking_hour
+      _ -> false
+    end
+  end
+
   defp fetch_view_screen(state) do
     polls_remaining = state.view_screen_polls_remaining - 1
 
@@ -182,7 +202,7 @@ defmodule Spitegear.Worker.GamePoller do
   defp schedule_work(0), do: Process.send_after(self(), :work, @interval)
 
   defp schedule_work(failures) do
-    delay = min(@interval * Integer.pow(2, min(failures, 10)), @max_backoff)
+    delay = min(@interval * Integer.pow(2, min(failures, 20)), @max_backoff)
     Process.send_after(self(), :work, delay)
   end
 

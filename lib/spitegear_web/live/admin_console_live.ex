@@ -154,6 +154,21 @@ defmodule SpitegearWeb.AdminConsoleLive do
         </div>
       </details>
 
+      <details class="border border-gray-200 rounded">
+        <summary class="px-4 py-2 text-sm font-semibold cursor-pointer text-gray-700 select-none">
+          Snippets
+        </summary>
+        <div class="px-4 pb-4 pt-2 text-sm font-mono flex flex-col gap-2">
+          <div class="text-xs text-gray-400 uppercase tracking-wide">
+            wargear.net proxy (routes requests through the warp/privoxy sidecars)
+          </div>
+          <div class="text-gray-700">
+            Settings.put("wargear_proxy_url", "http://privoxy:8118") # on
+          </div>
+          <div class="text-gray-700">Settings.put("wargear_proxy_url", "") # off</div>
+        </div>
+      </details>
+
       <form phx-submit="eval">
         <textarea
           id="console-input"

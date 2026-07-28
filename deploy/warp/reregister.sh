@@ -9,10 +9,19 @@
 # America/Chicago, see GamePoller's night?/0) — so it never runs while
 # a wargear.net request could be in flight.
 #
+# Posts a success/failure line to Slack (#spitegear_alerts, same channel
+# used for cookie-refresh confirmations) via the running spitegear
+# container's rpc console, so runs are visible without SSHing in.
+#
 # Usage (crontab, America/Chicago system time):
 #   15 3 * * * /path/to/spitegear/deploy/warp/reregister.sh >> /path/to/spitegear/warp-reregister.log 2>&1
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+slack() {
+  docker exec spitegear bin/spitegear rpc \
+    "Spitegear.PubSub.msg(:spitegear_alerts, \"$1\")" >/dev/null 2>&1
+}
 
 log "re-registering warp"
 
@@ -23,11 +32,13 @@ docker exec warp warp-cli registration delete >/dev/null 2>&1
 
 if ! docker exec warp warp-cli registration new; then
   log "registration new FAILED"
+  slack ":x: warp re-registration failed: \`registration new\` errored. Check warp-reregister.log on the Beelink."
   exit 1
 fi
 
 if ! docker exec warp warp-cli connect; then
   log "connect FAILED"
+  slack ":x: warp re-registration failed: \`connect\` errored after a fresh registration. Check warp-reregister.log on the Beelink."
   exit 1
 fi
 
@@ -38,9 +49,11 @@ log "status: $status"
 case "$status" in
   *Connected*)
     log "re-registration succeeded"
+    slack ":white_check_mark: warp re-registered and reconnected, egress IP rotated."
     ;;
   *)
     log "WARNING: warp not connected after re-registration"
+    slack ":x: warp re-registration finished but is not connected afterward. Check warp-reregister.log on the Beelink."
     exit 1
     ;;
 esac

@@ -13,6 +13,7 @@ defmodule Spitegear.Wargear.HTTP.LogSnapshot do
   alias Spitegear.Repo
   alias Spitegear.Settings
   alias Spitegear.Wargear.HTTP.Login
+  alias Spitegear.Wargear.HTTP.Proxy
 
   @base_url "https://www.wargear.net"
 
@@ -70,11 +71,14 @@ defmodule Spitegear.Wargear.HTTP.LogSnapshot do
   defp fetch_log(game_id, retried) do
     url = @base_url <> "/games/log/#{game_id}?showsetup=1&showips="
 
-    case Req.get(url,
-           headers: [{"Cookie", wargear_cookie()}],
-           receive_timeout: 30_000,
-           decode_body: false
-         ) do
+    opts =
+      [
+        headers: [{"Cookie", wargear_cookie()}],
+        receive_timeout: 30_000,
+        decode_body: false
+      ] ++ Proxy.req_options()
+
+    case Req.get(url, opts) do
       {:ok, %{body: body}} -> check_session(body, game_id, retried)
       {:error, reason} -> {:error, reason}
     end

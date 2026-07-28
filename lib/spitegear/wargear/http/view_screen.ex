@@ -4,6 +4,7 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
 
   alias Spitegear.HTML.Player
   alias Spitegear.Wargear.HTTP.Login
+  alias Spitegear.Wargear.HTTP.Proxy
 
   @type t :: %__MODULE__{}
 
@@ -63,12 +64,14 @@ defmodule Spitegear.Wargear.HTTP.ViewScreen do
   defp fetch_game(game_id, retried) do
     url_string = "https://www.wargear.net/games/view/#{game_id}"
 
-    with {:ok, %{status: 200, body: body}} <-
-           Req.get(url_string,
-             headers: [{"Cookie", wargear_cookie()}],
-             receive_timeout: 30_000,
-             decode_body: false
-           ),
+    opts =
+      [
+        headers: [{"Cookie", wargear_cookie()}],
+        receive_timeout: 30_000,
+        decode_body: false
+      ] ++ Proxy.req_options()
+
+    with {:ok, %{status: 200, body: body}} <- Req.get(url_string, opts),
          :ok <- check_session(body),
          {:ok, vs} <- parse(body, game_id) do
       {:ok, vs}

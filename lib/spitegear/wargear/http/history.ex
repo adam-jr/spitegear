@@ -1,13 +1,16 @@
 defmodule Spitegear.Wargear.HTTP.History do
   @moduledoc false
   alias Spitegear.Settings
+  alias Spitegear.Wargear.HTTP.Proxy
 
   @base_url "https://www.wargear.net/rest"
 
   def get(game_id) do
     api_key = Settings.get("wargear_api_key")
 
-    case Req.get(url(game_id), params: [api_key: api_key, format: "json"]) do
+    opts = [params: [api_key: api_key, format: "json"]] ++ Proxy.req_options()
+
+    case Req.get(url(game_id), opts) do
       {:ok, %{status: 200, body: %{"history" => %{"turn" => turns}}}} ->
         {:ok, Enum.map(turns, & &1["@attributes"])}
 

@@ -4,6 +4,7 @@ defmodule Spitegear.Wargear.HTTP.Login do
 
   alias Spitegear.PubSub
   alias Spitegear.Settings
+  alias Spitegear.Wargear.HTTP.Proxy
 
   @base_url "https://www.wargear.net"
 
@@ -56,8 +57,10 @@ defmodule Spitegear.Wargear.HTTP.Login do
            {"Content-Type", "application/x-www-form-urlencoded"},
            {"Cookie", initial_cookies}
          ],
+         post_opts =
+           [body: body, headers: headers, redirect: false] ++ Proxy.req_options(),
          {:ok, %{headers: resp_headers}} <-
-           Req.post(@base_url <> "/player/login", body: body, headers: headers, redirect: false),
+           Req.post(@base_url <> "/player/login", post_opts),
          cookie when cookie != "" <- extract_cookie(resp_headers) do
       {:ok, cookie}
     else
@@ -67,7 +70,9 @@ defmodule Spitegear.Wargear.HTTP.Login do
   end
 
   defp get_initial_cookies do
-    case Req.get(@base_url <> "/player/login", receive_timeout: 15_000) do
+    opts = [receive_timeout: 15_000] ++ Proxy.req_options()
+
+    case Req.get(@base_url <> "/player/login", opts) do
       {:ok, %{headers: headers}} -> {:ok, extract_cookie(headers)}
       {:error, reason} -> {:error, reason}
     end

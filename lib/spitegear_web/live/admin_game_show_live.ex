@@ -91,7 +91,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
       result =
         case Req.get(url, opts) do
           {:ok, %{status: 200, body: body, headers: headers}} ->
-            GameMaps.upsert(game_id, body, parse_content_type(headers))
+            GameMaps.upsert(game_id, nil, body, parse_content_type(headers))
 
           {:ok, %{status: status}} ->
             {:error, "HTTP #{status}"}

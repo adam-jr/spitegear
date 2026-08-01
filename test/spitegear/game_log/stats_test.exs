@@ -530,4 +530,113 @@ defmodule Spitegear.GameLog.StatsTest do
       assert [%{seq: 5, net_units: 8}, %{seq: 10, net_units: 5}] == result["Bob"]
     end
   end
+
+  describe "territories_held_series/1" do
+    test "returns empty map when no territory-affecting events exist" do
+      event(%{log_seq: 1, event_type: "started_turn", player: "Alice", raw_action: "x"})
+      assert %{} == Stats.territories_held_series(@game_id)
+    end
+
+    test "selected_territory picks before setup seed the starting count" do
+      event(%{
+        log_seq: 1,
+        event_type: "selected_territory",
+        player: "Alice",
+        territory_to: "A1",
+        raw_action: "x"
+      })
+
+      event(%{
+        log_seq: 2,
+        event_type: "selected_territory",
+        player: "Alice",
+        territory_to: "A2",
+        raw_action: "x"
+      })
+
+      event(%{
+        log_seq: 3,
+        event_type: "selected_territory",
+        player: "Bob",
+        territory_to: "B1",
+        raw_action: "x"
+      })
+
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+
+      result = Stats.territories_held_series(@game_id)
+
+      assert [%{seq: 5, net_units: 2}] ==
+               Enum.map(result["Alice"], &Map.take(&1, [:seq, :net_units]))
+
+      assert [%{seq: 5, net_units: 1}] ==
+               Enum.map(result["Bob"], &Map.take(&1, [:seq, :net_units]))
+    end
+
+    test "occupied event with a defender transfers a territory between players" do
+      event(%{
+        log_seq: 1,
+        event_type: "selected_territory",
+        player: "Alice",
+        territory_to: "A1",
+        raw_action: "x"
+      })
+
+      event(%{
+        log_seq: 2,
+        event_type: "selected_territory",
+        player: "Bob",
+        territory_to: "B1",
+        raw_action: "x"
+      })
+
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+
+      event(%{
+        log_seq: 10,
+        event_type: "occupied",
+        player: "Alice",
+        defender: "Bob",
+        territory_from: "A1",
+        territory_to: "B1",
+        units: 3,
+        raw_action: "x"
+      })
+
+      result = Stats.territories_held_series(@game_id)
+
+      assert [%{seq: 5, net_units: 1}, %{seq: 10, net_units: 2}] ==
+               Enum.map(result["Alice"], &Map.take(&1, [:seq, :net_units]))
+
+      assert [%{seq: 5, net_units: 1}, %{seq: 10, net_units: 0}] ==
+               Enum.map(result["Bob"], &Map.take(&1, [:seq, :net_units]))
+    end
+
+    test "occupied event with nil defender only adds to the attacker (neutral capture)" do
+      event(%{
+        log_seq: 1,
+        event_type: "selected_territory",
+        player: "Alice",
+        territory_to: "A1",
+        raw_action: "x"
+      })
+
+      event(%{log_seq: 5, event_type: "setup", raw_action: "Initial board setup complete"})
+
+      event(%{
+        log_seq: 10,
+        event_type: "occupied",
+        player: "Alice",
+        defender: nil,
+        territory_to: "N1",
+        units: 3,
+        raw_action: "x"
+      })
+
+      result = Stats.territories_held_series(@game_id)
+
+      assert [%{seq: 5, net_units: 1}, %{seq: 10, net_units: 2}] ==
+               Enum.map(result["Alice"], &Map.take(&1, [:seq, :net_units]))
+    end
+  end
 end

@@ -11,6 +11,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
   alias Spitegear.QuickChart
   alias Spitegear.Slack.API, as: SlackAPI
   alias Spitegear.Slack.Message
+  alias Spitegear.Wargear.HTTP.Proxy
 
   @refresh_interval 10_000
 
@@ -84,9 +85,11 @@ defmodule SpitegearWeb.AdminGameShowLive do
     game_id = socket.assigns.game_id
     lv = self()
 
+    opts = [receive_timeout: 60_000, decode_body: false] ++ Proxy.req_options()
+
     Task.start(fn ->
       result =
-        case Req.get(url, receive_timeout: 60_000, decode_body: false) do
+        case Req.get(url, opts) do
           {:ok, %{status: 200, body: body, headers: headers}} ->
             GameMaps.upsert(game_id, body, parse_content_type(headers))
 

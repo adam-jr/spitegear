@@ -611,6 +611,58 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   @doc """
+  Returns a per-player cumulative series of territories held over time, keyed
+  by player name. Same point shape as `enriched_net_units_series/1`.
+
+  Seeded from setup-phase `selected_territory` picks (aggregated at the
+  cutoff seq), then walks `occupied` events: the attacker (`player`) gains a
+  territory, and the previous owner (`defender`) loses one — unless the
+  territory was unowned (`defender` nil), in which case only the attacker
+  gains.
+  """
+  def territories_held_series(game_id) do
+    events =
+      Repo.all(
+        from(e in GameLogEvent,
+          where: e.game_id == ^game_id,
+          order_by: [asc: e.log_seq]
+        )
+      )
+
+    cutoff = setup_cutoff(events)
+
+    setup_deltas =
+      if cutoff > 0 do
+        events
+        |> Enum.take_while(&(&1.log_seq < cutoff))
+        |> Enum.flat_map(&setup_selected_delta/1)
+        |> Enum.group_by(& &1.player)
+        |> Enum.map(fn {player, deltas} ->
+          total = Enum.sum(Enum.map(deltas, & &1.delta))
+
+          %{
+            player: player,
+            seq: cutoff,
+            delta: total,
+            event_type: "setup",
+            source_player: nil,
+            defender: nil
+          }
+        end)
+      else
+        []
+      end
+
+    game_deltas =
+      events
+      |> Enum.drop_while(&(&1.log_seq < cutoff))
+      |> Enum.flat_map(&territory_delta/1)
+
+    (setup_deltas ++ game_deltas)
+    |> build_series()
+  end
+
+  @doc """
   Returns a per-player cumulative count of "jormp jomps" delivered, keyed by
   player name. Same point shape as `enriched_net_units_series/1`.
 
@@ -662,6 +714,43 @@ defmodule Spitegear.GameLog.Stats do
   end
 
   defp setup_placed_delta(_), do: []
+
+  # Setup phase only: each selected_territory pick is one starting territory.
+  defp setup_selected_delta(%GameLogEvent{
+         event_type: "selected_territory",
+         player: p,
+         territory_to: t,
+         log_seq: s
+       })
+       when not is_nil(p) and not is_nil(t) do
+    [%{player: p, seq: s, delta: 1}]
+  end
+
+  defp setup_selected_delta(_), do: []
+
+  # Territory transfer: attacker gains, previous owner (if any) loses.
+  defp territory_delta(%GameLogEvent{
+         event_type: "occupied",
+         player: p,
+         defender: d,
+         log_seq: s
+       })
+       when not is_nil(p) do
+    attacker = [
+      %{player: p, seq: s, delta: 1, event_type: "occupied", source_player: p, defender: d}
+    ]
+
+    defender =
+      if is_nil(d),
+        do: [],
+        else: [
+          %{player: d, seq: s, delta: -1, event_type: "occupied", source_player: p, defender: d}
+        ]
+
+    attacker ++ defender
+  end
+
+  defp territory_delta(_), do: []
 
   defp build_series(deltas) do
     deltas

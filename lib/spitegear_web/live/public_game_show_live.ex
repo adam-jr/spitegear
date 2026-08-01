@@ -15,6 +15,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
         log_summary = Stats.game_log_summary(game_id)
         total_board_units_series = Stats.total_board_units_series(game_id)
         net_units_series = Stats.enriched_net_units_series(game_id)
+        territories_held_series = Stats.territories_held_series(game_id)
         units_received_series = Stats.units_received_series(game_id)
         units_killed_series = Stats.units_killed_series(game_id)
         luck_delta_series = Stats.luck_delta_series(game_id)
@@ -41,6 +42,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
            log_summary: log_summary,
            total_board_units_series: total_board_units_series,
            net_units_series: net_units_series,
+           territories_held_series: territories_held_series,
            units_received_series: units_received_series,
            units_killed_series: units_killed_series,
            luck_delta_series: luck_delta_series,
@@ -356,6 +358,41 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   <% end %>
                 </div>
               <% end %>
+            </section>
+          <% end %>
+
+          <%!-- Territories Held Chart --%>
+          <%= if map_size(@territories_held_series) > 0 do %>
+            <section>
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  Territories Held Over Time
+                </h2>
+                <button
+                  phx-click={JS.dispatch("reset-zoom", to: "#territories-held-chart")}
+                  class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Reset Zoom
+                </button>
+              </div>
+              <p class="text-xs text-gray-400 mb-3">
+                Each player's territory count — rises on captures, falls when a territory is lost. Drag to zoom, double-click to reset.
+              </p>
+              <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-2 sm:p-1 relative h-[260px] sm:h-[420px]">
+                <canvas
+                  id="territories-held-chart"
+                  phx-hook="NetUnitsChart"
+                  data-series={Jason.encode!(@territories_held_series)}
+                  data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Territories Held"
+                  data-order={
+                    Jason.encode!(
+                      if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
+                    )
+                  }
+                >
+                </canvas>
+              </div>
             </section>
           <% end %>
 

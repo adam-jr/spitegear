@@ -66,6 +66,7 @@ const NetUnitsChart = {
     const series = JSON.parse(this.el.dataset.series)
     const gameColors = this.el.dataset.colors ? JSON.parse(this.el.dataset.colors) : {}
     const order = this.el.dataset.order ? JSON.parse(this.el.dataset.order) : []
+    const yLabel = this.el.dataset.yLabel || "Net Units"
     const datasets = Object.entries(series)
       .sort(([a], [b]) => {
         const ai = order.indexOf(a), bi = order.indexOf(b)
@@ -98,7 +99,7 @@ const NetUnitsChart = {
         animation: false,
         scales: {
           x: { type: "linear", title: { display: true, text: "Log Seq" } },
-          y: { title: { display: true, text: "Net Units" } },
+          y: { title: { display: true, text: yLabel } },
         },
         plugins: {
           legend: {

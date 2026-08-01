@@ -34,6 +34,12 @@ down-tunnel:
 # Cloudflare WARP client in SOCKS5 proxy mode, used to give outbound
 # wargear.net requests an alternate egress IP. See deploy/privoxy for the
 # HTTP-proxy front end that spitegear's Req client actually talks to.
+#
+# The image's built-in healthcheck curls cloudflare.com directly, which
+# never goes through the tunnel in this proxy-only mode (warp-cli only
+# tunnels traffic sent to its local proxy port) — it reports unhealthy
+# forever regardless of actual tunnel state. Override it to check through
+# the same GOST relay port (:1080) that privoxy actually forwards through.
 up-warp:
 	docker run -d --name $(WARP_CONTAINER) \
 		--network $(NETWORK) \
@@ -44,6 +50,11 @@ up-warp:
 		--sysctl net.ipv6.conf.all.disable_ipv6=0 \
 		--sysctl net.ipv4.conf.all.src_valid_mark=1 \
 		-v $(HOME)/spitegear/warp-data:/var/lib/cloudflare-warp \
+		--health-cmd "curl -fsS -x socks5h://127.0.0.1:1080 https://cloudflare.com/cdn-cgi/trace | grep -qE 'warp=(plus|on)'" \
+		--health-interval 15s \
+		--health-timeout 5s \
+		--health-start-period 10s \
+		--health-retries 3 \
 		caomingjun/warp
 
 down-warp:

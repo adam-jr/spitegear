@@ -48,8 +48,13 @@ log "status: $status"
 
 case "$status" in
   *Connected*)
-    log "re-registration succeeded"
-    slack ":white_check_mark: warp re-registered and reconnected, egress IP rotated."
+    # Check through the GOST relay on :1080 (the same port privoxy forwards
+    # through) rather than a bare curl from inside the container — warp-cli
+    # runs in WarpProxy mode here, so only traffic sent through that port is
+    # actually tunneled. Best-effort: don't fail the run if this lookup fails.
+    egress_ip=$(docker exec warp curl -fsS -x socks5h://127.0.0.1:1080 https://cloudflare.com/cdn-cgi/trace 2>/dev/null | grep '^ip=' | cut -d= -f2)
+    log "re-registration succeeded, egress IP: ${egress_ip:-unknown}"
+    slack ":white_check_mark: warp re-registered and reconnected, egress IP rotated to \`${egress_ip:-unknown}\`."
     ;;
   *)
     log "WARNING: warp not connected after re-registration"

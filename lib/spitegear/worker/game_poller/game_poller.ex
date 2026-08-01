@@ -4,6 +4,7 @@ defmodule Spitegear.Worker.GamePoller do
 
   alias Spitegear.GameMaps
   alias Spitegear.Wargear.HTTP.History
+  alias Spitegear.Wargear.HTTP.Proxy
   alias Spitegear.Wargear.HTTP.ViewScreen
   alias Spitegear.Worker.GameManager
 
@@ -221,8 +222,10 @@ defmodule Spitegear.Worker.GamePoller do
   @max_attempts length(@backoff_ms) + 1
 
   defp start_board_image_fetch(url, turn_id, game_id, attempt, poller) do
+    opts = [receive_timeout: 60_000, decode_body: false] ++ Proxy.req_options()
+
     Task.start(fn ->
-      case Req.get(url, receive_timeout: 60_000, decode_body: false) do
+      case Req.get(url, opts) do
         {:ok, %{status: 200, body: body, headers: headers}} ->
           GameMaps.upsert(game_id, turn_id, body, board_image_content_type(headers))
 

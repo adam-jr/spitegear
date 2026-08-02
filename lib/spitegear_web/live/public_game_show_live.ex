@@ -294,6 +294,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@total_board_units_series)}
                   data-colors={Jason.encode!(%{"Total" => "#6366f1"})}
+                  data-y-label="Units"
                   data-order={Jason.encode!(["Total"])}
                 >
                 </canvas>
@@ -306,7 +307,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <section>
               <div class="flex items-center justify-between mb-1">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                  Net Units Over Time
+                  Net Units
                 </h2>
                 <button
                   phx-click={JS.dispatch("reset-zoom", to: "#net-units-chart")}
@@ -324,6 +325,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@net_units_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Net Units"
                   data-order={
                     Jason.encode!(
                       if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
@@ -366,7 +368,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <section>
               <div class="flex items-center justify-between mb-1">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                  Territories Held Over Time
+                  Territories Held
                 </h2>
                 <button
                   phx-click={JS.dispatch("reset-zoom", to: "#territories-held-chart")}
@@ -401,7 +403,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <section>
               <div class="flex items-center justify-between mb-1">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                  Units Received Over Time
+                  Units Received
                 </h2>
                 <button
                   phx-click={JS.dispatch("reset-zoom", to: "#units-received-chart")}
@@ -417,6 +419,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@units_received_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Units Received"
                   data-order={
                     Jason.encode!(
                       if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
@@ -433,7 +436,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <section>
               <div class="flex items-center justify-between mb-1">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                  Units Killed Over Time
+                  Units Killed
                 </h2>
                 <button
                   phx-click={JS.dispatch("reset-zoom", to: "#units-killed-chart")}
@@ -449,6 +452,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@units_killed_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Units Killed"
                   data-order={
                     Jason.encode!(
                       if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
@@ -465,7 +469,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <section>
               <div class="flex items-center justify-between mb-1">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                  Luck Over Time
+                  Luck
                 </h2>
                 <button
                   phx-click={JS.dispatch("reset-zoom", to: "#luck-chart")}
@@ -483,6 +487,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@luck_delta_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Luck (Troops)"
                   data-order={
                     Jason.encode!(
                       if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
@@ -499,7 +504,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
             <section>
               <div class="flex items-center justify-between mb-1">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                  Attacks Received Over Time
+                  Attacks Received
                 </h2>
                 <button
                   phx-click={JS.dispatch("reset-zoom", to: "#attacks-received-chart")}
@@ -517,6 +522,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@attacks_received_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Attacker Dice Received"
                   data-order={
                     Jason.encode!(
                       if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
@@ -551,6 +557,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@jormp_jomps_received_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Jormp Jomps Received"
                   data-order={
                     Jason.encode!(
                       if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []
@@ -585,6 +592,7 @@ defmodule SpitegearWeb.PublicGameShowLive do
                   phx-hook="NetUnitsChart"
                   data-series={Jason.encode!(@jormp_jomps_delivered_series)}
                   data-colors={Jason.encode!(@game.player_colors || %{})}
+                  data-y-label="Jormp Jomps Delivered"
                   data-order={
                     Jason.encode!(
                       if @view_screen, do: Enum.map(@view_screen.players, & &1.name), else: []

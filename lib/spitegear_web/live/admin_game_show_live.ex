@@ -12,6 +12,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
   alias Spitegear.Slack.API, as: SlackAPI
   alias Spitegear.Slack.Message
   alias Spitegear.Wargear.HTTP.Proxy
+  alias Spitegear.Wargear.HTTP.ViewScreen
 
   @refresh_interval 10_000
 
@@ -81,7 +82,6 @@ defmodule SpitegearWeb.AdminGameShowLive do
   end
 
   def handle_event("fetch_board_image", _params, socket) do
-    url = socket.assigns.view_screen && socket.assigns.view_screen.board_image_url
     game_id = socket.assigns.game_id
     lv = self()
 
@@ -89,9 +89,15 @@ defmodule SpitegearWeb.AdminGameShowLive do
 
     Task.start(fn ->
       result =
-        case Req.get(url, opts) do
-          {:ok, %{status: 200, body: body, headers: headers}} ->
-            GameMaps.upsert(game_id, nil, body, parse_content_type(headers))
+        with {:ok, %{board_image_url: url}} when not is_nil(url) <- ViewScreen.get_game(game_id),
+             {:ok, %{status: 200, body: body, headers: headers}} <- Req.get(url, opts) do
+          GameMaps.upsert(game_id, nil, body, parse_content_type(headers))
+        else
+          {:ok, %{board_image_url: nil}} ->
+            {:error, "wargear.net's view screen has no board image URL for this game"}
+
+          :error ->
+            {:error, "failed to fetch the view screen from wargear.net"}
 
           {:ok, %{status: status}} ->
             {:error, "HTTP #{status}"}
@@ -280,10 +286,7 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <% end %>
             <button
               phx-click="fetch_board_image"
-              disabled={
-                @board_image_status == :fetching ||
-                  is_nil(@view_screen && @view_screen.board_image_url)
-              }
+              disabled={@board_image_status == :fetching}
               class="text-sm text-blue-600 hover:underline disabled:opacity-50"
             >
               {if @board_image_status == :fetching, do: "Fetching map…", else: "Fetch Map"}

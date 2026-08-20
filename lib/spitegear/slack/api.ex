@@ -1,6 +1,7 @@
 defmodule Spitegear.Slack.API do
   @moduledoc false
-  @bot_name "General Patton"
+  @bot_name "Gandalf"
+  @bot_icon_url "https://mckellen.com/images/0929.jpg"
 
   def post_message(text, channel \\ :spitegear) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
@@ -8,7 +9,12 @@ defmodule Spitegear.Slack.API do
     url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
 
     body =
-      %{text: text, channel: channel_id(channel), username: @bot_name}
+      %{
+        text: text,
+        channel: channel_id(channel),
+        username: @bot_name,
+        icon_url: @bot_icon_url
+      }
       |> Jason.encode!()
 
     Req.post(url, body: body, headers: headers())
@@ -20,7 +26,13 @@ defmodule Spitegear.Slack.API do
     url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
 
     body =
-      %{channel: channel_id(channel), blocks: blocks, text: fallback_text, username: @bot_name}
+      %{
+        channel: channel_id(channel),
+        blocks: blocks,
+        text: fallback_text,
+        username: @bot_name,
+        icon_url: @bot_icon_url
+      }
       |> Jason.encode!()
 
     Req.post(url, body: body, headers: headers())

@@ -4,6 +4,7 @@ defmodule Spitegear.MessageTemplates do
   alias Spitegear.MessageTemplate
   alias Spitegear.Repo
   alias Spitegear.Settings
+  alias Spitegear.Slack.API
 
   @keys ~w(next_turn kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4 player_moving player_died game_winners game_winners_gif round_complete)a
 
@@ -264,7 +265,7 @@ defmodule Spitegear.MessageTemplates do
   def get_sender(key, game_id) do
     key = to_string(key)
     row = fetch(key, game_id) || fetch(key, nil)
-    default = Spitegear.Slack.API.default_sender()
+    default = API.default_sender()
 
     %{
       name: (row && nilify(row.sender_name)) || default.name,

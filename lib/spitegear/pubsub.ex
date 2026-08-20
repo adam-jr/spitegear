@@ -5,6 +5,6 @@ defmodule Spitegear.PubSub do
   def dm(recipient, text),
     do: PubSub.broadcast(__MODULE__, "slack_messages", {:dm, recipient, text})
 
-  def msg(channel, text),
-    do: PubSub.broadcast(__MODULE__, "slack_messages", {:message, channel, text})
+  def msg(channel, text, sender \\ nil),
+    do: PubSub.broadcast(__MODULE__, "slack_messages", {:message, channel, text, sender})
 end

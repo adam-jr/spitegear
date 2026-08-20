@@ -38,7 +38,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
   end
 
   def handle_event("reset_template", %{"key" => key}, socket) do
-    MessageTemplates.delete(key, socket.assigns.game_id)
+    MessageTemplates.reset_template(key, socket.assigns.game_id)
     {game_templates, global_templates} = load_templates(socket.assigns.game_id)
 
     gif_preview_url =
@@ -67,14 +67,34 @@ defmodule SpitegearWeb.AdminTemplatesLive do
     {blocks, fallback} =
       MessageTemplates.game_winners_blocks([player], game_id || "00000000", "Test Game")
 
-    PubSub.msg(:spitegear_test, type: :game_winners, payload: {blocks, fallback})
+    sender = MessageTemplates.get_sender(:game_winners, game_id)
+    PubSub.msg(:spitegear_test, [type: :game_winners, payload: {blocks, fallback}], sender)
     {:noreply, socket}
   end
 
   def handle_event("test_template", %{"key" => key}, socket) do
     text = MessageTemplates.render_sample(key, socket.assigns.game_id)
-    PubSub.msg(:spitegear_test, text)
+    sender = MessageTemplates.get_sender(key, socket.assigns.game_id)
+    PubSub.msg(:spitegear_test, text, sender)
     {:noreply, socket}
+  end
+
+  def handle_event(
+        "save_sender",
+        %{"key" => key, "sender_name" => sender_name, "sender_icon_url" => sender_icon_url},
+        socket
+      ) do
+    MessageTemplates.put_sender(key, sender_name, sender_icon_url, socket.assigns.game_id)
+    {game_templates, global_templates} = load_templates(socket.assigns.game_id)
+
+    {:noreply, assign(socket, game_templates: game_templates, global_templates: global_templates)}
+  end
+
+  def handle_event("reset_sender", %{"key" => key}, socket) do
+    MessageTemplates.reset_sender(key, socket.assigns.game_id)
+    {game_templates, global_templates} = load_templates(socket.assigns.game_id)
+
+    {:noreply, assign(socket, game_templates: game_templates, global_templates: global_templates)}
   end
 
   defp load_templates(nil), do: {%{}, MessageTemplates.list_global()}
@@ -83,9 +103,16 @@ defmodule SpitegearWeb.AdminTemplatesLive do
     do: {MessageTemplates.list_for_game(game_id), MessageTemplates.list_global()}
 
   defp current_gif_url(game_id, game_templates, global_templates) do
-    if(game_id, do: Map.get(game_templates, "game_winners_gif")) ||
-      Map.get(global_templates, "game_winners_gif") ||
+    (game_id && template_text(game_templates, "game_winners_gif")) ||
+      template_text(global_templates, "game_winners_gif") ||
       MessageTemplates.default_template(:game_winners_gif)
+  end
+
+  defp template_text(templates, key) do
+    case Map.get(templates, key) do
+      nil -> nil
+      row -> row.template
+    end
   end
 
   defp back_path(nil), do: "/admin"
@@ -116,6 +143,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
           <% game_custom = if @game_id, do: Map.get(@game_templates, key_str) %>
           <% global_custom = Map.get(@global_templates, key_str) %>
           <% active = game_custom || if(is_nil(@game_id), do: global_custom) %>
+          <% active_template = active && active.template %>
           <div class="border border-gray-200 rounded p-4">
             <div class="flex items-center justify-between mb-1">
               <span class="text-sm font-medium font-mono">{key_str}</span>
@@ -161,7 +189,7 @@ defmodule SpitegearWeb.AdminTemplatesLive do
                 name="template"
                 rows={if key_str == "game_winners_gif", do: "1", else: "2"}
                 class="w-full font-mono text-sm border border-gray-300 rounded p-2"
-              ><%= active || MessageTemplates.default_template(key) %></textarea>
+              ><%= active_template || MessageTemplates.default_template(key) %></textarea>
               <%= if key_str == "game_winners_gif" do %>
                 <img
                   src={@gif_preview_url}
@@ -186,6 +214,41 @@ defmodule SpitegearWeb.AdminTemplatesLive do
                 <% end %>
               </div>
             </form>
+            <%= if key_str != "game_winners_gif" do %>
+              <form
+                phx-submit="save_sender"
+                class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100"
+              >
+                <input type="hidden" name="key" value={key_str} />
+                <input
+                  type="text"
+                  name="sender_name"
+                  value={active && active.sender_name}
+                  placeholder={"Sender name (default: #{Spitegear.Slack.API.default_sender().name})"}
+                  class="flex-1 text-sm border border-gray-300 rounded p-1.5"
+                />
+                <input
+                  type="text"
+                  name="sender_icon_url"
+                  value={active && active.sender_icon_url}
+                  placeholder="Icon URL (default: bot avatar)"
+                  class="flex-1 text-sm border border-gray-300 rounded p-1.5"
+                />
+                <button type="submit" class="text-sm text-blue-600 hover:underline shrink-0">
+                  Save sender
+                </button>
+                <%= if active && (active.sender_name || active.sender_icon_url) do %>
+                  <button
+                    type="button"
+                    phx-click="reset_sender"
+                    phx-value-key={key_str}
+                    class="text-sm text-red-500 hover:underline shrink-0"
+                  >
+                    Reset sender
+                  </button>
+                <% end %>
+              </form>
+            <% end %>
           </div>
         <% end %>
       </div>

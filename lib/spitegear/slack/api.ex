@@ -3,39 +3,39 @@ defmodule Spitegear.Slack.API do
   @bot_name "Gandalf"
   @bot_icon_url "https://mckellen.com/images/0929.jpg"
 
-  def post_message(text, channel \\ :spitegear) do
+  @doc "The bot identity used when a message has no per-template sender override."
+  def default_sender, do: %{name: @bot_name, icon_url: @bot_icon_url}
+
+  def post_message(text, channel \\ :spitegear, sender \\ nil) do
     config = Application.get_env(:spitegear, Spitegear.Slack.API)
     %URI{} = base = config[:url]
     url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
 
     body =
-      %{
-        text: text,
-        channel: channel_id(channel),
-        username: @bot_name,
-        icon_url: @bot_icon_url
-      }
+      %{text: text, channel: channel_id(channel)}
+      |> Map.merge(sender_fields(sender))
       |> Jason.encode!()
 
     Req.post(url, body: body, headers: headers())
   end
 
-  def post_blocks(blocks, fallback_text, channel \\ :spitegear) do
+  def post_blocks(blocks, fallback_text, channel \\ :spitegear, sender \\ nil) do
     config = Application.get_env(:spitegear, __MODULE__)
     %URI{} = base = config[:url]
     url = %{base | path: config[:endpoints][:post_message]} |> URI.to_string()
 
     body =
-      %{
-        channel: channel_id(channel),
-        blocks: blocks,
-        text: fallback_text,
-        username: @bot_name,
-        icon_url: @bot_icon_url
-      }
+      %{channel: channel_id(channel), blocks: blocks, text: fallback_text}
+      |> Map.merge(sender_fields(sender))
       |> Jason.encode!()
 
     Req.post(url, body: body, headers: headers())
+  end
+
+  defp sender_fields(nil), do: %{username: @bot_name, icon_url: @bot_icon_url}
+
+  defp sender_fields(%{name: name, icon_url: icon_url}) do
+    %{username: name || @bot_name, icon_url: icon_url || @bot_icon_url}
   end
 
   def post_dm(text, recipient) do

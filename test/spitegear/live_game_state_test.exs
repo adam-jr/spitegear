@@ -398,7 +398,7 @@ defmodule Spitegear.LiveGameStateTest do
 
       state = %LiveGameState{game_id: "11111", turn_advanced: true, current_view_screen: vs}
       assert LiveGameState.announce_next_round(state) == state
-      assert_receive {:message, :spitegear, _}, 500
+      assert_receive {:message, :spitegear, _, _}, 500
     end
   end
 
@@ -421,7 +421,7 @@ defmodule Spitegear.LiveGameStateTest do
       result = LiveGameState.announce_next_turn(state)
 
       assert result == state
-      assert_receive {:message, :spitegear, _}, 500
+      assert_receive {:message, :spitegear, _, _}, 500
     end
   end
 
@@ -571,7 +571,7 @@ defmodule Spitegear.LiveGameStateTest do
       }
 
       LiveGameState.infer_deaths_from_skip(state)
-      assert_receive {:message, :spitegear_test, _}, 500
+      assert_receive {:message, :spitegear_test, _, _}, 500
     end
   end
 
@@ -636,7 +636,7 @@ defmodule Spitegear.LiveGameStateTest do
       state = %LiveGameState{game_id: "11111", view_screen_changed: true, current_view_screen: vs}
       LiveGameState.detect_eliminations(state)
 
-      assert_receive {:message, :spitegear, _}, 500
+      assert_receive {:message, :spitegear, _, _}, 500
     end
 
     test "returns state unchanged" do
@@ -681,7 +681,7 @@ defmodule Spitegear.LiveGameStateTest do
 
       LiveGameState.announce_winners(state)
 
-      assert_receive {:message, :spitegear, _}, 500
+      assert_receive {:message, :spitegear, _, _}, 500
     end
 
     test "returns state unchanged" do

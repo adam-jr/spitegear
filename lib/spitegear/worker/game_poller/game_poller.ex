@@ -87,25 +87,22 @@ defmodule Spitegear.Worker.GamePoller do
 
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
 
-  def handle_info({:retry_board_image, url, turn_id, attempt}, state) do
-    start_board_image_fetch(url, turn_id, state.game_id, attempt, self())
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_cast({:fetch_board_image, url, turn_id}, state) do
-    start_board_image_fetch(url, turn_id, state.game_id, 0, self())
-    {:noreply, state}
-  end
-
-  @impl true
-  def terminate(:normal, %{game_id: game_id}) do
-    GameManager.stop(game_id)
-  end
-
-  def terminate(_reason, _state), do: :ok
-
   def name(game_id), do: :"#{__MODULE__}_#{game_id}"
+
+  @doc """
+  Fetches the board image at `url` and stores it via `GameMaps.upsert/4`,
+  retrying with backoff on failure.
+
+  Runs entirely inside a detached `Task` — does not message any GenServer,
+  so it completes even if the calling process (or this poller) has already
+  stopped by the time the fetch finishes. Safe to call when a game just
+  finished, when the `GamePoller` may terminate itself immediately after.
+  """
+  @spec fetch_board_image(String.t(), String.t(), integer() | nil) :: :ok
+  def fetch_board_image(game_id, url, turn_id) do
+    Task.start(fn -> do_fetch_board_image(url, turn_id, game_id, 0) end)
+    :ok
+  end
 
   defp do_work(%{game_id: game_id, last_turn_id: nil} = state) do
     case History.latest_turn(game_id) do
@@ -221,22 +218,20 @@ defmodule Spitegear.Worker.GamePoller do
   @backoff_ms [5_000, 15_000, 30_000]
   @max_attempts length(@backoff_ms) + 1
 
-  defp start_board_image_fetch(url, turn_id, game_id, attempt, poller) do
+  defp do_fetch_board_image(url, turn_id, game_id, attempt) do
     opts = [receive_timeout: 60_000, decode_body: false] ++ Proxy.req_options()
 
-    Task.start(fn ->
-      case Req.get(url, opts) do
-        {:ok, %{status: 200, body: body, headers: headers}} ->
-          GameMaps.upsert(game_id, turn_id, body, board_image_content_type(headers))
+    case Req.get(url, opts) do
+      {:ok, %{status: 200, body: body, headers: headers}} ->
+        GameMaps.upsert(game_id, turn_id, body, board_image_content_type(headers))
 
-        _ when attempt + 1 < @max_attempts ->
-          backoff = Enum.at(@backoff_ms, attempt)
-          Process.send_after(poller, {:retry_board_image, url, turn_id, attempt + 1}, backoff)
+      _ when attempt + 1 < @max_attempts ->
+        Process.sleep(Enum.at(@backoff_ms, attempt))
+        do_fetch_board_image(url, turn_id, game_id, attempt + 1)
 
-        _ ->
-          Logger.warning("#{__MODULE__} board image fetch failed for game #{game_id}")
-      end
-    end)
+      _ ->
+        Logger.warning("#{__MODULE__} board image fetch failed for game #{game_id}")
+    end
   end
 
   defp board_image_content_type(headers) do

@@ -180,7 +180,7 @@ defmodule Spitegear.LiveGameState do
     turn_id = state.current_turn && state.current_turn.id
 
     if url && turn_id do
-      GenServer.cast(GamePoller.name(state.game_id), {:fetch_board_image, url, turn_id})
+      GamePoller.fetch_board_image(state.game_id, url, turn_id)
     end
 
     state
@@ -519,7 +519,7 @@ defmodule Spitegear.LiveGameState do
     url = state.current_view_screen.board_image_url
 
     if url do
-      GenServer.cast(GamePoller.name(state.game_id), {:fetch_board_image, url, nil})
+      GamePoller.fetch_board_image(state.game_id, url, nil)
     end
 
     state

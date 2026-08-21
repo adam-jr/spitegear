@@ -280,7 +280,7 @@ defmodule Spitegear.LiveGameState do
           vs.game_name
         )
 
-      PubSub.msg(:spitegear, text)
+      PubSub.msg(:spitegear, text, MessageTemplates.get_sender(:round_complete, vs.game_id))
     end
 
     state
@@ -300,7 +300,7 @@ defmodule Spitegear.LiveGameState do
   def announce_next_turn(%__MODULE__{} = state) do
     round_info = Turns.round_info(state.game_id)
     text = MessageTemplates.next_turn(state, round_info)
-    PubSub.msg(:spitegear, text)
+    PubSub.msg(:spitegear, text, MessageTemplates.get_sender(:next_turn, state.game_id))
     state
   end
 
@@ -329,7 +329,8 @@ defmodule Spitegear.LiveGameState do
       vs = state.current_view_screen
       player_slack = vs.current_player && vs.current_player.slack_name
       text = MessageTemplates.kind_reminder(state.current_turn, player_slack, vs.game_name)
-      PubSub.msg(:spitegear, text)
+      key = :"kind_reminder_#{min(state.current_turn.reminders, 4)}"
+      PubSub.msg(:spitegear, text, MessageTemplates.get_sender(key, state.game_id))
       {:ok, updated_turn} = Turns.record_reminder(state.current_turn)
       %{state | current_turn: updated_turn}
     else
@@ -369,7 +370,8 @@ defmodule Spitegear.LiveGameState do
     if same_player? && turn.reminders >= 1 do
       Logger.info("#{turn.player_name} is taking their turn (game #{state.game_id})")
       text = MessageTemplates.player_moving(vs.current_player, state.game_id)
-      PubSub.msg(:spitegear, text)
+      sender = MessageTemplates.get_sender(:player_moving, state.game_id)
+      PubSub.msg(:spitegear, text, sender)
       {:ok, updated_turn} = Turns.record_moving_announced(turn)
       %{state | current_turn: updated_turn}
     else
@@ -424,7 +426,8 @@ defmodule Spitegear.LiveGameState do
       Logger.info("#{__MODULE__} inferring #{player.name} dead (skipped in turn order)")
       GameDeaths.create(state.game_id, player.name, now, inferred: true)
       text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
-      PubSub.msg(:spitegear_test, text)
+      sender = MessageTemplates.get_sender(:player_died, state.game_id)
+      PubSub.msg(:spitegear_test, text, sender)
     end)
 
     state
@@ -458,7 +461,8 @@ defmodule Spitegear.LiveGameState do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       GameDeaths.create(state.game_id, player.name, now)
       text = MessageTemplates.player_died(player, state.game_id, vs.game_name)
-      PubSub.msg(:spitegear, text)
+      sender = MessageTemplates.get_sender(:player_died, state.game_id)
+      PubSub.msg(:spitegear, text, sender)
     end)
 
     state
@@ -488,7 +492,8 @@ defmodule Spitegear.LiveGameState do
     {blocks, fallback} =
       MessageTemplates.game_winners_blocks(vs.winners, state.game_id, vs.game_name)
 
-    PubSub.msg(:spitegear, type: :game_winners, payload: {blocks, fallback})
+    sender = MessageTemplates.get_sender(:game_winners, state.game_id)
+    PubSub.msg(:spitegear, [type: :game_winners, payload: {blocks, fallback}], sender)
     GenServer.cast(self(), :finish_game)
     state
   end

@@ -22,8 +22,8 @@ defmodule Spitegear.Worker.SlackMessenger do
     send(self(), {:dm, recipient, text})
   end
 
-  def msg(channel, text) do
-    send(self(), {:message, channel, text})
+  def msg(channel, text, sender \\ nil) do
+    send(self(), {:message, channel, text, sender})
   end
 
   def handle_info({:ssl_closed, _}, state) do
@@ -38,16 +38,19 @@ defmodule Spitegear.Worker.SlackMessenger do
     {:noreply, state}
   end
 
-  def handle_info({:message, channel, [type: _type, payload: {blocks, fallback}]}, state)
+  def handle_info(
+        {:message, channel, [type: _type, payload: {blocks, fallback}], sender},
+        state
+      )
       when is_list(blocks) do
     if post_to_slack?(),
-      do: API.post_blocks(blocks, fallback, channel),
+      do: API.post_blocks(blocks, fallback, channel, sender),
       else: Logger.info("[Slack:#{channel}] #{fallback}")
 
     {:noreply, state}
   end
 
-  def handle_info({:message, channel, [type: type, payload: payload]}, state) do
+  def handle_info({:message, channel, [type: type, payload: payload], _sender}, state) do
     text = Message.text(type, payload)
 
     if post_to_slack?(),
@@ -57,9 +60,9 @@ defmodule Spitegear.Worker.SlackMessenger do
     {:noreply, state}
   end
 
-  def handle_info({:message, channel, text}, state) do
+  def handle_info({:message, channel, text, sender}, state) do
     if post_to_slack?(),
-      do: API.post_message(text, channel),
+      do: API.post_message(text, channel, sender),
       else: Logger.info("[Slack:#{channel}] #{text}")
 
     {:noreply, state}

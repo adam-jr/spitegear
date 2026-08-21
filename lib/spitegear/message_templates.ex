@@ -4,6 +4,7 @@ defmodule Spitegear.MessageTemplates do
   alias Spitegear.MessageTemplate
   alias Spitegear.Repo
   alias Spitegear.Settings
+  alias Spitegear.Slack.API
 
   @keys ~w(next_turn kind_reminder_0 kind_reminder_1 kind_reminder_2 kind_reminder_3 kind_reminder_4 player_moving player_died game_winners game_winners_gif round_complete)a
 
@@ -256,26 +257,112 @@ defmodule Spitegear.MessageTemplates do
     end
   end
 
-  def delete(key, game_id \\ nil) do
+  @doc """
+  Returns the Slack sender (`%{name:, icon_url:}`) to post `key`'s messages
+  with — a game-specific override if set, else the global override, else
+  `Spitegear.Slack.API.default_sender/0`.
+  """
+  def get_sender(key, game_id) do
+    key = to_string(key)
+    row = fetch(key, game_id) || fetch(key, nil)
+    default = API.default_sender()
+
+    %{
+      name: (row && nilify(row.sender_name)) || default.name,
+      icon_url: (row && nilify(row.sender_icon_url)) || default.icon_url
+    }
+  end
+
+  @doc "Saves a per-key Slack sender override. Blank fields clear the override."
+  def put_sender(key, sender_name, sender_icon_url, game_id \\ nil) do
+    key = to_string(key)
+    attrs = %{sender_name: nilify(sender_name), sender_icon_url: nilify(sender_icon_url)}
+
+    case fetch(key, game_id) do
+      nil ->
+        template_str = default_template(String.to_existing_atom(key))
+
+        %MessageTemplate{}
+        |> MessageTemplate.changeset(
+          Map.merge(attrs, %{key: key, template: template_str, game_id: game_id})
+        )
+        |> Repo.insert()
+
+      existing ->
+        existing
+        |> MessageTemplate.changeset(attrs)
+        |> Repo.update()
+    end
+  end
+
+  @doc """
+  Resets `key`'s template text to the default. If a sender override is set on
+  the same row, keeps the row (just updates the text) so the sender override
+  survives; otherwise deletes the row entirely.
+  """
+  def reset_template(key, game_id \\ nil) do
     key = to_string(key)
 
     case fetch(key, game_id) do
-      nil -> :ok
-      template -> Repo.delete(template) && :ok
+      nil ->
+        :ok
+
+      %MessageTemplate{sender_name: nil, sender_icon_url: nil} = row ->
+        Repo.delete(row) && :ok
+
+      row ->
+        row
+        |> MessageTemplate.changeset(%{template: default_template(String.to_existing_atom(key))})
+        |> Repo.update()
+
+        :ok
+    end
+  end
+
+  @doc """
+  Clears `key`'s sender override, falling back to the global/default sender.
+  If the template text is still the default, deletes the row entirely;
+  otherwise keeps the row (just clears the sender fields).
+  """
+  def reset_sender(key, game_id \\ nil) do
+    key = to_string(key)
+
+    case fetch(key, game_id) do
+      nil ->
+        :ok
+
+      %MessageTemplate{template: template} = row ->
+        if template == default_template(String.to_existing_atom(key)) do
+          Repo.delete(row) && :ok
+        else
+          row
+          |> MessageTemplate.changeset(%{sender_name: nil, sender_icon_url: nil})
+          |> Repo.update()
+
+          :ok
+        end
     end
   end
 
   def list_global do
     Repo.all(from(t in MessageTemplate, where: is_nil(t.game_id)))
-    |> Map.new(&{&1.key, &1.template})
+    |> Map.new(&{&1.key, row_summary(&1)})
   end
 
   def list_for_game(game_id) do
     Repo.all(from(t in MessageTemplate, where: t.game_id == ^game_id))
-    |> Map.new(&{&1.key, &1.template})
+    |> Map.new(&{&1.key, row_summary(&1)})
   end
 
   # --- Private ---
+
+  defp row_summary(row) do
+    %{template: row.template, sender_name: row.sender_name, sender_icon_url: row.sender_icon_url}
+  end
+
+  defp nilify(nil), do: nil
+  defp nilify(""), do: nil
+  defp nilify(s), do: s
 
   defp fetch(key, nil) do
     Repo.one(from(t in MessageTemplate, where: t.key == ^key and is_nil(t.game_id)))

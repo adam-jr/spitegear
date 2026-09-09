@@ -56,8 +56,14 @@ defmodule SpitegearWeb.AdminGameShowLive do
     {:noreply, assign(socket, log_fetch_status: {:error, reason})}
   end
 
-  def handle_event("start_game", _params, socket) do
-    Games.start_game(socket.assigns.game_id)
+  def handle_event("start_game", params, socket) do
+    opts =
+      case params do
+        %{"total_fog" => "true"} -> [total_fog: true]
+        _ -> []
+      end
+
+    Games.start_game(socket.assigns.game_id, opts)
     {:noreply, assign(socket, load(socket.assigns.game_id))}
   end
 
@@ -261,6 +267,14 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <%= if @game_manager_alive do %>
               <span class="text-xs text-gray-400">manager</span>
             <% end %>
+            <%= if @game && @game.total_fog do %>
+              <span
+                class="text-xs bg-gray-800 text-white px-2 py-0.5 rounded-full"
+                title="Poller skips History and fetches the ViewScreen directly"
+              >
+                total fog
+              </span>
+            <% end %>
             <%= if @game_running do %>
               <button phx-click="stop_game" class="text-sm text-red-600 hover:underline">
                 Stop
@@ -268,6 +282,14 @@ defmodule SpitegearWeb.AdminGameShowLive do
             <% else %>
               <button phx-click="start_game" class="text-sm text-blue-600 hover:underline">
                 Start
+              </button>
+              <button
+                phx-click="start_game"
+                phx-value-total_fog="true"
+                title="Skip the History poll and fetch the ViewScreen directly on every poll"
+                class="text-sm text-blue-600 hover:underline"
+              >
+                Start (Total Fog)
               </button>
             <% end %>
             <button

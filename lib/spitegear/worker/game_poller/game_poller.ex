@@ -23,34 +23,51 @@ defmodule Spitegear.Worker.GamePoller do
 
   @state %{
     game_id: nil,
+    total_fog: false,
     last_turn_id: nil,
     view_screen_timer: nil,
     view_screen_polls_remaining: 0,
     consecutive_failures: 0
   }
 
-  def child_spec(game_id: game_id) do
+  def child_spec(opts) do
+    game_id = Keyword.fetch!(opts, :game_id)
+    total_fog = Keyword.get(opts, :total_fog, false)
+
     %{
       id: __MODULE__,
-      start: {__MODULE__, :start_link, [[game_id: game_id, name: :"#{__MODULE__}_#{game_id}"]]},
+      start:
+        {__MODULE__, :start_link,
+         [[game_id: game_id, total_fog: total_fog, name: :"#{__MODULE__}_#{game_id}"]]},
       type: :worker,
       restart: :temporary
     }
   end
 
-  def start_link(game_id: game_id, name: name) do
-    GenServer.start_link(__MODULE__, [game_id: game_id], name: name)
+  def start_link(opts) do
+    game_id = Keyword.fetch!(opts, :game_id)
+    total_fog = Keyword.get(opts, :total_fog, false)
+    name = Keyword.fetch!(opts, :name)
+
+    GenServer.start_link(__MODULE__, [game_id: game_id, total_fog: total_fog], name: name)
   end
 
   @impl true
-  def init(game_id: game_id) do
-    Logger.info("Initializing #{__MODULE__} with game_id #{game_id}")
-    Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
+  def init(game_id: game_id, total_fog: total_fog) do
+    Logger.info("Initializing #{__MODULE__} with game_id #{game_id} (total_fog: #{total_fog})")
+
+    if total_fog do
+      Logger.info(
+        "#{__MODULE__} total fog mode: polling ViewScreen directly every #{@interval / 1000} second(s), skipping History"
+      )
+    else
+      Logger.info("#{__MODULE__} will poll wargear.net every #{@interval / 1000} second(s)")
+    end
 
     send(self(), :update_game)
     schedule_work()
 
-    {:ok, %{@state | game_id: game_id}}
+    {:ok, %{@state | game_id: game_id, total_fog: total_fog}}
   end
 
   @impl true
@@ -102,6 +119,24 @@ defmodule Spitegear.Worker.GamePoller do
   def fetch_board_image(game_id, url, turn_id) do
     Task.start(fn -> do_fetch_board_image(url, turn_id, game_id, 0) end)
     :ok
+  end
+
+  defp do_work(%{total_fog: true, game_id: game_id} = state) do
+    case ViewScreen.get_game(game_id) do
+      {:ok, view_screen} ->
+        GameManager.notify_view_screen_fetched(game_id, view_screen)
+        state = %{state | consecutive_failures: 0}
+
+        if Enum.any?(view_screen.winners) do
+          {:stop, :normal, state}
+        else
+          schedule_work()
+          {:noreply, state}
+        end
+
+      error ->
+        handle_total_fog_failure(error, state)
+    end
   end
 
   defp do_work(%{game_id: game_id, last_turn_id: nil} = state) do
@@ -188,6 +223,17 @@ defmodule Spitegear.Worker.GamePoller do
   end
 
   defp maybe_schedule_view_screen_poll(_), do: {nil, 0}
+
+  defp handle_total_fog_failure(error, state) do
+    failures = state.consecutive_failures + 1
+
+    Logger.error(
+      "#{__MODULE__} total fog ViewScreen.get_game failed for game #{state.game_id} (#{failures} consecutive failure(s)): #{inspect(error)}"
+    )
+
+    schedule_work(failures)
+    {:noreply, %{state | consecutive_failures: failures}}
+  end
 
   defp handle_history_failure(error, state) do
     failures = state.consecutive_failures + 1

@@ -37,6 +37,22 @@ defmodule Spitegear.GamesTest do
     end
   end
 
+  describe "set_total_fog/2" do
+    test "persists the flag on the game row" do
+      {:ok, _} = Games.upsert_game(build_view_screen(game_id: "3"))
+
+      assert :ok = Games.set_total_fog("3", true)
+      assert Games.get_game("3").total_fog == true
+
+      assert :ok = Games.set_total_fog("3", false)
+      assert Games.get_game("3").total_fog == false
+    end
+
+    test "is a no-op for a game that doesn't exist" do
+      assert :ok = Games.set_total_fog("does-not-exist", true)
+    end
+  end
+
   describe "upsert_game/1" do
     test "inserts a new game row" do
       assert {:ok, game} = Games.upsert_game(build_view_screen())

@@ -98,7 +98,17 @@ defmodule SpitegearWeb.AdminGamesLive do
                       {game.game_id}
                     </a>
                   </td>
-                  <td class="py-2 pr-4">{game.game_name || "—"}</td>
+                  <td class="py-2 pr-4">
+                    {game.game_name || "—"}
+                    <%= if game.total_fog do %>
+                      <span
+                        class="text-xs bg-gray-800 text-white px-2 py-0.5 rounded-full ml-1"
+                        title="Poller skips History and fetches the ViewScreen directly"
+                      >
+                        total fog
+                      </span>
+                    <% end %>
+                  </td>
                   <td class="py-2 pr-4">{if turn, do: turn.player_name, else: "—"}</td>
                   <td class="py-2 pr-4">
                     <span class={if running, do: "text-green-600", else: "text-gray-400"}>

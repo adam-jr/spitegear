@@ -289,12 +289,55 @@ defmodule Spitegear.Games do
     )
   end
 
-  @doc "Starts both a `GamePoller` and a `GameManager` for `game_id`."
-  @spec start_game(game_id()) :: :ok
-  def start_game(game_id) do
-    DynamicSupervisor.start_child(GameSupervisor, GamePoller.child_spec(game_id: game_id))
+  @doc """
+  Starts both a `GamePoller` and a `GameManager` for `game_id`.
+
+  Pass `total_fog: true` to start the poller in total fog mode, where it
+  skips the cheap `History.latest_turn` poll entirely and instead fetches
+  the `ViewScreen` directly on every poll. Persists the flag on the `Game`
+  row so it's remembered across restarts (see `resume_games/0`). Without
+  the option, the poller starts in whatever mode was last persisted for
+  this game (defaulting to `false` for a brand new game).
+  """
+  @spec start_game(game_id(), keyword()) :: :ok
+  def start_game(game_id, opts \\ []) do
+    total_fog =
+      case Keyword.fetch(opts, :total_fog) do
+        {:ok, total_fog} ->
+          set_total_fog(game_id, total_fog)
+          total_fog
+
+        :error ->
+          total_fog?(game_id)
+      end
+
+    DynamicSupervisor.start_child(
+      GameSupervisor,
+      GamePoller.child_spec(game_id: game_id, total_fog: total_fog)
+    )
+
     DynamicSupervisor.start_child(GameSupervisor, GameManager.child_spec(game_id: game_id))
     :ok
+  end
+
+  @doc "Persists the total fog poller flag on `game_id`'s `Game` row. No-op if the game doesn't exist."
+  @spec set_total_fog(game_id(), boolean()) :: :ok
+  def set_total_fog(game_id, total_fog) do
+    case get_game(game_id) do
+      nil ->
+        :ok
+
+      game ->
+        game |> Ecto.Changeset.change(total_fog: total_fog) |> Repo.update()
+        :ok
+    end
+  end
+
+  defp total_fog?(game_id) do
+    case get_game(game_id) do
+      nil -> false
+      game -> game.total_fog
+    end
   end
 
   @doc "Terminates the `GamePoller` and `GameManager` for `game_id`. No-op if neither is running."

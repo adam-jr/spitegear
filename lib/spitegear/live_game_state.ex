@@ -27,6 +27,7 @@ defmodule Spitegear.LiveGameState do
       |> LiveGameState.announce_next_turn()
       |> LiveGameState.infer_deaths_from_skip()
       |> LiveGameState.detect_eliminations()
+      |> LiveGameState.send_reminder_if_total_fog()
       |> LiveGameState.announce_winners()
       |> LiveGameState.fetch_board_image_if_finished()
 
@@ -37,6 +38,7 @@ defmodule Spitegear.LiveGameState do
   require Logger
 
   alias Spitegear.GameDeaths
+  alias Spitegear.Games
   alias Spitegear.LiveGameState.HistoryResponses
   alias Spitegear.LiveGameState.Turn
   alias Spitegear.LiveGameState.Turns
@@ -58,7 +60,8 @@ defmodule Spitegear.LiveGameState do
           prev_api_response: WargearHistoryApiResponseDb.t() | nil,
           history_changed: boolean(),
           view_screen_changed: boolean(),
-          turn_advanced: boolean()
+          turn_advanced: boolean(),
+          total_fog: boolean()
         }
 
   defstruct game_id: nil,
@@ -70,7 +73,8 @@ defmodule Spitegear.LiveGameState do
             prev_api_response: nil,
             history_changed: false,
             view_screen_changed: false,
-            turn_advanced: false
+            turn_advanced: false,
+            total_fog: false
 
   @doc """
   Returns a new `LiveGameState` for `game_id` with all fields loaded from
@@ -86,8 +90,9 @@ defmodule Spitegear.LiveGameState do
 
   @doc """
   Hydrates all DB-backed fields on the given struct from the database.
-  Loads turns, view screen snapshots, and history responses.
-  Preserves transient dispatch flags (`view_screen_changed`, `turn_advanced`).
+  Loads turns, view screen snapshots, history responses, and the game's
+  total fog flag. Preserves transient dispatch flags (`view_screen_changed`,
+  `turn_advanced`).
 
   Call this on startup or after a crash restart. For ongoing updates, use the
   individual pipeline steps, which update the struct in-memory without an extra
@@ -102,7 +107,8 @@ defmodule Spitegear.LiveGameState do
         current_view_screen: ViewScreens.get_latest(game_id),
         prev_view_screen: ViewScreens.get_prev(game_id),
         current_api_response: HistoryResponses.get_latest(game_id),
-        prev_api_response: HistoryResponses.get_prev(game_id)
+        prev_api_response: HistoryResponses.get_prev(game_id),
+        total_fog: Games.total_fog?(game_id)
     }
   end
 
@@ -337,6 +343,20 @@ defmodule Spitegear.LiveGameState do
       state
     end
   end
+
+  @doc """
+  Runs `send_reminder/1` for total fog games.
+
+  Total fog pollers skip the History API entirely, so the history pipeline
+  (and the reminder ticks that normally ride on it via `send_reminder/1`)
+  never runs for these games — this step drives reminders off the view
+  screen pipeline instead, which is the only thing ticking for them.
+
+  No-op when `total_fog` is `false`.
+  """
+  @spec send_reminder_if_total_fog(t()) :: t()
+  def send_reminder_if_total_fog(%__MODULE__{total_fog: false} = state), do: state
+  def send_reminder_if_total_fog(%__MODULE__{} = state), do: send_reminder(state)
 
   defp reminder_due?(%{reminded_at: nil}, _now), do: false
 

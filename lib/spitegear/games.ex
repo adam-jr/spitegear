@@ -316,11 +316,7 @@ defmodule Spitegear.Games do
       GamePoller.child_spec(game_id: game_id, total_fog: total_fog)
     )
 
-    DynamicSupervisor.start_child(
-      GameSupervisor,
-      GameManager.child_spec(game_id: game_id, total_fog: total_fog)
-    )
-
+    DynamicSupervisor.start_child(GameSupervisor, GameManager.child_spec(game_id: game_id))
     :ok
   end
 
@@ -337,7 +333,9 @@ defmodule Spitegear.Games do
     end
   end
 
-  defp total_fog?(game_id) do
+  @doc "Returns `true` if `game_id`'s poller is in total fog mode. `false` if the game doesn't exist."
+  @spec total_fog?(game_id()) :: boolean()
+  def total_fog?(game_id) do
     case get_game(game_id) do
       nil -> false
       game -> game.total_fog

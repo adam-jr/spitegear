@@ -1,6 +1,7 @@
 defmodule Spitegear.LiveGameStateTest do
   use Spitegear.DataCase, async: true
 
+  alias Spitegear.Game
   alias Spitegear.GameDeath
   alias Spitegear.HTML.Player
   alias Spitegear.LiveGameState
@@ -172,6 +173,13 @@ defmodule Spitegear.LiveGameStateTest do
       assert state.current_turn == nil
       assert state.current_view_screen == nil
       assert state.current_api_response == nil
+      assert state.total_fog == false
+    end
+
+    test "hydrates total_fog from the game row" do
+      Repo.insert!(%Game{game_id: "11111", total_fog: true})
+      state = blank_state() |> LiveGameState.hydrate()
+      assert state.total_fog == true
     end
   end
 
@@ -422,6 +430,32 @@ defmodule Spitegear.LiveGameStateTest do
 
       assert result == state
       assert_receive {:message, :spitegear, _, _}, 500
+    end
+  end
+
+  describe "send_reminder_if_total_fog/1" do
+    test "no-op when total_fog is false, even if a reminder would otherwise be due" do
+      turn = %Turn{
+        game_id: "11111",
+        player_name: "adam",
+        started_at: @base,
+        reminded_at: ~U[2020-01-01 12:00:00Z],
+        reminders: 0
+      }
+
+      state = %LiveGameState{
+        game_id: "11111",
+        total_fog: false,
+        current_turn: turn,
+        current_view_screen: %ViewScreen{game_name: "Test Game"}
+      }
+
+      assert LiveGameState.send_reminder_if_total_fog(state) == state
+    end
+
+    test "delegates to send_reminder/1 when total_fog is true" do
+      state = %LiveGameState{game_id: "11111", total_fog: true, current_turn: nil}
+      assert LiveGameState.send_reminder_if_total_fog(state) == LiveGameState.send_reminder(state)
     end
   end
 

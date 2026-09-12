@@ -6,10 +6,6 @@ defmodule Spitegear.Worker.GameManager do
   wargear.net directly, it receives notifications from `GamePoller` whenever
   that poller successfully fetches a `History.latest_turn` or `ViewScreen`.
 
-  For games running in total fog mode, `GamePoller` never fetches History, so
-  `send_reminder/1` is instead run inline in the `:view_screen_fetched`
-  pipeline (see `maybe_send_reminder/2`).
-
   Start and stop a manager for any running game from the admin:
 
       Games.start_game_manager(game_id)
@@ -25,21 +21,17 @@ defmodule Spitegear.Worker.GameManager do
 
   require Logger
 
-  def child_spec(opts) do
-    game_id = Keyword.fetch!(opts, :game_id)
-    total_fog = Keyword.get(opts, :total_fog, false)
-
+  def child_spec(game_id: game_id) do
     %{
       id: {__MODULE__, game_id},
-      start:
-        {__MODULE__, :start_link, [[game_id: game_id, total_fog: total_fog, name: name(game_id)]]},
+      start: {__MODULE__, :start_link, [[game_id: game_id, name: name(game_id)]]},
       type: :worker,
       restart: :temporary
     }
   end
 
-  def start_link(game_id: game_id, total_fog: total_fog, name: name) do
-    GenServer.start_link(__MODULE__, [game_id: game_id, total_fog: total_fog], name: name)
+  def start_link(game_id: game_id, name: name) do
+    GenServer.start_link(__MODULE__, [game_id: game_id], name: name)
   end
 
   @doc "Returns the registered process name for `game_id`."
@@ -74,11 +66,9 @@ defmodule Spitegear.Worker.GameManager do
   end
 
   @impl true
-  def init(game_id: game_id, total_fog: total_fog) do
+  def init(game_id: game_id) do
     Logger.info("#{__MODULE__} starting for game #{game_id}")
-
-    {:ok, %{game_state: %LiveGameState{game_id: game_id}, total_fog: total_fog},
-     {:continue, :hydrate}}
+    {:ok, %{game_state: %LiveGameState{game_id: game_id}}, {:continue, :hydrate}}
   end
 
   @impl true
@@ -97,10 +87,7 @@ defmodule Spitegear.Worker.GameManager do
     {:noreply, %{state | game_state: game_state}}
   end
 
-  def handle_cast(
-        {:view_screen_fetched, view_screen},
-        %{game_state: game_state, total_fog: total_fog} = state
-      ) do
+  def handle_cast({:view_screen_fetched, view_screen}, %{game_state: game_state} = state) do
     Games.upsert_game(view_screen)
 
     game_state =
@@ -113,7 +100,7 @@ defmodule Spitegear.Worker.GameManager do
       |> LiveGameState.detect_eliminations()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
-      |> maybe_send_reminder(total_fog)
+      |> LiveGameState.send_reminder_if_total_fog()
       |> LiveGameState.announce_winners()
       |> LiveGameState.fetch_board_image_if_finished()
 
@@ -144,10 +131,4 @@ defmodule Spitegear.Worker.GameManager do
 
   @impl true
   def handle_info({:ssl_closed, _}, state), do: {:noreply, state}
-
-  # Total fog games never fetch History, so :history_fetched (and the
-  # reminder ticks that ride on it) never arrives — send reminders off the
-  # ViewScreen poll instead, which is the only thing ticking for these games.
-  defp maybe_send_reminder(game_state, true), do: LiveGameState.send_reminder(game_state)
-  defp maybe_send_reminder(game_state, false), do: game_state
 end

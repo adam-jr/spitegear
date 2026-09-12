@@ -316,7 +316,11 @@ defmodule Spitegear.Games do
       GamePoller.child_spec(game_id: game_id, total_fog: total_fog)
     )
 
-    DynamicSupervisor.start_child(GameSupervisor, GameManager.child_spec(game_id: game_id))
+    DynamicSupervisor.start_child(
+      GameSupervisor,
+      GameManager.child_spec(game_id: game_id, total_fog: total_fog)
+    )
+
     :ok
   end
 

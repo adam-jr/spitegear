@@ -41,5 +41,14 @@ npm-debug.log
 # Local secrets, never commit
 /config/dev.secret.exs
 .envrc
+.env
+.cf-tunnel-token
+
+# Editor/swap backup files (may contain copies of secret files above)
+*~
 
 .playwright-mcp/
+
+# Local Cloudflare WARP client state/logs, unrelated to the app
+/warp-data/
+/warp-reregister.log

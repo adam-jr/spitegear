@@ -100,6 +100,7 @@ defmodule Spitegear.Worker.GameManager do
       |> LiveGameState.detect_eliminations()
       |> LiveGameState.announce_next_round()
       |> LiveGameState.announce_next_turn()
+      |> LiveGameState.send_reminder_if_total_fog()
       |> LiveGameState.announce_winners()
       |> LiveGameState.fetch_board_image_if_finished()
 
